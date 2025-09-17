@@ -3,8 +3,9 @@
 
 # include "Location.hpp"
 # include <map>
+# include <vector>
 
-class	 Serveur : public Location
+class	 Server : public Location
 {
 	private:
 		std::map<std::string, std::string>	_data;
@@ -13,5 +14,7 @@ class	 Serveur : public Location
 	public:
 
 };
+
+void	parsing(std::vector<Server> &servers, std::string configFile);
 
 #endif

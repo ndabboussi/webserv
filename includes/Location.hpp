@@ -11,9 +11,10 @@
 class Location
 {
 	protected:
-		std::string	_path;
-		std::string	_root;
-		uint8_t		_methods;
+		std::vector<Location>	_locations;
+		std::string				_path;
+		std::string				_root;
+		uint8_t					_methods;
 
 	public:
 		Location(void);

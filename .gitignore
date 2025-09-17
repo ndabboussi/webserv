@@ -1,9 +1,6 @@
 webserv
 srcs/*/*.o
 
-libft/libft.a
-libft/*/*.o
-
 objs
 objs/*.o
 objs/*/*.o
