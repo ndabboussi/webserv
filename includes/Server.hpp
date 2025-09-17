@@ -1,5 +1,5 @@
-#ifndef SERVEUR_HPP
-# define SERVEUR_HPP
+#ifndef SERVER_HPP
+# define SERVER_HPP
 
 # include "Location.hpp"
 # include <map>
