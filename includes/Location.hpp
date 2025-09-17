@@ -16,16 +16,9 @@ class Location
 		uint8_t		_methods;
 
 	public:
-		Location(/* args */);
-		~Location();
+		Location(void);
+		~Location(void);
 };
 
-Location::Location(/* args */)
-{
-}
-
-Location::~Location()
-{
-}
 
 #endif
