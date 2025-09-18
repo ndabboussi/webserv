@@ -6,7 +6,7 @@ CFLAGS = -Wall -Wextra -Werror -std=c++98 -Iincludes
 SRC_DIR = srcs
 OBJ_DIR = obj
 
-SRC_FILES = main.cpp parsing/parser.cpp
+SRC_FILES = main.cpp parsing/parser.cpp Location.cpp Server.cpp debug.cpp
 OBJ_FILES = $(addprefix $(OBJ_DIR)/,$(SRC_FILES:.cpp=.o))
 
 all: $(NAME)
