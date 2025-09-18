@@ -1,12 +1,36 @@
 # include "Server.hpp"
 
-void	parsingServer(Server &server,
-					const std::vector<std::string> &tokens,
-					std::vector<std::string>::const_iterator &it);
+static void	parsingLocation(Location &location, std::vector<std::string> file, std::vector<std::string>::iterator &it)
+{
+	for (; it != file.end() && *it != "}" ; it++)
+	{
 
-void	parsingLocation(Location &location,
-					const std::vector<std::string> &tokens,
-					std::vector<std::string>::const_iterator &it);
+	}
+}
+
+static void	parsingServer(Server &server, std::vector<std::string> file, std::vector<std::string>::iterator &it)
+{
+	for (; it != file.end() && *it != "}" ; it++)
+	{
+		if (*it == "listen")
+		{
+			it++;
+			if (isdigit((*it)[0]))
+				server;
+			else
+				throw std::exception(); //missing port in field listen
+			while (it != file.end() && *it != ";")
+				it++;
+		}
+		if (*it == "server_name")
+		{
+			it++;
+			
+			while (it != file.end() && *it != ";")
+				it++;
+		}
+	}
+}
 
 static void tokenizeLine(const std::string &line, std::vector<std::string> &tokens)
 {
