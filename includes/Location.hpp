@@ -7,6 +7,7 @@
 # include <iostream>     // For cout
 # include <unistd.h>     // For read
 # include <cerrno>
+# include <vector>
 
 class Location
 {
