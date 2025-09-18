@@ -58,8 +58,8 @@ void Location::addLocations(Location newLoc)
 void Location::addData(std::string key, std::string value)
 {
 	// this->_data.insert(key, value);
-	// // this->_data[key] = value;//remplace la key si elle existe deja
-	this->_data.insert(std::make_pair(key, value));//ne remplace pas la key si elle existe deja
+	this->_data[key] = value;//remplace la key si elle existe deja
+	//this->_data.insert(std::make_pair(key, value));//ne remplace pas la key si elle existe deja
 	return ;
 }
 

@@ -1,72 +1,123 @@
 # include "Server.hpp"
 
-static void	parsingLocation(Location &location, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
+template<typename ServLoc>
+void mapElement(ServLoc servLoc, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
 {
-	// for (; it != end && *it != "}" ; it++)
-	// {
-
-	// }
-	(void)location;
-	(void)end;
-	(void)it;
+	std::string key, value;
+	key = *it;
+	it++;
+	if (*it != ";")
+		value = ((*it)[it->size() - 1] == ';') ? it->substr(0, (*it)[it->size() - 2]): *it;
+	else
+		throw std::exception(); //missing server Name in field server_name
+	if (it + 1 != end && *(it + 1) == ";")//check if next str is a ;
+		it++;
+	if ((*it)[it->size() - 1] != ';')
+		throw std::exception(); //missing ; or too much informations in instruction
+	servLoc.addData(key, value);
 }
 
-// template<typename ServLoc>
-// void mapElement(ServLoc servLoc, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
-// {
-// 	std::string key, value;
-// 	servLoc.addData();
-// }
+template<typename ServLoc>
+void setMethods(ServLoc servLoc, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
+{
+	uint8_t get = 0;
+	uint8_t post = 0;
+	uint8_t deletee = 0;
+	for (; it != end && *it != ";"; it++)
+	{
+		std::string str = ((*it)[it->size() - 1] == ';') ? it->substr(0, (*it)[it->size() - 2]): *it;
+		if (str == "GET" && !get)
+			get = GET;
+		else if (str == "POST" && !post)
+			post = POST;
+		else if (str == "DELETE" && !deletee)
+			deletee = DELETE;
+		else if (str != "GET" && str != "POST" && str != "DELETE")
+			throw std::exception(); //Unrecognise method
+		else
+			throw std::exception(); //method is used twice
+		if ((*it)[it->size() - 1] == ';')
+			break ;
+	}
+	if (it == end)
+		throw std::exception(); //Unexpexted EOF
+	servLoc.setMethods(get + post + deletee);
+}
 
+static void	parsingLocation(Location &location, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
+{
+	for (; it != end && *it != "}" ; it++)
+	{
+		if (*it == "location" && it + 1 != end && *(it + 1) == "{")
+		{
+			Location newLoc;
+			it++;
+			parsingLocation(newLoc, it, end);
+			location.addLocations(newLoc);
+		}
+		else if (*it == "allow_methods" && it + 1 != end)
+			setMethods(location, ++it, end);
+		else if (*it == "root" && it + 1 != end)
+		{
+			;
+		}
+		else if (*it == "alias" && it + 1 != end)
+		{
+			;
+		}
+		else if (*it != ";" && it + 1 != end)
+			mapElement(location, end, it);
+	}
+}
 
 static void	parsingServer(Server &server, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
 {
-	// for (; it != end && *it != "}" ; it++)
-	// {
-	// 	if (*it == "location" && it + 1 != end && *(it + 1) == "{")
-	// 	{
-	// 		Location newLoc;
-	// 		it++;
-	// 		parsingLocation(newLoc, it, end);
-	// 		server.addLocations(newLoc);
-	// 	}
-	// 	if (*it == "listen" && it + 1 != end)
-	// 	{
-	// 		it++;
-	// 		if (isdigit((*it)[0]))
-	// 		{
-	// 			long nb = std::stol(*it);
-	// 			if (nb > 2147483648)
-	// 				throw std::exception(); //too large number in field listen
-	// 			//server.setPort(nb);
-	// 		}
-	// 		else if ((*it)[0] == ';')
-	// 			throw std::exception(); //missing port in field listen
-	// 		else
-	// 			throw std::exception(); //unrecognise char in field listen
-	// 		if (it + 1 != end && *(it + 1) == ";") //check if next str is a ;
-	// 			it++;
-	// 		if ((*it)[it->size() - 1] != ';')
-	// 			throw std::exception(); //missing ; or too much informations in instruction
-	// 	}
-	// 	else if (*it == "server_name" && it + 1 != end)
-	// 	{
-	// 		it++;
-	// 		if (*it != ";")
-	// 			;//server.setName(((*it)[it->size() - 1] == ';') ? it->substr(0, (*it)[it->size() - 2]): *it);
-	// 		else
-	// 			throw std::exception(); //missing server Name in field server_name
-	// 		if (it + 1 != end && *(it + 1) == ";")//check if next str is a ;
-	// 			it++;
-	// 		if ((*it)[it->size() - 1] != ';')
-	// 			throw std::exception(); //missing ; or too much informations in instruction
-	// 	}
-	// 	else if (*it != ";" && it + 1 != end)
-	// 		mapElement(server, end, it);
-	// }
-	(void)server;
-	(void)it;
-	(void)end;
+	for (; it != end && *it != "}" ; it++)
+	{
+		if (*it == "location" && it + 1 != end && *(it + 1) == "{")
+		{
+			Location newLoc;
+			it++;
+			parsingLocation(newLoc, it, end);
+			server.addLocations(newLoc);
+		}
+		else if (*it == "allow_methods" && it + 1 != end)
+			setMethods(server, ++it, end);
+		else if (*it == "listen" && it + 1 != end)
+		{
+			it++;
+			if (isdigit((*it)[0]))
+			{
+				char *end;
+				long nb = std::strtol(it->c_str(), &end, it->size());
+				if (nb > 2147483648)
+					throw std::exception(); //too large number in field listen
+				server.setPort(nb);
+			}
+			else if ((*it)[0] == ';')
+				throw std::exception(); //missing port in field listen
+			else
+				throw std::exception(); //unrecognise char in field listen
+			if (it + 1 != end && *(it + 1) == ";") //check if next str is a ;
+				it++;
+			if ((*it)[it->size() - 1] != ';')
+				throw std::exception(); //missing ; or too much informations in instruction
+		}
+		else if (*it == "server_name" && it + 1 != end)
+		{
+			it++;
+			if (*it != ";")
+				server.setName(((*it)[it->size() - 1] == ';') ? it->substr(0, (*it)[it->size() - 2]): *it);
+			else
+				throw std::exception(); //missing server Name in field server_name
+			if (it + 1 != end && *(it + 1) == ";")//check if next str is a ;
+				it++;
+			if ((*it)[it->size() - 1] != ';')
+				throw std::exception(); //missing ; or too much informations in instruction
+		}
+		else if (*it != ";" && it + 1 != end)
+			mapElement(server, end, it);
+	}
 }
 
 
@@ -128,7 +179,7 @@ void parsing(std::vector<Server> &servers, std::string configFile)
 
 			Location loc;
 			parsingLocation(loc, it, end);
-			servers.back().addLocation(loc);
+			servers.back().addLocations(loc);
 		}
 	}
 

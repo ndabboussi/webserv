@@ -6,6 +6,7 @@
 # include <cstdlib>      // For exit() and EXIT_FAILURE
 # include <iostream>     // For cout
 # include <unistd.h>     // For read
+# include <string>
 
 # include <sstream>  // pour std::istringstream
 # include <fstream>  // pour std::ifstream
@@ -39,8 +40,6 @@ class Location
 	public:
 		std::vector<Location> const					getLocations() const;
 		std::map<std::string, std::string> const	getData() const;
-		// bool const									getAlias() const;
-		// uint8_t const								getMethods() const;
 		bool										getAlias() const;
 		uint8_t										getMethods() const;
 		void										addLocations(Location newLoc);

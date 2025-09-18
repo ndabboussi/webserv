@@ -16,15 +16,10 @@ class	 Server : public Location
 		Server &operator=(Server const &src);
 
 	public:
-		void addLocation(const Location &loc)
-		{
-			_locations.push_back(loc);
-		}
-
-		const std::vector<Location> &getLocations() const
-		{
-			return _locations;
-		}
+		int			getPort() const;
+		std::string	getName() const;
+		void		setPort(int port);
+		void		setName(std::string name);
 };
 
 void	parsing(std::vector<Server> &servers, std::string configFile);

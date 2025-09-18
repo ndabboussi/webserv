@@ -17,7 +17,7 @@ Server &Server::operator=(Server const &src)
 
 // Server::Server(void): Location();
 
-Server::Server(void) : Location(), _port(0), _name("") {}
+Server::Server(void) : Location(), _port(-1), _name("") {}
 
 Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name) {}
 
@@ -25,3 +25,22 @@ Server::~Server(void) {}
 
 //Member functions---------------------------------------------------------
 
+int Server::getPort() const
+{
+    return (this->_port);
+}
+
+std::string Server::getName() const
+{
+    return (this->_name);
+}
+
+void Server::setPort(int port)
+{
+    this->_port = port;
+}
+
+void Server::setName(std::string name)
+{
+    this->_name = name;
+}
