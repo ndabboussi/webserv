@@ -2,34 +2,40 @@
 
 static void	parsingLocation(Location &location, std::vector<std::string> file, std::vector<std::string>::iterator &it)
 {
-	for (; it != file.end() && *it != "}" ; it++)
-	{
+	// for (; it != file.end() && *it != "}" ; it++)
+	// {
 
-	}
+	// }
+	(void)location;
+	(void)file;
+	(void)it;
 }
 
 static void	parsingServer(Server &server, std::vector<std::string> file, std::vector<std::string>::iterator &it)
 {
-	for (; it != file.end() && *it != "}" ; it++)
-	{
-		if (*it == "listen")
-		{
-			it++;
-			if (isdigit((*it)[0]))
-				server;
-			else
-				throw std::exception(); //missing port in field listen
-			while (it != file.end() && *it != ";")
-				it++;
-		}
-		if (*it == "server_name")
-		{
-			it++;
+// 	for (; it != file.end() && *it != "}" ; it++)
+// 	{
+// 		if (*it == "listen")
+// 		{
+// 			it++;
+// 			if (isdigit((*it)[0]))
+//				server;
+// 			else
+// 				throw std::exception(); //missing port in field listen
+// 			while (it != file.end() && *it != ";")
+// 				it++;
+// 		}
+// 		if (*it == "server_name")
+// 		{
+// 			it++;
 			
-			while (it != file.end() && *it != ";")
-				it++;
-		}
-	}
+// 			while (it != file.end() && *it != ";")
+// 				it++;
+// 		}
+// 	}
+	(void)server;
+	(void)file;
+	(void)it;
 }
 
 static void tokenizeLine(const std::string &line, std::vector<std::string> &tokens)
@@ -63,9 +69,10 @@ static std::vector<std::string> tokenizeConfig(const std::string &configFile)
 void parsing(std::vector<Server> &servers, std::string configFile)
 {
 	std::vector<std::string> tokens = tokenizeConfig(configFile);
+	printTokens(tokens); //debug
 
 	int flagBrackets = 0;
-	for (std::vector<std::string>::const_iterator it = tokens.begin(); it != tokens.end(); it++)
+	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
 		if (*it == "{")
 			flagBrackets++;

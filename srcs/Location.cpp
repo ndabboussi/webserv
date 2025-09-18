@@ -37,12 +37,14 @@ std::map<std::string, std::string> const Location::getData() const
 	return (this->_data);
 }
 
-bool const Location::getAlias() const
+// bool const Location::getAlias() const
+bool	Location::getAlias() const
 {
 	return (this->_alias);
 }
 
-uint8_t	const Location::getMethods() const
+// uint8_t	const Location::getMethods() const
+uint8_t	Location::getMethods() const
 {
 	return (this->_methods);
 }
@@ -55,7 +57,9 @@ void Location::addLocations(Location newLoc)
 
 void Location::addData(std::string key, std::string value)
 {
-	this->_data.insert(key, value);
+	// this->_data.insert(key, value);
+	// // this->_data[key] = value;//remplace la key si elle existe deja
+	this->_data.insert(std::make_pair(key, value));//ne remplace pas la key si elle existe deja
 	return ;
 }
 

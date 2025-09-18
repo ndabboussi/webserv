@@ -10,6 +10,12 @@ class	 Server : public Location
 		std::string	_name;
 
 	public:
+		Server(void);
+		Server(Server const &src);
+		~Server(void);
+		Server &operator=(Server const &src);
+
+	public:
 		void addLocation(const Location &loc)
 		{
 			_locations.push_back(loc);
@@ -22,5 +28,6 @@ class	 Server : public Location
 };
 
 void	parsing(std::vector<Server> &servers, std::string configFile);
+void	printTokens(const std::vector<std::string> &tokens);
 
 #endif
