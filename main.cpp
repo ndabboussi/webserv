@@ -11,14 +11,13 @@ int	main(int ac, char **av)
 	try
 	{
 		parsing(servers, configFile);
-		//call parsing function
 	}
 	catch(const std::exception &e)
 	{
 		std::cerr << e.what() << '\n';
 		return 1;
 	}
-	launchServer();
 	//printServers(servers);
+	launchServer(servers);
 	return 0;
 }
