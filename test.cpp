@@ -1,3 +1,9 @@
+#include <cstring>      // memset
+#include <cstdlib>      // exit
+#include <unistd.h>     // close
+#include <arpa/inet.h>  // sockaddr_in, inet_addr
+#include <sys/socket.h> // socket, bind, listen, accept
+#include "Server.hpp"
 
 int main()
 {
@@ -13,6 +19,7 @@ int main()
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_addr.s_addr = INADDR_ANY;
     sockaddr.sin_port = htons(9999); // convert to network byte order
+
     if (bind(sockfd, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) < 0) {
         std::cout << "Failed to bind to port 9999. errno: " << errno << std::endl;
         exit(EXIT_FAILURE);
@@ -37,18 +44,18 @@ int main()
     // Send a message to the connection
     while (true)
     {
-      char buffer[100];
-      ssize_t bytesRead = read(connection, buffer, sizeof(buffer) - 1);
-      if (bytesRead > 0)
-      {
+        char buffer[100];
+        ssize_t bytesRead = read(connection, buffer, sizeof(buffer) - 1);
+        if (bytesRead > 0)
+        {
         buffer[bytesRead] = '\0'; // Null-terminate to safely print
         std::cout << "The message was: " << buffer;
-      }
+        }
 
-      std::string response = "Good talking to you\n";
-      send(connection, response.c_str(), response.size(), 0);
-      // if (!buffer)
-      //   break;
+        std::string response = "Good talking to you\n";
+        send(connection, response.c_str(), response.size(), 0);
+        // if (!buffer)
+        //   break;
     }
 
     // Close the connections

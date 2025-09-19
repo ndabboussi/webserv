@@ -18,6 +18,7 @@ int	main(int ac, char **av)
 		std::cerr << e.what() << '\n';
 		return 1;
 	}
-	printServers(servers);
+	launchServer();
+	//printServers(servers);
 	return 0;
 }
