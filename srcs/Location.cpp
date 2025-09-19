@@ -10,18 +10,19 @@ Location &Location::operator=(Location const &src)
 	this->_data = src._data;
 	this->_alias = src._alias;
 	this->_methods = src._methods;
+	this->_path = src._path;
 	return (*this);
 }
 
 //Constructor/Destructors--------------------------------------------------
 
-Location::Location(void): _locations(), _data(), _alias(false), _methods(7){};
+Location::Location(void): _locations(), _data(), _alias(false), _methods(0){};
 
 Location::Location(Location const &src)
 {
 	*this = src;
 	return ;
-};
+}
 
 Location::~Location(void){}
 
@@ -37,16 +38,19 @@ std::map<std::string, std::string> const Location::getData() const
 	return (this->_data);
 }
 
-// bool const Location::getAlias() const
 bool	Location::getAlias() const
 {
 	return (this->_alias);
 }
 
-// uint8_t	const Location::getMethods() const
 uint8_t	Location::getMethods() const
 {
 	return (this->_methods);
+}
+
+std::string Location::getPath() const
+{
+	return (this->_path);
 }
 
 void Location::addLocations(Location newLoc)
@@ -55,11 +59,19 @@ void Location::addLocations(Location newLoc)
 	return ;
 }
 
+void Location::cpyData(std::map<std::string, std::string> data)
+{
+	this->_data = data;
+	return ;
+}
+
 void Location::addData(std::string key, std::string value)
 {
-	// this->_data.insert(key, value);
-	// // this->_data[key] = value;//remplace la key si elle existe deja
-	this->_data.insert(std::make_pair(key, value));//ne remplace pas la key si elle existe deja
+	if (this->_data.find(key) == this->_data.end())
+		this->_data.insert(std::make_pair(key, value));
+	else
+		this->_data[key] = value;//remplace la key si elle existe deja
+	//this->_data.insert(std::make_pair(key, value));//ne remplace pas la key si elle existe deja
 	return ;
 }
 
@@ -72,5 +84,11 @@ void Location::setAlias(bool alias)
 void Location::setMethods(uint8_t methods)
 {
 	this->_methods = methods;
+	return ;
+}
+
+void Location::setPath(std::string path)
+{
+	this->_path = path;
 	return ;
 }
