@@ -15,8 +15,9 @@ int	main(int ac, char **av)
 	}
 	catch(const std::exception &e)
 	{
-		std::cerr << "Erreur: " << e.what() << '\n';
+		std::cerr << e.what() << '\n';
 		return 1;
 	}
+	printServers(servers);
 	return 0;
 }
