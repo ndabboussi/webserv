@@ -18,5 +18,6 @@ int	main(int ac, char **av)
 		std::cerr << "Erreur: " << e.what() << '\n';
 		return 1;
 	}
+	launchServer();
 	return 0;
 }
