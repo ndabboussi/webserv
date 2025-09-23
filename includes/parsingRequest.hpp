@@ -5,6 +5,8 @@
 # include <sys/stat.h>
 # include "Server.hpp"
 
+class	 Server;
+
 struct HttpRequest
 {
 	int			error;

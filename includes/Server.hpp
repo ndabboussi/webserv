@@ -2,6 +2,9 @@
 # define SERVER_HPP
 
 # include "Location.hpp"
+# include "parsingRequest.hpp"
+
+struct HttpRequest;
 
 class	 Server : public Location
 {
@@ -27,5 +30,6 @@ void	printTokens(const std::vector<std::string> &tokens);
 int		launchServer(const std::vector<Server> &servers);
 void	printServers(const std::vector<Server> &servers);
 void	printLocation(const std::vector<Location> &locations);
+void	sendResponse(int client_fd, const HttpRequest &request);
 
 #endif

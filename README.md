@@ -48,6 +48,8 @@ HTTP responses: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Stat
 NGINX/Apache: https://djangodeployment.com/2016/11/15/why-nginx-is-faster-than-apache-and-why-you-neednt-necessarily-care/
 
 Socket: https://www.geeksforgeeks.org/cpp/socket-programming-in-cpp/ 
+hearders Content-Type: https://www.geeksforgeeks.org/html/http-headers-content-type/ 
+
 
 
 Tuto: https://hackmd.io/@fttranscendance/H1mLWxbr_#Les-mots-cl%C3%A9s-%C3%A0-impl%C3%A9menter-
@@ -143,3 +145,4 @@ There are a few steps involved in using sockets:
 ![alt text](image.png)
 
 ![alt text](image-1.png)
+
