@@ -1,4 +1,5 @@
-#include "parsingRequest.hpp"
+// #include "parsingRequest.hpp"
+#include "Server.hpp"
 
 int launchServer(const std::vector<Server> &servers)
 {
@@ -86,42 +87,44 @@ int launchServer(const std::vector<Server> &servers)
 			continue;
 		}
 		buffer[bytes_read] = '\0';
+		std::cout << PINK <<  buffer << RESET << std::endl;
 		HttpRequest request = parseHttpRequest(buffer, servers[0]);
+		sendResponse(client_fd, request);
 
-		if (!request.path.empty())
-		{
-			std::string filePath = request.path;
-			std::cout << filePath << std::endl;
-			std::ifstream file(filePath.c_str(), std::ios::binary);
-			if (file)
-			{
-				std::vector<char> fileContent((std::istreambuf_iterator<char>(file)),
-												std::istreambuf_iterator<char>());
-				std::ostringstream response;
-				response << "HTTP/1.1 200 OK\r\n";
-				response << "Content-Type: image/jpeg\r\n";
-				response << "Content-Length: " << fileContent.size() << "\r\n";
-				response << "Connection: close\r\n\r\n";
+		// if (!request.path.empty())
+		// {
+		// 	std::string filePath = request.path;
+		// 	std::cout << filePath << std::endl;
+		// 	std::ifstream file(filePath.c_str(), std::ios::binary);
+		// 	if (file)
+		// 	{
+		// 		std::vector<char> fileContent((std::istreambuf_iterator<char>(file)),
+		// 										std::istreambuf_iterator<char>());
+		// 		std::ostringstream response;
+		// 		response << "HTTP/1.1 200 OK\r\n";
+		// 		response << "Content-Type: image/jpeg\r\n";
+		// 		response << "Content-Length: " << fileContent.size() << "\r\n";
+		// 		response << "Connection: close\r\n\r\n";
 
-				std::string headers = response.str();
-				send(client_fd, headers.c_str(), headers.size(), 0);
-				send(client_fd, fileContent.data(), fileContent.size(), 0);
+		// 		std::string headers = response.str();
+		// 		send(client_fd, headers.c_str(), headers.size(), 0);
+		// 		send(client_fd, fileContent.data(), fileContent.size(), 0);
 
-				std::cout << GREEN "[<] Sent file: temp[] (" << fileContent.size() << " bytes)" << RESET << std::endl;
-			}
-			else
-			{
-				std::string notFound = "HTTP/1.1 404 Not Found\r\nContent-Length: 13\r\n\r\n404 Not Found";
-				send(client_fd, notFound.c_str(), notFound.size(), 0);
-			}
-		}
-		else
-		{
-			// 7. Send a message to the connection
-			std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 19\r\n\r\nHello from webserv!";
-			std::cout << GREEN << "[<] Response sent to client." << RESET << std::endl;
-			send(client_fd, response.c_str(), strlen(response.c_str()), 0);
-		}
+		// 		std::cout << GREEN "[<] Sent file: temp[] (" << fileContent.size() << " bytes)" << RESET << std::endl;
+		// 	}
+		// 	else
+		// 	{
+		// 		std::string notFound = "HTTP/1.1 404 Not Found\r\nContent-Length: 13\r\n\r\n404 Not Found";
+		// 		send(client_fd, notFound.c_str(), notFound.size(), 0);
+		// 	}
+		// }
+		// else
+		// {
+		// 	// 7. Send a message to the connection
+		// 	std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 19\r\n\r\nHello from webserv!";
+		// 	std::cout << GREEN << "[<] Response sent to client." << RESET << std::endl;
+		// 	send(client_fd, response.c_str(), strlen(response.c_str()), 0);
+		// }
 
 		close(client_fd);
 
