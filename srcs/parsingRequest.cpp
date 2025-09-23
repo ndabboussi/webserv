@@ -4,49 +4,48 @@ int parsePath(HttpRequest &req, const Server &server)
 {
 	std::vector<Location> tmp = server.getLocations();
 	std::vector<Location>::iterator it;
-	if (req.path[0] == '/')
-		req.path.erase(req.path.begin());
 	for (it = tmp.begin(); it != tmp.end(); it++)
 	{
 		if (it->getPath() == req.path)
 		{
+			if (req.path[0] == '/' && req.path.size() != 1)
+				req.path.erase(req.path.begin());
 			std::map<std::string, std::string> data = it->getData();
 			if (data.find("alias") != data.end())
-				req.path = data.find("alias")->second;
+				req.path = data.find("alias")->second + '/';
 			else if (server.getData().find("root") != server.getData().end())
 				req.path = server.getData().find("root")->second + req.path;
 			break ;
 		}
 	}
-	std::cout << "path: " << req.path << std::endl;
+	std::cout << req.path << std::endl;
+	if (req.path[0] == '/')
+		req.path.erase(req.path.begin());
+	std::cout << req.path << std::endl;
 	struct stat st;
-	if (stat(req.path.c_str(), &st) == 0)
+	if (stat(req.path.c_str(), &st) == 0 && !S_ISREG(st.st_mode))
 	{
-		if (!S_ISREG(st.st_mode))
+		if (it != tmp.end())
 		{
-			if (it != tmp.end())
+			if (it->getData().find("index") != it->getData().end())\
+				req.path += it->getData().find("index")->second;
+			else
 			{
-				if (it->getData().find("index") != it->getData().end())\
-					req.path += '/' + it->getData().find("index")->second;
-				else
-				{
-					std::cerr << RED "Error 404: Not found: " << req.path << RESET << std::endl;
-					req.error = 404;
-					return 1;
-				}
-
+				std::cerr << RED "inside stat Error 404: Not found: " << req.path << RESET << std::endl;
+				req.error = 404;
+				return 1;
 			}
 		}
 	}
 	else
 	{
-		std::cerr << RED "Error 404: Not found: " << req.path << RESET << std::endl;
+		std::cerr << RED "in stat, Error 404: Not found: " << req.path << RESET << std::endl;
 		req.error = 404;
 		return 1;
 	}
 	if (access(req.path.c_str(), F_OK) != 0)
 	{
-		std::cerr << RED "Error 404: Not found: " << req.path << RESET << std::endl;
+		std::cerr << RED "in access, Error 404: Not found: " << req.path << RESET << std::endl;
 		req.error = 404;
 		return 1;
 	}
@@ -66,7 +65,6 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 	std::istringstream requestStream(rawRequest);
 	requestStream >> req.method >> req.path >> req.version;
 	req.error = 0;
-	std::cout << req.method << ", " << req.path << ", " << req.version << std::endl;
 	if (req.method.empty() || req.path.empty() || req.version.empty())
 	{
 		std::cerr << RED "Error 400: Malformed HTTP request received" << RESET << std::endl;//400 bad request

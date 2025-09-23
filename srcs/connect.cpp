@@ -91,6 +91,7 @@ int launchServer(const std::vector<Server> &servers)
 		if (!request.path.empty())
 		{
 			std::string filePath = request.path;
+			std::cout << filePath << std::endl;
 			std::ifstream file(filePath.c_str(), std::ios::binary);
 			if (file)
 			{
@@ -106,7 +107,7 @@ int launchServer(const std::vector<Server> &servers)
 				send(client_fd, headers.c_str(), headers.size(), 0);
 				send(client_fd, fileContent.data(), fileContent.size(), 0);
 
-				std::cout << GREEN "[<] Sent image: herbe.jpg (" << fileContent.size() << " bytes)" << RESET << std::endl;
+				std::cout << GREEN "[<] Sent file: temp[] (" << fileContent.size() << " bytes)" << RESET << std::endl;
 			}
 			else
 			{
