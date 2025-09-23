@@ -98,7 +98,7 @@ int launchServer(const std::vector<Server> &servers)
 												std::istreambuf_iterator<char>());
 				std::ostringstream response;
 				response << "HTTP/1.1 200 OK\r\n";
-				response << "Content-Type: image/jpeg\r\n";
+				response << "Content-Type: text/jpeg\r\n";
 				response << "Content-Length: " << fileContent.size() << "\r\n";
 				response << "Connection: close\r\n\r\n";
 

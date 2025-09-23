@@ -1,34 +1,65 @@
 #include "parsingRequest.hpp"
 
+int findLocations(std::string str, Location &location)
+{
+	std::vector<Location>::iterator it;
+	std::vector<Location> tmp = location.getLocations();
+
+	for (it = tmp.begin(); it != tmp.end(); it++)
+	{
+		std::map<std::string, std::string> map = it->getData();
+		if (str == it->getPath())
+		{
+			location = *it;
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int parsePath(HttpRequest &req, const Server &server)
 {
 	std::vector<Location> tmp = server.getLocations();
-	std::vector<Location>::iterator it;
-	for (it = tmp.begin(); it != tmp.end(); it++)
-	{
-		if (it->getPath() == req.path)
-		{
-			if (req.path[0] == '/' && req.path.size() != 1)
-				req.path.erase(req.path.begin());
-			std::map<std::string, std::string> data = it->getData();
-			if (data.find("alias") != data.end())
-				req.path = data.find("alias")->second + '/';
-			else if (server.getData().find("root") != server.getData().end())
-				req.path = server.getData().find("root")->second + req.path;
-			break ;
-		}
-	}
+	std::map<std::string,std::string> data;
 	std::cout << req.path << std::endl;
+	std::string newPath = (server.getData().find("root") != server.getData().end())
+								? server.getData().find("root")->second : "";
+	Location loc = server;
+	size_t i = 0;
+	size_t end = 0;
+	std::string str;
+
+	while (end != std::string::npos)
+	{
+		data = loc.getData() ;
+		if (data.find("alias") != data.end())
+			newPath = data.find("alias")->second;
+		i = req.path.find('/', i);
+		end = req.path.find('/', i + 1);
+		if (end != std::string::npos)
+			str = req.path.substr(i, end - i);
+		else
+			str = req.path.substr(i, req.path.size());
+		i++;
+		findLocations(str, loc);
+	}
+	if (str[0] == '/' && str.size() == 1)
+		str = "";
+	data = loc.getData() ;
+	if (data.find("alias") != data.end())
+		newPath = data.find("alias")->second;
+	else
+		newPath += str;
+	req.path = newPath;
 	if (req.path[0] == '/')
 		req.path.erase(req.path.begin());
-	std::cout << req.path << std::endl;
 	struct stat st;
-	if (stat(req.path.c_str(), &st) == 0 && !S_ISREG(st.st_mode))
+	if (stat(req.path.c_str(), &st) == 0)
 	{
-		if (it != tmp.end())
+		if (!S_ISREG(st.st_mode))
 		{
-			if (it->getData().find("index") != it->getData().end())\
-				req.path += it->getData().find("index")->second;
+			if (loc.getData().find("index") != loc.getData().end())
+				req.path += '/' + loc.getData().find("index")->second;
 			else
 			{
 				std::cerr << RED "inside stat Error 404: Not found: " << req.path << RESET << std::endl;
@@ -91,6 +122,5 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 						<< RESET << std::endl;
 		}
 	}
-
 	return req;
 }
