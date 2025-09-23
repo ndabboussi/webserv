@@ -8,7 +8,6 @@ Location &Location::operator=(Location const &src)
 		return (*this);
 	this->_locations = src._locations;
 	this->_data = src._data;
-	this->_alias = src._alias;
 	this->_methods = src._methods;
 	this->_path = src._path;
 	return (*this);
@@ -16,7 +15,7 @@ Location &Location::operator=(Location const &src)
 
 //Constructor/Destructors--------------------------------------------------
 
-Location::Location(void): _locations(), _data(), _alias(false), _methods(0){};
+Location::Location(void): _locations(), _data(), _methods(0){};
 
 Location::Location(Location const &src)
 {
@@ -36,11 +35,6 @@ std::vector<Location> const Location::getLocations() const
 std::map<std::string, std::string> const Location::getData() const
 {
 	return (this->_data);
-}
-
-bool	Location::getAlias() const
-{
-	return (this->_alias);
 }
 
 uint8_t	Location::getMethods() const
@@ -72,12 +66,6 @@ void Location::addData(std::string key, std::string value)
 	else
 		this->_data[key] = value;//remplace la key si elle existe deja
 	//this->_data.insert(std::make_pair(key, value));//ne remplace pas la key si elle existe deja
-	return ;
-}
-
-void Location::setAlias(bool alias)
-{
-	this->_alias = alias;
 	return ;
 }
 
