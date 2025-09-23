@@ -36,9 +36,9 @@ static HttpRequest parseHttpRequest(const std::string &rawRequest)
 int launchServer(const std::vector<Server> &servers)
 {
 	// 1. Create a socket
-	int server_fd;
-	server_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (server_fd == -1)
+	int server_fd = -1;
+	server_fd = socket(AF_INET, SOCK_STREAM, 0);//0 = protocol nb = TCP
+	if (server_fd < 0)
 	{
 		//perror("socket");
 		std::cerr << RED "Failed to create socket. errno: " << errno << RESET << std::endl;
@@ -67,7 +67,9 @@ int launchServer(const std::vector<Server> &servers)
 	struct sockaddr_in sockAddress;
 	sockAddress.sin_family = AF_INET;
 	sockAddress.sin_addr.s_addr = INADDR_ANY;
-	sockAddress.sin_port = htons(port);
+	sockAddress.sin_port = htons(port);//converts a nb to the network standard bytes order
+	/* htonl converts a long integer (e.g. address) to a network representation */
+	/* htons converts a short integer (e.g. port) to a network representation */ 
 	
 	// 3. Link socket to the address
 	if (bind(server_fd, (struct sockaddr *)&sockAddress, sizeof(sockAddress)) < 0)
@@ -103,20 +105,19 @@ int launchServer(const std::vector<Server> &servers)
 			continue;
 		}
 
+		char client_adress[4096];
+		inet_ntop(AF_INET, &clientAdrr, client_adress, 4096);
+		printf(PINK "Client connection: %s\n" RESET, client_adress);
+
+
 		// 6. Read from the connection
-		char buffer[4096];
+		char buffer[4096] = {0};
 		int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
 		if (bytes_read <= 0)
 		{
 			close(client_fd);
 			continue;
 		}
-		// if (bytes_read > 0)
-		// {
-		// 	buffer[bytes_read] = '\0';
-		// 	std::cout << GREEN "[>] HTTP Request received:\n" << buffer << RESET << std::endl;
-		// }
-
 		buffer[bytes_read] = '\0';
 		HttpRequest request = parseHttpRequest(buffer);
 
