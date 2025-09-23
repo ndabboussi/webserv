@@ -51,62 +51,62 @@ MimeCategory	getMimeCategory(const std::string &path)
 
 std::string	getContentType(const std::string &path)
 {
-    MimeCategory category = getMimeCategory(path);
+	MimeCategory category = getMimeCategory(path);
 
-    switch (category)
-    {
-        case APPLICATION:
-            if (path.find(".pdf") != std::string::npos) return "application/pdf";
-            if (path.find(".json") != std::string::npos) return "application/json";
-            if (path.find(".xml") != std::string::npos) return "application/xml";
-            if (path.find(".zip") != std::string::npos) return "application/zip";
-            if (path.find(".js")  != std::string::npos) return "application/javascript";
-            return "application/octet-stream";
+	switch (category)
+	{
+		case APPLICATION:
+			if (path.find(".pdf") != std::string::npos) return "application/pdf";
+			if (path.find(".json") != std::string::npos) return "application/json";
+			if (path.find(".xml") != std::string::npos) return "application/xml";
+			if (path.find(".zip") != std::string::npos) return "application/zip";
+			if (path.find(".js")  != std::string::npos) return "application/javascript";
+			return "application/octet-stream";
 
-        case AUDIO:
-            if (path.find(".mp3") != std::string::npos) return "audio/mpeg";
-            if (path.find(".wav") != std::string::npos) return "audio/x-wav";
-            if (path.find(".wma") != std::string::npos) return "audio/x-ms-wma";
-            return "audio/*";
+		case AUDIO:
+			if (path.find(".mp3") != std::string::npos) return "audio/mpeg";
+			if (path.find(".wav") != std::string::npos) return "audio/x-wav";
+			if (path.find(".wma") != std::string::npos) return "audio/x-ms-wma";
+			return "audio/*";
 
-        case IMAGE:
-            if (path.find(".jpg")  != std::string::npos || path.find(".jpeg") != std::string::npos)
-                return "image/jpeg";
-            if (path.find(".png")  != std::string::npos) return "image/png";
-            if (path.find(".gif")  != std::string::npos) return "image/gif";
-            if (path.find(".svg")  != std::string::npos) return "image/svg+xml";
-            if (path.find(".ico")  != std::string::npos) return "image/x-icon";
-            return "image/*";
+		case IMAGE:
+			if (path.find(".jpg")  != std::string::npos || path.find(".jpeg") != std::string::npos)
+				return "image/jpeg";
+			if (path.find(".png")  != std::string::npos) return "image/png";
+			if (path.find(".gif")  != std::string::npos) return "image/gif";
+			if (path.find(".svg")  != std::string::npos) return "image/svg+xml";
+			if (path.find(".ico")  != std::string::npos) return "image/x-icon";
+			return "image/*";
 
-        case MULTIPART:
-            return "multipart/form-data";
+		case MULTIPART:
+			return "multipart/form-data";
 
-        case TEXT:
-            if (path.find(".html") != std::string::npos || path.find(".htm") != std::string::npos)
-                return "text/html";
-            if (path.find(".css") != std::string::npos) return "text/css";
-            if (path.find(".csv") != std::string::npos) return "text/csv";
-            return "text/plain";
+		case TEXT:
+			if (path.find(".html") != std::string::npos || path.find(".htm") != std::string::npos)
+				return "text/html";
+			if (path.find(".css") != std::string::npos) return "text/css";
+			if (path.find(".csv") != std::string::npos) return "text/csv";
+			return "text/plain";
 
-        case VIDEO:
-            if (path.find(".mp4") != std::string::npos) return "video/mp4";
-            if (path.find(".avi") != std::string::npos) return "video/x-msvideo";
-            if (path.find(".flv") != std::string::npos) return "video/x-flv";
-            if (path.find(".webm")!= std::string::npos) return "video/webm";
-            return "video/*";
+		case VIDEO:
+			if (path.find(".mp4") != std::string::npos) return "video/mp4";
+			if (path.find(".avi") != std::string::npos) return "video/x-msvideo";
+			if (path.find(".flv") != std::string::npos) return "video/x-flv";
+			if (path.find(".webm")!= std::string::npos) return "video/webm";
+			return "video/*";
 
-        case VND:
-            if (path.find(".docx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            if (path.find(".doc")  != std::string::npos) return "application/msword";
-            if (path.find(".xls")  != std::string::npos) return "application/vnd.ms-excel";
-            if (path.find(".xlsx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            if (path.find(".pptx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-            if (path.find(".ppt")  != std::string::npos) return "application/vnd.ms-powerpoint";
-            return "application/vnd";
+		case VND:
+			if (path.find(".docx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+			if (path.find(".doc")  != std::string::npos) return "application/msword";
+			if (path.find(".xls")  != std::string::npos) return "application/vnd.ms-excel";
+			if (path.find(".xlsx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+			if (path.find(".pptx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+			if (path.find(".ppt")  != std::string::npos) return "application/vnd.ms-powerpoint";
+			return "application/vnd";
 
-        default:
-            return "application/octet-stream";
-    }
+		default:
+			return "application/octet-stream";
+	}
 }
 
 void sendResponse(int client_fd, const HttpRequest &request)
