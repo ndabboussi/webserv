@@ -47,7 +47,7 @@ int parsePath(HttpRequest &req, const Server &server)
 		str = "";
 	data = loc.getData() ;
 	if (data.find("alias") != data.end())
-		newPath = data.find("alias")->second;
+		newPath = data.find("alias")->second + str;
 	else
 		newPath += str;
 	req.path = newPath;
