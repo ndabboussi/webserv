@@ -4,6 +4,8 @@ int parsePath(HttpRequest &req, const Server &server)
 {
 	std::vector<Location> tmp = server.getLocations();
 	std::vector<Location>::iterator it;
+	if (req.path[0] == '/')
+		req.path.erase(req.path.begin());
 	for (it = tmp.begin(); it != tmp.end(); it++)
 	{
 		if (it->getPath() == req.path)
@@ -16,8 +18,6 @@ int parsePath(HttpRequest &req, const Server &server)
 			break ;
 		}
 	}
-	if (req.path[0] == '/')
-		req.path.erase(req.path.begin());
 	std::cout << "path: " << req.path << std::endl;
 	struct stat st;
 	if (stat(req.path.c_str(), &st) == 0)
