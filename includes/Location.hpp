@@ -9,6 +9,9 @@
 # include <string>
 # include <algorithm>
 
+#include <cstring>      // memset
+#include <arpa/inet.h>  // sockaddr_in, inet_addr
+
 # include <sstream>  // pour std::istringstream
 # include <fstream>  // pour std::ifstream
 # include <stdexcept> 
@@ -40,7 +43,6 @@ class Location
 	protected:
 		std::vector<Location>				_locations;
 		std::map<std::string, std::string>	_data;
-		bool								_alias;
 		uint8_t								_methods;
 		
 	public:
@@ -52,13 +54,11 @@ class Location
 	public:
 		std::vector<Location> const					getLocations() const;
 		std::map<std::string, std::string> const	getData() const;
-		bool										getAlias() const;
 		uint8_t										getMethods() const;
 		std::string									getPath() const;
 		void										addLocations(Location newLoc);
 		void										addData(std::string key, std::string value);
 		void										cpyData(std::map<std::string, std::string> data);
-		void										setAlias(bool alias);
 		void										setMethods(uint8_t methods);
 		void										setPath(std::string path);
 };

@@ -1,37 +1,4 @@
-#include <cstring>      // memset
-#include <cstdlib>      // exit
-#include <unistd.h>     // close
-#include <arpa/inet.h>  // sockaddr_in, inet_addr
-#include <sys/socket.h> // socket, bind, listen, accept
-#include "Server.hpp"
-
-struct HttpRequest
-{
-	std::string method;
-	std::string path;
-	std::string version;
-};
-
-static HttpRequest parseHttpRequest(const std::string &rawRequest)
-{
-	HttpRequest req;
-
-	std::istringstream requestStream(rawRequest);
-	requestStream >> req.method >> req.path >> req.version;
-
-	if (req.method.empty() || req.path.empty() || req.version.empty())
-	{
-		std::cerr << RED "Malformed HTTP request received" << RESET << std::endl;
-	}
-	else
-	{
-		std::cout << YELLOW "[>] Parsed Request: "
-					<< req.method << " " << req.path << " " << req.version
-					<< RESET << std::endl;
-	}
-
-	return req;
-}
+#include "parsingRequest.hpp"
 
 int launchServer(const std::vector<Server> &servers)
 {
@@ -118,11 +85,11 @@ int launchServer(const std::vector<Server> &servers)
 		// }
 
 		buffer[bytes_read] = '\0';
-		HttpRequest request = parseHttpRequest(buffer);
+		HttpRequest request = parseHttpRequest(buffer, servers[0]);
 
-		if (request.path.find("/pictures") == 0)
+		if (!request.path.empty())
 		{
-			std::string filePath = "conf/data/test/pictures/herbe.jpg";
+			std::string filePath = request.path;
 			std::ifstream file(filePath.c_str(), std::ios::binary);
 			if (file)
 			{

@@ -8,7 +8,6 @@ void	printLocation(const std::vector<Location> &locations)
 		std::cout << "\n------location no " << i << "------" << std::endl << std::endl;
 		std::cout << "Location Path: " << it2->getPath() << std::endl;
 		std::cout << "Location methods: " << (int)it2->getMethods() << std::endl;
-		std::cout << "Location alias: " << it2->getAlias() << std::endl;
 		std::cout << "-----location data-----" << std::endl;
 		const std::map<std::string, std::string> data2 = it2->getData();
 		for (std::map<std::string, std::string>::const_iterator it3 = data2.begin(); it3 != data2.end(); it3++)

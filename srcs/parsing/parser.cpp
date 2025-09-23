@@ -22,12 +22,12 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 		}
 		else if (*it == "allow_methods" && it + 1 != end)
 			setMethods(location, ++it, end);
-		else if ((*it == "alias" || *it == "alias;") && it + 1 != end)
-		{
-			location.setAlias(true);
-			if ((*it)[it->size() - 1] != ';' && *(++it) != ";")
-				throw std::runtime_error("Error: Missing ; in location scope"); // missing ;
-		}
+		// else if ((*it == "alias" || *it == "alias;") && it + 1 != end)
+		// {
+		// 	location.setAlias(true);
+		// 	if ((*it)[it->size() - 1] != ';' && *(++it) != ";")
+		// 		throw std::runtime_error("Error: Missing ; in location scope"); // missing ;
+		// }
 		else if (*it != ";" && it + 1 != end)
 			mapElement(location, it, end);
 	}
