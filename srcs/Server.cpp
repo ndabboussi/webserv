@@ -17,13 +17,16 @@ Server &Server::operator=(Server const &src)
 
 // Server::Server(void): Location();
 
-Server::Server(void) : Location(), _port(-1), _name("") {}
+Server::Server(void) : Location(), _port(-1), _name(""), _socketFd(-1)
+{}
 
-Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name) {}
+Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd)
+{}
 
-Server::~Server(void) {}
+Server::~Server(void)
+{}
 
-//Member functions---------------------------------------------------------
+//GETTERS ---------------------------------------------------------
 
 int Server::getPort() const
 {
@@ -35,6 +38,13 @@ std::string Server::getName() const
     return (this->_name);
 }
 
+int Server::getSocketFd() const
+{
+    return (this->_socketFd);
+}
+
+//SETTERS ---------------------------------------------------------
+
 void Server::setPort(int port)
 {
     this->_port = port;
@@ -43,4 +53,10 @@ void Server::setPort(int port)
 void Server::setName(std::string name)
 {
     this->_name = name;
+}
+
+
+void Server::setSocketFd(int fd)
+{
+    this->_socketFd = fd;
 }
