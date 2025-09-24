@@ -2,8 +2,48 @@
 
 #define SERVEPORT 8080
 #define BUFSIZE 4096
-// #define SOCKETERROR -1
 #define SERVER_BACKLOG 100
+
+void handleClient(int client_fd, const Server &servers)
+{
+	char buffer[BUFSIZE] = {0};
+	int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+	if (bytes_read <= 0)
+	{
+		close(client_fd);
+		return;
+	}
+
+	buffer[bytes_read] = '\0';
+	std::cout << PINK << buffer << RESET << std::endl;
+
+	HttpRequest request = parseHttpRequest(buffer, servers);
+	sendResponse(client_fd, request);
+	close(client_fd);
+}
+
+void acceptConnect(const Server &servers)
+{
+	while (true)
+	{
+		struct sockaddr_in clientAdrr;
+		socklen_t clientLen = sizeof(clientAdrr);
+
+		int client_fd = accept(servers.getSocketFd(), (struct sockaddr *)&clientAdrr, &clientLen);
+		if (client_fd < 0)
+		{
+			std::cerr << RED "Failed to grab connection. errno: " << errno << RESET << std::endl;
+			continue;
+		}
+		//char client_address[INET_ADDRSTRLEN];
+		char client_address[BUFSIZE];
+		inet_ntop(AF_INET, &clientAdrr, client_address, BUFSIZE);//debug
+		printf(PINK "Client connection: %s\n" RESET, client_address);//debug
+
+		handleClient(client_fd, servers);
+		close(client_fd);
+	}
+}
 
 void	bindAndListen(int server_fd, int port)
 {
@@ -29,49 +69,7 @@ void	bindAndListen(int server_fd, int port)
 	std::cout << GREEN "Server running on http://localhost:" << port << RESET << std::endl;
 }
 
-void handleClient(int client_fd, const Server &servers)
-{
-	char buffer[BUFSIZE] = {0};
-	int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
-	if (bytes_read <= 0)
-	{
-		close(client_fd);
-		return;
-	}
-
-	buffer[bytes_read] = '\0';
-	std::cout << PINK << buffer << RESET << std::endl;
-
-	HttpRequest request = parseHttpRequest(buffer, servers);
-	sendResponse(client_fd, request);
-	close(client_fd);
-}
-
-void acceptClients(int server_fd, const Server &servers)
-{
-	while (true)
-	{
-		struct sockaddr_in clientAdrr;
-		socklen_t clientLen = sizeof(clientAdrr);
-
-		int client_fd = accept(server_fd, (struct sockaddr *)&clientAdrr, &clientLen);
-		if (client_fd < 0)
-		{
-			std::cerr << RED "Failed to grab connection. errno: " << errno << RESET << std::endl;
-			close(server_fd);
-			continue;
-		}
-
-		//char client_address[INET_ADDRSTRLEN];
-		char client_address[BUFSIZE];
-		inet_ntop(AF_INET, &clientAdrr, client_address, BUFSIZE);//debug
-		printf(PINK "Client connection: %s\n" RESET, client_address);//debug
-
-		handleClient(client_fd, servers);
-	}
-}
-
-int createServerSocket()
+int createServerSocket(int port)
 {
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);//0 = protocol nb = TCP
 	if (server_fd < 0)
@@ -88,10 +86,11 @@ int createServerSocket()
 		return -1;
 	}
 
+	bindAndListen(server_fd, port);
 	return server_fd;
 }
 
-int launchServer(const std::vector<Server> &servers)
+int launchServer(std::vector<Server> &servers)
 {
 	if (servers.empty())
 	{
@@ -99,31 +98,41 @@ int launchServer(const std::vector<Server> &servers)
 		return 1;
 	}
 
-	int	port = 8080;
-	if (!servers.empty())
+	for(size_t i = 0; i < servers.size(); i++)
 	{
-		if (servers[0].getPort() > 0)
+		int	port = 8080;
+		if (servers[i].getPort() > 0)
 		{
-			port = servers[0].getPort();
+			port = servers[i].getPort();
 		}
+		int server_fd = createServerSocket(port);
+		if (server_fd < 0)
+			return 1;
+		servers[i].setSocketFd(server_fd);
 	}
 
-	// for(int i = 0; i < servers.size(); i++)
+	acceptConnect(servers[0]);
+	// while (true)
 	// {
-	// 	int	port = 8080;
-	// 	if (servers[i].getPort() > 0)
-	// 	{
-	// 		port = servers[i].getPort();
-	// 	}
-	// 	int fd = 
-	// }
+	// 	struct sockaddr_in clientAdrr;
+	// 	socklen_t clientLen = sizeof(clientAdrr);
 
-	int server_fd = createServerSocket();
-	if (server_fd < 0)
-		return 1;
-	bindAndListen(server_fd, port);
-	acceptClients(server_fd, servers[0]);
-	close(server_fd);
+	// 	int client_fd = accept(servers[0].getSocketFd(), (struct sockaddr *)&clientAdrr, &clientLen);
+	// 	if (client_fd < 0)
+	// 	{
+	// 		std::cerr << RED "Failed to grab connection. errno: " << errno << RESET << std::endl;
+	// 		continue;
+	// 	}
+	// 	//char client_address[INET_ADDRSTRLEN];
+	// 	char client_address[BUFSIZE];
+	// 	inet_ntop(AF_INET, &clientAdrr, client_address, BUFSIZE);//debug
+	// 	printf(PINK "Client connection: %s\n" RESET, client_address);//debug
+
+	// 	handleClient(client_fd, servers[0]);
+	// 	close(client_fd);
+	// }
+	for(size_t i = 0; i < servers.size(); i++)
+		close(servers[i].getSocketFd());
 	return 0;
 }
 
@@ -156,56 +165,5 @@ int launchServer(const std::vector<Server> &servers)
 //         }
 //     }
 // }
-
-
-//  #define MAX_EVENTS 10
-//            struct epoll_event ev, events[MAX_EVENTS];
-//            int listen_sock, conn_sock, nfds, epollfd;
-
-//            /* Code to set up listening socket, 'listen_sock',
-//               (socket(), bind(), listen()) omitted */
-
-//            epollfd = epoll_create1(0);
-//            if (epollfd == -1) {
-//                perror("epoll_create1");
-//                exit(EXIT_FAILURE);
-//            }
-
-//            ev.events = EPOLLIN;
-//            ev.data.fd = listen_sock;
-//            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &ev) == -1) {
-//                perror("epoll_ctl: listen_sock");
-//                exit(EXIT_FAILURE);
-//            }
-
-//            for (;;) {
-//                nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
-//                if (nfds == -1) {
-//                    perror("epoll_wait");
-//                    exit(EXIT_FAILURE);
-//                }
-
-//                for (n = 0; n < nfds; ++n) {
-//                    if (events[n].data.fd == listen_sock) {
-//                        conn_sock = accept(listen_sock,
-//                                           (struct sockaddr *) &addr, &addrlen);
-//                        if (conn_sock == -1) {
-//                            perror("accept");
-//                            exit(EXIT_FAILURE);
-//                        }
-//                        setnonblocking(conn_sock);
-//                        ev.events = EPOLLIN | EPOLLET;
-//                        ev.data.fd = conn_sock;
-//                        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock,
-//                                    &ev) == -1) {
-//                            perror("epoll_ctl: conn_sock");
-//                            exit(EXIT_FAILURE);
-//                        }
-//                    } else {
-//                        do_use_fd(events[n].data.fd);
-//                    }
-//                }
-//            }
-
 
 
