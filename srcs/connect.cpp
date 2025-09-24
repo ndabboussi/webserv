@@ -1,27 +1,104 @@
-// #include "parsingRequest.hpp"
 #include "Server.hpp"
 
-int launchServer(const std::vector<Server> &servers)
+#define SERVEPORT 8080
+#define BUFSIZE 4096
+// #define SOCKETERROR -1
+#define SERVER_BACKLOG 100
+
+void	bindAndListen(int server_fd, int port)
 {
-	// 1. Create a socket
-	int server_fd = -1;
-	server_fd = socket(AF_INET, SOCK_STREAM, 0);//0 = protocol nb = TCP
-	if (server_fd < 0)
+	struct sockaddr_in sockAddress;
+	sockAddress.sin_family = AF_INET;
+	sockAddress.sin_addr.s_addr = INADDR_ANY;
+	sockAddress.sin_port = htons(port);
+
+	if (bind(server_fd, (struct sockaddr *)&sockAddress, sizeof(sockAddress)) < 0)
 	{
-		//perror("socket");
-		std::cerr << RED "Failed to create socket. errno: " << errno << RESET << std::endl;
+		std::cerr << RED "Failed to bind to port " << port << ". errno: " << errno << RESET << std::endl;
+		close(server_fd);
 		exit(EXIT_FAILURE);
 	}
 
-	const int	flag = 1;
+	if (listen(server_fd, 10) < 0)
+	{
+		std::cerr << RED "Failed to listen on socket. errno: " << errno << RESET << std::endl;
+		close(server_fd);
+		exit(EXIT_FAILURE);
+	}
+
+	std::cout << GREEN "Server running on http://localhost:" << port << RESET << std::endl;
+}
+
+void handleClient(int client_fd, const Server &servers)
+{
+	char buffer[BUFSIZE] = {0};
+	int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+	if (bytes_read <= 0)
+	{
+		close(client_fd);
+		return;
+	}
+
+	buffer[bytes_read] = '\0';
+	std::cout << PINK << buffer << RESET << std::endl;
+
+	HttpRequest request = parseHttpRequest(buffer, servers);
+	sendResponse(client_fd, request);
+	close(client_fd);
+}
+
+void acceptClients(int server_fd, const Server &servers)
+{
+	while (true)
+	{
+		struct sockaddr_in clientAdrr;
+		socklen_t clientLen = sizeof(clientAdrr);
+
+		int client_fd = accept(server_fd, (struct sockaddr *)&clientAdrr, &clientLen);
+		if (client_fd < 0)
+		{
+			std::cerr << RED "Failed to grab connection. errno: " << errno << RESET << std::endl;
+			close(server_fd);
+			continue;
+		}
+
+		//char client_address[INET_ADDRSTRLEN];
+		char client_address[BUFSIZE];
+		inet_ntop(AF_INET, &clientAdrr, client_address, BUFSIZE);//debug
+		printf(PINK "Client connection: %s\n" RESET, client_address);//debug
+
+		handleClient(client_fd, servers);
+	}
+}
+
+int createServerSocket()
+{
+	int server_fd = socket(AF_INET, SOCK_STREAM, 0);//0 = protocol nb = TCP
+	if (server_fd < 0)
+	{
+		std::cerr << RED "Failed to create socket. errno: " << errno << RESET << std::endl;
+		return -1;
+	}
+
+	const int flag = 1;
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int)) < 0)
 	{
-		std::cerr << RED "Error. errno: " << errno << RESET << std::endl;
+		std::cerr << RED "Failed to set socket options. errno: " << errno << RESET << std::endl;
 		close(server_fd);
+		return -1;
+	}
+
+	return server_fd;
+}
+
+int launchServer(const std::vector<Server> &servers)
+{
+	if (servers.empty())
+	{
+		std::cerr << RED "No server configuration found." << RESET << std::endl;
 		return 1;
 	}
 
-	//	1.1. Determine which port to use
 	int	port = 8080;
 	if (!servers.empty())
 	{
@@ -31,105 +108,104 @@ int launchServer(const std::vector<Server> &servers)
 		}
 	}
 
-	// 2. Listen to port 8080 (0.0.0.0:8080)
-	struct sockaddr_in sockAddress;
-	sockAddress.sin_family = AF_INET;
-	sockAddress.sin_addr.s_addr = INADDR_ANY;
-	sockAddress.sin_port = htons(port);//converts a nb to the network standard bytes order
-	/* htonl converts a long integer (e.g. address) to a network representation */
-	/* htons converts a short integer (e.g. port) to a network representation */ 
-	
-	// 3. Link socket to the address
-	if (bind(server_fd, (struct sockaddr *)&sockAddress, sizeof(sockAddress)) < 0)
-	{
-		//perror("bind");
-		std::cerr << RED "Failed to bind to port 8080. errno: " << errno << RESET << std::endl;
-		close(server_fd);
-		exit(EXIT_FAILURE);
-	}
+	// for(int i = 0; i < servers.size(); i++)
+	// {
+	// 	int	port = 8080;
+	// 	if (servers[i].getPort() > 0)
+	// 	{
+	// 		port = servers[i].getPort();
+	// 	}
+	// 	int fd = 
+	// }
 
-	// 4. Start listening. Hold at most 10 connections in the queue
-	if (listen(server_fd, 10) < 0)
-	{
-		//perror("listen");
-		std::cerr << RED "Failed to listen on socket. errno: " << errno << RESET << std::endl;
-		close(server_fd);
-		exit(EXIT_FAILURE);
-	}
-
-	std::cout << GREEN "Server running on http://localhost:" << port << RESET <<  std::endl;
-
-	// 5. Grab a connection from the queue
-	while (true)
-	{
-		struct sockaddr_in clientAdrr;
-		socklen_t	clientLen = sizeof(clientAdrr);
-		int client_fd = accept(server_fd, (struct sockaddr *)&clientAdrr, &clientLen);
-		if (client_fd < 0)
-		{
-			//perror("accept");
-			std::cerr << RED "Failed to grab connection. errno: " << errno << RESET << std::endl;
-			close(server_fd);
-			continue;
-		}
-
-		char client_adress[4096];
-		inet_ntop(AF_INET, &clientAdrr, client_adress, 4096);
-		printf(PINK "Client connection: %s\n" RESET, client_adress);
-
-
-		// 6. Read from the connection
-		char buffer[4096] = {0};
-		int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
-		if (bytes_read <= 0)
-		{
-			close(client_fd);
-			continue;
-		}
-		buffer[bytes_read] = '\0';
-		std::cout << PINK <<  buffer << RESET << std::endl;
-		HttpRequest request = parseHttpRequest(buffer, servers[0]);
-		sendResponse(client_fd, request);
-
-		// if (!request.path.empty())
-		// {
-		// 	std::string filePath = request.path;
-		// 	std::cout << filePath << std::endl;
-		// 	std::ifstream file(filePath.c_str(), std::ios::binary);
-		// 	if (file)
-		// 	{
-		// 		std::vector<char> fileContent((std::istreambuf_iterator<char>(file)),
-		// 										std::istreambuf_iterator<char>());
-		// 		std::ostringstream response;
-		// 		response << "HTTP/1.1 200 OK\r\n";
-		// 		response << "Content-Type: image/jpeg\r\n";
-		// 		response << "Content-Length: " << fileContent.size() << "\r\n";
-		// 		response << "Connection: close\r\n\r\n";
-
-		// 		std::string headers = response.str();
-		// 		send(client_fd, headers.c_str(), headers.size(), 0);
-		// 		send(client_fd, fileContent.data(), fileContent.size(), 0);
-
-		// 		std::cout << GREEN "[<] Sent file: temp[] (" << fileContent.size() << " bytes)" << RESET << std::endl;
-		// 	}
-		// 	else
-		// 	{
-		// 		std::string notFound = "HTTP/1.1 404 Not Found\r\nContent-Length: 13\r\n\r\n404 Not Found";
-		// 		send(client_fd, notFound.c_str(), notFound.size(), 0);
-		// 	}
-		// }
-		// else
-		// {
-		// 	// 7. Send a message to the connection
-		// 	std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 19\r\n\r\nHello from webserv!";
-		// 	std::cout << GREEN << "[<] Response sent to client." << RESET << std::endl;
-		// 	send(client_fd, response.c_str(), strlen(response.c_str()), 0);
-		// }
-
-		close(client_fd);
-
-	}
+	int server_fd = createServerSocket();
+	if (server_fd < 0)
+		return 1;
+	bindAndListen(server_fd, port);
+	acceptClients(server_fd, servers[0]);
 	close(server_fd);
-
 	return 0;
 }
+
+
+// struct ServerSocket {
+//     int fd;
+//     int port;
+//     Server *server;
+// };
+// std::vector<ServerSocket> sockets;
+
+
+// fd_set readfds;
+// int max_fd = -1;
+// while (true) {
+//     FD_ZERO(&readfds);
+//     for (size_t i = 0; i < sockets.size(); ++i) {
+//         FD_SET(sockets[i].fd, &readfds);
+//         if (sockets[i].fd > max_fd) max_fd = sockets[i].fd;
+//     }
+
+//     int activity = select(max_fd + 1, &readfds, NULL, NULL, NULL);
+//     if (activity < 0) continue; // erreur ou signal
+
+//     for (size_t i = 0; i < sockets.size(); ++i) {
+//         if (FD_ISSET(sockets[i].fd, &readfds)) {
+//             int client_fd = accept(sockets[i].fd, ...);
+//             // Ici tu sais sur quel serveur/port le client s'est connecté :
+//             handleClient(client_fd, *sockets[i].server);
+//         }
+//     }
+// }
+
+
+//  #define MAX_EVENTS 10
+//            struct epoll_event ev, events[MAX_EVENTS];
+//            int listen_sock, conn_sock, nfds, epollfd;
+
+//            /* Code to set up listening socket, 'listen_sock',
+//               (socket(), bind(), listen()) omitted */
+
+//            epollfd = epoll_create1(0);
+//            if (epollfd == -1) {
+//                perror("epoll_create1");
+//                exit(EXIT_FAILURE);
+//            }
+
+//            ev.events = EPOLLIN;
+//            ev.data.fd = listen_sock;
+//            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &ev) == -1) {
+//                perror("epoll_ctl: listen_sock");
+//                exit(EXIT_FAILURE);
+//            }
+
+//            for (;;) {
+//                nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
+//                if (nfds == -1) {
+//                    perror("epoll_wait");
+//                    exit(EXIT_FAILURE);
+//                }
+
+//                for (n = 0; n < nfds; ++n) {
+//                    if (events[n].data.fd == listen_sock) {
+//                        conn_sock = accept(listen_sock,
+//                                           (struct sockaddr *) &addr, &addrlen);
+//                        if (conn_sock == -1) {
+//                            perror("accept");
+//                            exit(EXIT_FAILURE);
+//                        }
+//                        setnonblocking(conn_sock);
+//                        ev.events = EPOLLIN | EPOLLET;
+//                        ev.data.fd = conn_sock;
+//                        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock,
+//                                    &ev) == -1) {
+//                            perror("epoll_ctl: conn_sock");
+//                            exit(EXIT_FAILURE);
+//                        }
+//                    } else {
+//                        do_use_fd(events[n].data.fd);
+//                    }
+//                }
+//            }
+
+
+
