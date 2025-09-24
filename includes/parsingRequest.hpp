@@ -14,6 +14,7 @@ struct HttpRequest
 	std::string path;
 	std::string version;
 	std::map<std::string, std::string> header;
+	std::string body;
 };
 
 HttpRequest	parseHttpRequest(const std::string &rawRequest, const Server &server);
