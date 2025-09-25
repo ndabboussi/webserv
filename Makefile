@@ -7,8 +7,9 @@ SRC_DIR = srcs
 OBJ_DIR = obj
 
 SRC_FILES = main.cpp parsing/parser.cpp Location.cpp Server.cpp debug.cpp \
-				connect.cpp parsingRequest/parsingRequest.cpp parsingRequest/parsingPath.cpp \
-				parsingRequest/parsingBody.cpp sendResponse.cpp
+				parsingRequest/parsingRequest.cpp parsingRequest/parsingPath.cpp \
+				parsingRequest/parsingBody.cpp sendResponse.cpp \
+				launchServer.cpp parsingRequest.cpp
 OBJ_FILES = $(addprefix $(OBJ_DIR)/,$(SRC_FILES:.cpp=.o))
 
 all: $(NAME)

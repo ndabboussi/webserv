@@ -50,6 +50,8 @@ NGINX/Apache: https://djangodeployment.com/2016/11/15/why-nginx-is-faster-than-a
 Socket: https://www.geeksforgeeks.org/cpp/socket-programming-in-cpp/ 
 hearders Content-Type: https://www.geeksforgeeks.org/html/http-headers-content-type/ 
 
+Epoll VS Select: https://devarea.com/linux-io-multiplexing-select-vs-poll-vs-epoll/
+
 
 
 Tuto: https://hackmd.io/@fttranscendance/H1mLWxbr_#Les-mots-cl%C3%A9s-%C3%A0-impl%C3%A9menter-
@@ -142,7 +144,30 @@ There are a few steps involved in using sockets:
     Send and receive messages
     Close the socket
 
-![alt text](image.png)
+|                 | **select()**                                       | **epoll()**                                             |
+| --------------- | -------------------------------------------------- | ------------------------------------------------------- |
+| **Principe**    | Fournit un `fd_set` au kernel à chaque appel       | Enregistre les FDs une seule fois (epoll\_ctl)          |
+| **Complexité**  | O(n) à chaque appel (il faut scanner tous les FDs) | O(1) pour notifier uniquement ceux qui sont actifs      |
+| **Performance** | OK pour < 1 000 connexions                         | Idéal pour des milliers de connexions                   |
+| **Portabilité** | POSIX, fonctionne partout                          | Linux-only                                              |
+| **Simplicité**  | Facile à coder                                     | Plus complexe (nécessite un epoll\_fd et un event loop) |
 
-![alt text](image-1.png)
 
+SELECT https://copyconstruct.medium.com/nonblocking-i-o-99948ad7c957
+int select(
+   int nfds,
+   fd_set *readfds,
+   fd_set *writefds,
+   fd_set *exceptfds,
+   struct timeval *timeout
+);
+
+— the readfds descriptors are monitored to see if a read will not block (when bytes become available for reading or when encountering an EOF)
+— the writefds descriptors are monitored to for when a write will not block.
+— the exceptfds descriptors are monitored for exceptional conditions
+The final argument is a timeout value, which specifies for how long the select system call will block:
+— when the timeout is set to 0, select does not block but returns immediately after polling the file descriptors
+— when timeout is set to NULL, select will block “forever”. When select blocks, the kernel can put the process to sleep until select returns. Select will block until 1) one or more descriptors specified in the three sets described above are ready or 2) the call is interrupted by a signal handler
+— when timeout is set to a specific value, then select will block until 1) one or more descriptors specified in the three sets described above are ready or 2) the call is interrupted by a signal handler or 3) the amount of time specified by timeout has expired
+
+EPOLL https://copyconstruct.medium.com/the-method-to-epolls-madness-d9d2d6378642
