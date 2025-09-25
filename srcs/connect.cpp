@@ -88,7 +88,7 @@ int launchServer(const std::vector<Server> &servers)
 		}
 		buffer[bytes_read] = '\0';
 		std::cout << PINK <<  buffer << RESET << std::endl;
-		HttpRequest request = parseHttpRequest(buffer, servers[0]);
+		HttpRequest request = parseHttpRequest(buffer, servers[2]);
 		sendResponse(client_fd, request);
 
 		// if (!request.path.empty())

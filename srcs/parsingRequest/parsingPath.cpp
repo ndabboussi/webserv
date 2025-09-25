@@ -7,7 +7,7 @@ static int error404(HttpRequest &req, std::string &tmp)
 	return 1;
 }
 
-int findLocations(std::string str, Location &location)
+static int findLocations(std::string str, Location &location)
 {
 	std::vector<Location>::iterator it;
 	std::vector<Location> tmp = location.getLocations();
@@ -123,79 +123,4 @@ int parsePath(HttpRequest &req, const Server &server)
 	if (checkAccess(req))
 		return 1;
 	return (0);
-}
-
-static int parseHeader(HttpRequest req, std::istringstream &requestStream)
-{
-	std::string str;
-	while (std::getline(requestStream, str))
-	{
-		if (str == "\r")
-			break;
-		str.erase(str.find_last_of('\r'));
-		std::string key, value;
-		size_t pos = str.find(':');
-		key = str.substr(0, pos);
-		value = str.substr(pos + 1, str.size() - pos);
-		std::cout << "Key: " << key << ", value: " << value << std::endl;
-		req.header.insert(std::make_pair(key, value));
-	}
-	if (str != "\r")
-		return 1;
-	return 0;
-}
-
-static int parseBody(HttpRequest req, std::istringstream &requestStream)
-{
-	std::string str;
-	std::string res = "";
-	while (std::getline(requestStream, str))
-	{
-		// if (str == "\r")
-		// 	break;
-		//str.erase(str.find_last_of('\r'));
-		res += str + "\n";// est ce que je dois recup comme c'est recu ? avec les \r\n ?		
-	}
-	if (str != "\r")
-		return 1;
-	req.body = res;
-	return 0;
-}
-
-HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server)
-{
-	HttpRequest req;
-
-	std::istringstream requestStream(rawRequest);
-	requestStream >> req.method >> req.path >> req.version;
-	req.error = 0;
-	if (req.method.empty() || req.path.empty() || req.version.empty())
-	{
-		std::cerr << RED "Error 400: Malformed HTTP request received" << RESET << std::endl;//400 bad request
-		req.error = 400;
-		return req;
-	}
-	if (parseHeader(req, requestStream))
-		;//put error here
-	if (req.method == "POST" && parseBody(req, requestStream))
-		;//put error here
-	if (req.method != "GET" && req.method != "POST" && req.method != "DELETE")
-	{
-		std::cerr << RED "Error 405: Method not allowed" << RESET << std::endl;
-		req.error = 405;
-	}
-	else if (req.version != "HTTP/1.1")
-	{
-		std::cerr << RED "Error 505: HTTP Version Not Supported" << RESET << std::endl;
-		req.error = 505;
-	}
-	else if (parsePath(req, server))
-		;
-	else
-	{
-		std::cout << YELLOW "[>] Parsed Request: "
-					<< req.method << " " << req.path << " " << req.version
-					<< RESET << std::endl;
-	}
-	return req;
 }
