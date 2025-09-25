@@ -7,7 +7,7 @@ static int error404(HttpRequest &req, std::string &tmp)
 	return 1;
 }
 
-int findLocations(std::string str, Location &location)
+static int findLocations(std::string str, Location &location)
 {
 	std::vector<Location>::iterator it;
 	std::vector<Location> tmp = location.getLocations();
@@ -46,6 +46,7 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 
 	while (end != std::string::npos)
 	{
+		newPath += str;
 		data = loc.getData();
 		if (data.find("alias") != data.end())
 			newPath = data.find("alias")->second;
@@ -108,10 +109,12 @@ int parsePath(HttpRequest &req, const Server &server)
 	if (req.path[0] == '/')
 		req.path.erase(req.path.begin());
 	int res = isAFile(req.path);
-	if (res == 0)//if the path is a file
+	if (res == 0 && req.method == "GET")//if the path is a directory
 	{
-		if (loc.getData().find("index") != loc.getData().end())
-			req.path += '/' + loc.getData().find("index")->second;
+		data = loc.getData();
+		std::map<std::string, std::string>::const_iterator it = data.find("index");
+		if (it != data.end())
+			req.path += "/" + it->second;
 		else
 			return error404(req, req.path);
 	}
@@ -120,40 +123,4 @@ int parsePath(HttpRequest &req, const Server &server)
 	if (checkAccess(req))
 		return 1;
 	return (0);
-}
-
-HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server)
-{
-	HttpRequest req;
-
-	std::istringstream requestStream(rawRequest);
-	requestStream >> req.method >> req.path >> req.version;
-	req.error = 0;
-	if (req.method.empty() || req.path.empty() || req.version.empty())
-	{
-		std::cerr << RED "Error 400: Malformed HTTP request received" << RESET << std::endl;//400 bad request
-		req.error = 400;
-	}
-	else
-	{
-		if (req.method != "GET" && req.method != "POST" && req.method != "DELETE")
-		{
-			std::cerr << RED "Error 405: Method not allowed" << RESET << std::endl;
-			req.error = 405;
-		}
-		else if (req.version != "HTTP/1.1")
-		{
-			std::cerr << RED "Error 505: HTTP Version Not Supported" << RESET << std::endl;
-			req.error = 505;
-		}
-		else if (parsePath(req, server))
-			;
-		else
-		{
-			std::cout << YELLOW "[>] Parsed Request: "
-						<< req.method << " " << req.path << " " << req.version
-						<< RESET << std::endl;
-		}
-	}
-	return req;
 }

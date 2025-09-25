@@ -15,7 +15,7 @@ Location &Location::operator=(Location const &src)
 
 //Constructor/Destructors--------------------------------------------------
 
-Location::Location(void): _locations(), _data(), _methods(0){};
+Location::Location(void): _path(""), _locations(), _data(), _methods(0){};
 
 Location::Location(Location const &src)
 {

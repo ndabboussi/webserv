@@ -14,8 +14,12 @@ struct HttpRequest
 	std::string path;
 	std::string version;
 	std::map<std::string, std::string> header;
+	std::map<std::string, std::string> body;
+	std::string JsonBody;
 };
 
 HttpRequest	parseHttpRequest(const std::string &rawRequest, const Server &server);
+int			parsePath(HttpRequest &req, const Server &server);
+int			parseBody(HttpRequest &req, std::istringstream &requestStream);
 
 # endif
