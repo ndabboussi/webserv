@@ -174,7 +174,7 @@ int launchServer(std::vector<Server> &servers)
 					client_server_map.erase(fd);
 					client_fds_vec.erase(client_fds_vec.begin() + i);
 					std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
-                              << servers[i].getPort() << RESET << std::endl;
+                              << servers[server_index].getPort() << RESET << std::endl;
 					continue;
 				}
 			}
