@@ -154,6 +154,7 @@ There are a few steps involved in using sockets:
 
 
 SELECT https://copyconstruct.medium.com/nonblocking-i-o-99948ad7c957
+https://devarea.com/linux-io-multiplexing-select-vs-poll-vs-epoll/
 int select(
    int nfds,
    fd_set *readfds,
@@ -171,3 +172,5 @@ The final argument is a timeout value, which specifies for how long the select s
 — when timeout is set to a specific value, then select will block until 1) one or more descriptors specified in the three sets described above are ready or 2) the call is interrupted by a signal handler or 3) the amount of time specified by timeout has expired
 
 EPOLL https://copyconstruct.medium.com/the-method-to-epolls-madness-d9d2d6378642
+
+HTTP Responses: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Messages#http_responses
