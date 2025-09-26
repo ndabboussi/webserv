@@ -109,36 +109,123 @@ std::string	getContentType(const std::string &path)
 	}
 }
 
+static std::string  statusCodeReponse(int code)
+{
+    switch (code)
+    {
+        //informational responses
+        case 100: return "Continue";
+        case 101: return "Switching Protocols";
+
+        //succesful responses
+        case 200: return "OK";
+        case 201: return "Created";
+        case 202: return "Accepted";
+        case 204: return "No Content";
+        case 205: return "Reset Content";
+        case 206: return "Partial Content";
+
+        //redirection messages
+        case 301: return "Moved Permanently";
+        case 302: return "Found"; 	
+        case 303: return "See Other";	
+        case 304: return "Not Modified"; 	
+        case 305: return "Use Proxy"; 	
+        case 307: return "Temporary Redirect";
+
+        //client error responses
+        case 400: return "Bad Request";
+        case 401: return "Unauthorized";
+        case 402: return "Bad Request";
+        case 403: return "Forbidden";
+        case 404: return "Not Found";
+        case 405: return "Method Not Allowed";
+        case 406: return "Not Acceptable"; 	
+        case 407: return "Proxy Authentication Required"; 	
+        case 408: return "Request Timeout";
+        case 409: return "Conflict";
+        case 410: return "Gone";
+        case 411: return "Length Required";
+        case 412: return "Precondition Failed";
+        case 413: return "Payload Too Large";
+        case 414: return "URI Too Long";
+        case 415: return "Unsupported Media Type";
+        case 416: return "Range Not Satisfiable";
+        case 417: return "Expectation Failed";
+        case 426: return "Upgrade Required";
+
+        //NGINX
+        case 444: return "No Response";
+        case 494: return "Request Header Too Large";
+        case 465: return "SSL Certificate Error";
+        case 496: return "SSL Certificate Required";
+        case 497: return "HTTP Request Sent To HTTPs Port";
+        case 433: return "Client Closed Request";
+
+        //server error responses
+        case 500: return "Internal Server Error";
+        case 501: return "Not Implemented";
+        case 502: return "Bad Gateway";	
+        case 503: return "Service Unavailable ";
+        case 504: return "Gateway Timeout";
+        case 505: return "HTTP Version Not Supported";
+
+        default:  return "Error";
+    }
+}
+
 void sendResponse(int client_fd, const HttpRequest &request)
 {
-	if (request.path.empty())
-	{
-		std::string body = "<h1>Hello from webserv!</h1>";
+    if (request.error)
+    {
+        std::ostringstream body;
+        body << "<h1>" << request.error << " " << statusCodeReponse(request.error) << "<h1>";
+        std::string bd = body.str();
+        
 		std::ostringstream response;
-		response << "HTTP/1.1 200 OK\r\n";
+		response << "HTTP/1.1 " << request.error << " " << statusCodeReponse(request.error) << "\r\n";
 		response << "Content-Type: text/html\r\n";
-		response << "Content-Length: " << body.size() << "\r\n";
+		response << "Content-Length: " << bd.size() << "\r\n";
 		response << "Connection: close\r\n\r\n";
-		response << body;
+		response << bd;
 		std::string resp = response.str();
 		send(client_fd, resp.c_str(), resp.size(), 0);
+		std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
 		return;
-	}
+    }
+	// if (request.path.empty())
+	// {
+	// 	std::string body = "<h1>Hello from webserv!</h1>";
+	// 	std::ostringstream response;
+	// 	response << "HTTP/1.1 200 OK\r\n";
+	// 	response << "Content-Type: text/html\r\n";
+	// 	response << "Content-Length: " << body.size() << "\r\n";
+	// 	response << "Connection: close\r\n\r\n";
+	// 	response << body;
+	// 	std::string resp = response.str();
+	// 	send(client_fd, resp.c_str(), resp.size(), 0);
 
-	struct stat fileStat;
-	if (stat(request.path.c_str(), &fileStat) == -1 || !S_ISREG(fileStat.st_mode))
-	{
-		std::string body = "<h1>404 Not Found</h1>";
-		std::ostringstream response;
-		response << "HTTP/1.1 404 Not Found\r\n";
-		response << "Content-Type: text/html\r\n";
-		response << "Content-Length: " << body.size() << "\r\n";
-		response << "Connection: close\r\n\r\n";
-		response << body;
-		std::string resp = response.str();
-		send(client_fd, resp.c_str(), resp.size(), 0);
-		return;
-	}
+	// 	std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
+	// 	return;
+	// }
+
+	// struct stat fileStat;
+	// if (stat(request.path.c_str(), &fileStat) == -1 || !S_ISREG(fileStat.st_mode))
+	// {
+	// 	std::string body = "<h1>404 Not Found</h1>";
+	// 	std::ostringstream response;
+	// 	response << "HTTP/1.1 404 Not Found\r\n";
+	// 	response << "Content-Type: text/html\r\n";
+	// 	response << "Content-Length: " << body.size() << "\r\n";
+	// 	response << "Connection: close\r\n\r\n";
+	// 	response << body;
+	// 	std::string resp = response.str();
+	// 	send(client_fd, resp.c_str(), resp.size(), 0);
+	// 	std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
+	// 	return;
+	// }
+
+
 	std::ifstream file(request.path.c_str(), std::ios::binary);
 	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	std::ostringstream response;
@@ -151,6 +238,7 @@ void sendResponse(int client_fd, const HttpRequest &request)
 	send(client_fd, headers.c_str(), headers.size(), 0);
 	send(client_fd, fileContent.data(), fileContent.size(), 0);
 
+	std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET;
 	std::cout << GREEN "[<] Sent file: " << request.path
 				<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
 }
