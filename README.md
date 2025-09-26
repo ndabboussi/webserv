@@ -298,3 +298,35 @@ The final argument is a timeout value, which specifies for how long the select s
 EPOLL https://copyconstruct.medium.com/the-method-to-epolls-madness-d9d2d6378642
 
 HTTP Responses: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Messages#http_responses
+
+
+// Stat est ton ami pour Content-Length. Utilise st_size puis stream le fichier en morceaux.
+
+// HEAD : renvoie mêmes headers qu’un GET (même Content-Length) mais pas le body.
+
+// Keep-Alive : si tu veux conserver la connexion, envoie Content-Length (ou chunked) ; 
+//si tu préfères fermer à la fin, envoie Connection: close et ferme le fd.
+
+// Fichiers volumineux : évite de charger tout en mémoire ;
+//fais un read/send en boucle (comme ci-dessus).
+
+// Transfer-Encoding: chunked : utile pour le streaming dynamique si tu ne peux pas connaître la taille. Implémentation plus complexe (exemples ci-dessus).
+
+// Encodage & charset : pour text/* indique charset=utf-8 (utile pour navigateurs).
+
+// Sécurité : fais attention aux chemins (..) dans request.path — normalise et refuse si hors racine.
+
+// Allow header pour 405 (tu peux construire la chaîne depuis la config Location).
+
+// Si tu veux, je peux :
+
+// Adapter le sendResponse ci-dessus pour intégrer le mapping request.error
+//(si tu utilises d’autres codes spéciaux) ou pour inclure Allow: en cas de 405 à partir de ta config Location.
+
+// Rédiger une version chunked si tu veux servir du streaming dynamique.
+
+// Ajouter la gestion des Range requests (206 Partial Content) (un peu plus délicat mais faisable).
+
+// Tu veux que j’ajoute l’une de ces options
+
+

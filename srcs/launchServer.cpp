@@ -6,18 +6,67 @@
 
 bool	handleClient(int client_fd, const Server &servers)
 {
-	char	buffer[BUFSIZE] = {0};
-	int		bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
-	if (bytes_read <= 0)
+	std::string	data;
+	char		buffer[BUFSIZE] = {0};
+	int			bytes_read;
+	size_t		content_length = 0;
+	bool		stored_header = false;
+
+	while (1)
+	{
+		bytes_read = read(client_fd, buffer, sizeof(buffer));
+		if (bytes_read < 0)
+		{
+			std::cerr << RED "Erreur de lecture depuis le client. errno: " << errno << RESET << std::endl;
+			return (false);
+		}
+		if (bytes_read == 0)
+			break;
+		data.append(buffer, bytes_read);
+
+		if (!stored_header)
+		{
+			size_t end = data.find("\r\n\r\n");
+			if (end != std::string::npos)
+			{
+				stored_header = true;
+
+				size_t pos = data.find("Content-Length:");
+				if (pos != std::string::npos)
+				{
+					pos += 15;
+					content_length = std::atoi(data.c_str() + pos);
+				}
+
+				if (content_length > 0)
+				{
+					size_t	content_start = data.find("\r\n\r\n");
+					size_t	size = data.size() - (content_start + 4);
+
+					while (size < content_length)
+					{
+						bytes_read = read(client_fd, buffer, sizeof(buffer));
+						if (bytes_read <= 0)
+							break;
+						data.append(buffer, bytes_read);
+						size += bytes_read;
+					}
+					break;
+				}
+				else
+					break;
+			}
+		}
+	}
+
+	if (data.empty())
 		return false;
 
-	buffer[bytes_read] = '\0';
-	std::cout << PINK << buffer << RESET << std::endl;
+	std::cout << PINK << data << RESET << std::endl;//logger
 
-	HttpRequest request = parseHttpRequest(buffer, servers);
+	HttpRequest request = parseHttpRequest(data.c_str(), servers);
 	sendResponse(client_fd, request);
 	return true;
-
 }
 
 // void acceptConnect(const Server &servers)
