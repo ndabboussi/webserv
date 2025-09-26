@@ -26,7 +26,7 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 {
 	HttpRequest req;
 
-	std::istringstream requestStream(rawRequest);
+	std::istringstream requestStream(rawRequest, std::ios::binary);
 	requestStream >> req.method >> req.path >> req.version;
 	req.error = 0;
 	if (req.method.empty() || req.path.empty() || req.version.empty())

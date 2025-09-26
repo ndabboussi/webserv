@@ -28,7 +28,7 @@ static void createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::
 		chdir("..");
 }
 
-static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::string &line, std::string boundary)
+static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::string &line, std::string &boundary)
 {
 	std::ofstream Fout;
 	createFileAtRightPlace(Fout, req.path, req.body.find("filename")->second);
@@ -37,22 +37,33 @@ static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::st
 		//error dest file couldnt be oppened
 		return 1;
 	}
-	line += '\n';
-	Fout << line;
-	while (std::getline(requestStream, line))
+	line.clear();
+	int size = 0;
+	while (1)
 	{
-		if (line == std::string("--" + boundary + "--") || line == std::string("--" + boundary))
+		char c;
+		if (!requestStream.get(c))
+			break; // fin du flux ou erreur
+		line += c;
+		if (line.find("--" + boundary + "--"))
+		{
+			size = boundary.size() + 4;
 			break ;
-		line += "/n";
-		Fout << line;
+		}
+		if (line.find("--" + boundary))
+		{
+			size = boundary.size() + 2;
+			break ;
+		}
 	}
 	if (requestStream.eof())
 		;//error bad request 400
+	Fout << line.substr(0, line.size() - size);
 	Fout.close();
 	return 0;
 }
 
-static void parseType2(HttpRequest &req, std::istringstream &requestStream, std::string ContentType)
+static void parseType2(HttpRequest &req, std::istringstream &requestStream, std::string &ContentType)
 {
 	if (!ContentType.find("boundary="))
 		return ;//error in header
@@ -107,18 +118,15 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 				return ;//bad request 400
 		}
 		else if (body)
+			req.body.insert(std::make_pair(key, line));
+		if (body && req.body.find("filename") != req.body.end())
 		{
-			if (req.body.find("filename") != req.body.end())
-			{
-				if (fillFile(req, requestStream, line, boundary))
-					return ;//error bad request 400
-				if (line == std::string("--" + boundary + "--"))
-					break ;
-				if (line == "--" + boundary)
-					header = 1, body = 0;
-			}
-			else
-				req.body.insert(std::make_pair(key, line));
+			if (fillFile(req, requestStream, line, boundary))
+				return ;//error bad request 400
+			if (line.find("--" + boundary + "--") != std::string::npos)
+				break ;
+			if (line.find("--" + boundary) != std::string::npos)
+				header = 1, body = 0;
 		}
 	}
 	for (std::map<std::string, std::string>::const_iterator it = req.body.begin(); it != req.body.end(); it++)
