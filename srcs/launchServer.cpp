@@ -64,7 +64,7 @@ bool	handleClient(int client_fd, const Server &servers)
 
 	std::cout << PINK << data << RESET << std::endl;//logger
 
-	HttpRequest request = parseHttpRequest(data.c_str(), servers);
+	HttpRequest request = parseHttpRequest(data, servers);
 	sendResponse(client_fd, request);
 	return true;
 }
