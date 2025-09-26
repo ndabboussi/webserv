@@ -1,47 +1,50 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Exemple POST vers port local 8080</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 2em; }
-  label, input, button { display: block; margin: 0.5em 0; }
-  pre { background: #f5f5f5; padding: 1em; border-radius: 6px; }
-</style>
-</head>
-<body>
-<h1>Envoyer un formulaire (POST) vers le port 8080</h1>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exemple POST vers port local 8080</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 2em; }
+      label, input, button { display: block; margin: 0.5em 0; }
+      pre { background: #f5f5f5; padding: 1em; border-radius: 6px; }
+    </style>
+    </head>
+  <body>
+    <h1>Envoyer un formulaire (POST) vers le port 8080</h1>
 
-<form id="myForm">
-  <label>Nom : <input name="name" required></label>
-  <label>Email : <input name="email" type="email" required></label>
-  <button type="submit">Envoyer</button>
-</form>
+   <form action="http://localhost:8080/upload" method="POST" enctype="multipart/form-data">
+      <label>Nom : <input name="name" required></label>
+      <label>Email : <input name="email" type="email" required></label>
+      <label for="file">Choisir un fichier :</label>
+      <input type="file" name="myfile" id="file">
+      <br><br>
+      <button type="submit">Envoyer</button>
+    </form>
 
-<h2>Réponse serveur :</h2>
-<pre id="response">(aucune réponse pour l'instant)</pre>
+    <h2>Réponse serveur :</h2>
+    <pre id="response">(aucune réponse pour l'instant)</pre>
 
-<script>
-const form = document.getElementById('myForm');
-const responseEl = document.getElementById('response');
+    <script>
+      const form = document.getElementById('myForm');
+      const responseEl = document.getElementById('response');
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault(); // empêche le rechargement de la page
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault(); // empêche le rechargement de la page
 
-  const formData = new FormData(form);
+        const formData = new FormData(form);
 
-  try {
-    const res = await fetch('http://localhost:8080/submit', { // POST vers ton serveur local sur le port 8080
-      method: 'POST',
-      body: formData
-    });
-    const json = await res.json();
-    responseEl.textContent = JSON.stringify(json, null, 2);
-  } catch (err) {
-    responseEl.textContent = 'Erreur: ' + err.message;
-  }
-});
-</script>
-</body>
+        try {
+          const res = await fetch('http://localhost:8080/upload', {
+            method: 'POST',
+            body: formData
+          });
+          const json = await res.json();
+          responseEl.textContent = JSON.stringify(json, null, 2);
+        } catch (err) {
+          responseEl.textContent = 'Erreur: ' + err.message;
+        }
+      });
+    </script>
+  </body>
 </html>
