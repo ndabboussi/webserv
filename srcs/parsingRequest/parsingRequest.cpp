@@ -37,8 +37,6 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 	}
 	if (parseHeader(req, requestStream))
 		;//put error here
-	if (req.method == "POST" && parseBody(req, requestStream))
-		;//put error here
 	if (req.method != "GET" && req.method != "POST" && req.method != "DELETE")
 	{
 		std::cerr << RED "Error 405: Method not allowed" << RESET << std::endl;
@@ -53,6 +51,8 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 		;
 	else
 	{
+		if (req.method == "POST" && parseBody(req, requestStream))
+			;//put error here
 		std::cout << YELLOW "[>] Parsed Request: "
 					<< req.method << " " << req.path << " " << req.version
 					<< RESET << std::endl;
