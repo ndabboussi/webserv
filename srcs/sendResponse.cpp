@@ -111,79 +111,84 @@ std::string	getContentType(const std::string &path)
 
 static std::string  statusCodeReponse(int code)
 {
-    switch (code)
-    {
-        //informational responses
-        case 100: return "Continue";
-        case 101: return "Switching Protocols";
+	switch (code)
+	{
+		//informational responses
+		case 100: return "Continue";
+		case 101: return "Switching Protocols";
 
-        //succesful responses
-        case 200: return "OK";
-        case 201: return "Created";
-        case 202: return "Accepted";
-        case 204: return "No Content";
-        case 205: return "Reset Content";
-        case 206: return "Partial Content";
+		//succesful responses
+		case 200: return "OK";
+		case 201: return "Created";
+		case 202: return "Accepted";
+		case 204: return "No Content";
+		case 205: return "Reset Content";
+		case 206: return "Partial Content";
 
-        //redirection messages
-        case 301: return "Moved Permanently";
-        case 302: return "Found"; 	
-        case 303: return "See Other";	
-        case 304: return "Not Modified"; 	
-        case 305: return "Use Proxy"; 	
-        case 307: return "Temporary Redirect";
+		//redirection messages
+		case 301: return "Moved Permanently";
+		case 302: return "Found"; 	
+		case 303: return "See Other";	
+		case 304: return "Not Modified"; 	
+		case 305: return "Use Proxy"; 	
+		case 307: return "Temporary Redirect";
 
-        //client error responses
-        case 400: return "Bad Request";
-        case 401: return "Unauthorized";
-        case 402: return "Bad Request";
-        case 403: return "Forbidden";
-        case 404: return "Not Found";
-        case 405: return "Method Not Allowed";
-        case 406: return "Not Acceptable"; 	
-        case 407: return "Proxy Authentication Required"; 	
-        case 408: return "Request Timeout";
-        case 409: return "Conflict";
-        case 410: return "Gone";
-        case 411: return "Length Required";
-        case 412: return "Precondition Failed";
-        case 413: return "Payload Too Large";
-        case 414: return "URI Too Long";
-        case 415: return "Unsupported Media Type";
-        case 416: return "Range Not Satisfiable";
-        case 417: return "Expectation Failed";
-        case 426: return "Upgrade Required";
+		//client error responses
+		case 400: return "Bad Request";
+		case 401: return "Unauthorized";
+		case 402: return "Bad Request";
+		case 403: return "Forbidden";
+		case 404: return "Not Found";
+		case 405: return "Method Not Allowed";
+		case 406: return "Not Acceptable"; 	
+		case 407: return "Proxy Authentication Required"; 	
+		case 408: return "Request Timeout";
+		case 409: return "Conflict";
+		case 410: return "Gone";
+		case 411: return "Length Required";
+		case 412: return "Precondition Failed";
+		case 413: return "Payload Too Large";
+		case 414: return "URI Too Long";
+		case 415: return "Unsupported Media Type";
+		case 416: return "Range Not Satisfiable";
+		case 417: return "Expectation Failed";
+		case 426: return "Upgrade Required";
 
-        //NGINX
-        case 444: return "No Response";
-        case 494: return "Request Header Too Large";
-        case 465: return "SSL Certificate Error";
-        case 496: return "SSL Certificate Required";
-        case 497: return "HTTP Request Sent To HTTPs Port";
-        case 433: return "Client Closed Request";
+		//NGINX
+		case 444: return "No Response";
+		case 494: return "Request Header Too Large";
+		case 465: return "SSL Certificate Error";
+		case 496: return "SSL Certificate Required";
+		case 497: return "HTTP Request Sent To HTTPs Port";
+		case 433: return "Client Closed Request";
 
-        //server error responses
-        case 500: return "Internal Server Error";
-        case 501: return "Not Implemented";
-        case 502: return "Bad Gateway";	
-        case 503: return "Service Unavailable ";
-        case 504: return "Gateway Timeout";
-        case 505: return "HTTP Version Not Supported";
+		//server error responses
+		case 500: return "Internal Server Error";
+		case 501: return "Not Implemented";
+		case 502: return "Bad Gateway";	
+		case 503: return "Service Unavailable ";
+		case 504: return "Gateway Timeout";
+		case 505: return "HTTP Version Not Supported";
 
-        default:  return "Error";
-    }
+		default:  return "Error";
+	}
 }
 
 void sendResponse(int client_fd, const HttpRequest &request)
 {
-    if (request.error)
-    {
-        std::ostringstream body;
-        body << "<h1>" << request.error << " " << statusCodeReponse(request.error) << "<h1>";
-        std::string bd = body.str();
-        
+	int code = 200;
+	std::string statusMessage = "OK";
+
+	if (request.error != 0)
+	{
+		code = request.error;
+		statusMessage = statusCodeReponse(code);
+		std::ostringstream body;
+		body << "<h1>" << code << " " << statusMessage << "<h1>";
+		std::string bd = body.str();
+
 		std::ostringstream response;
-		response << "HTTP/1.1 " << request.error << " " << statusCodeReponse(request.error) << "\r\n";
+		response << "HTTP/1.1 " << code << " " << statusMessage << "\r\n";
 		response << "Content-Type: text/html\r\n";
 		response << "Content-Length: " << bd.size() << "\r\n";
 		response << "Connection: close\r\n\r\n";
@@ -192,39 +197,23 @@ void sendResponse(int client_fd, const HttpRequest &request)
 		send(client_fd, resp.c_str(), resp.size(), 0);
 		std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
 		return;
-    }
-	// if (request.path.empty())
-	// {
-	// 	std::string body = "<h1>Hello from webserv!</h1>";
-	// 	std::ostringstream response;
-	// 	response << "HTTP/1.1 200 OK\r\n";
-	// 	response << "Content-Type: text/html\r\n";
-	// 	response << "Content-Length: " << body.size() << "\r\n";
-	// 	response << "Connection: close\r\n\r\n";
-	// 	response << body;
-	// 	std::string resp = response.str();
-	// 	send(client_fd, resp.c_str(), resp.size(), 0);
+	}
 
-	// 	std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
-	// 	return;
-	// }
-
-	// struct stat fileStat;
-	// if (stat(request.path.c_str(), &fileStat) == -1 || !S_ISREG(fileStat.st_mode))
-	// {
-	// 	std::string body = "<h1>404 Not Found</h1>";
-	// 	std::ostringstream response;
-	// 	response << "HTTP/1.1 404 Not Found\r\n";
-	// 	response << "Content-Type: text/html\r\n";
-	// 	response << "Content-Length: " << body.size() << "\r\n";
-	// 	response << "Connection: close\r\n\r\n";
-	// 	response << body;
-	// 	std::string resp = response.str();
-	// 	send(client_fd, resp.c_str(), resp.size(), 0);
-	// 	std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
-	// 	return;
-	// }
-
+	struct stat fileStat;
+	if (stat(request.path.c_str(), &fileStat) == -1 || !S_ISREG(fileStat.st_mode))
+	{
+		std::string body = "<h1>404 Not Found</h1>";
+		std::ostringstream response;
+		response << "HTTP/1.1 404 Not Found\r\n";
+		response << "Content-Type: text/html\r\n";
+		response << "Content-Length: " << body.size() << "\r\n";
+		response << "Connection: close\r\n\r\n";
+		response << body;
+		std::string resp = response.str();
+		send(client_fd, resp.c_str(), resp.size(), 0);
+		std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
+		return;
+	}
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
 	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -242,3 +231,35 @@ void sendResponse(int client_fd, const HttpRequest &request)
 	std::cout << GREEN "[<] Sent file: " << request.path
 				<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
 }
+
+
+// Stat est ton ami pour Content-Length. Utilise st_size puis stream le fichier en morceaux.
+
+// HEAD : renvoie mêmes headers qu’un GET (même Content-Length) mais pas le body.
+
+// Keep-Alive : si tu veux conserver la connexion, envoie Content-Length (ou chunked) ; 
+//si tu préfères fermer à la fin, envoie Connection: close et ferme le fd.
+
+// Fichiers volumineux : évite de charger tout en mémoire ;
+//fais un read/send en boucle (comme ci-dessus).
+
+// Transfer-Encoding: chunked : utile pour le streaming dynamique si tu ne peux pas connaître la taille. Implémentation plus complexe (exemples ci-dessus).
+
+// Encodage & charset : pour text/* indique charset=utf-8 (utile pour navigateurs).
+
+// Sécurité : fais attention aux chemins (..) dans request.path — normalise et refuse si hors racine.
+
+// Allow header pour 405 (tu peux construire la chaîne depuis la config Location).
+
+// Si tu veux, je peux :
+
+// Adapter le sendResponse ci-dessus pour intégrer le mapping request.error
+//(si tu utilises d’autres codes spéciaux) ou pour inclure Allow: en cas de 405 à partir de ta config Location.
+
+// Rédiger une version chunked si tu veux servir du streaming dynamique.
+
+// Ajouter la gestion des Range requests (206 Partial Content) (un peu plus délicat mais faisable).
+
+// Tu veux que j’ajoute l’une de ces options
+
+
