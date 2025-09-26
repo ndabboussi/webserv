@@ -232,34 +232,6 @@ void sendResponse(int client_fd, const HttpRequest &request)
 				<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
 }
 
-
-// Stat est ton ami pour Content-Length. Utilise st_size puis stream le fichier en morceaux.
-
-// HEAD : renvoie mêmes headers qu’un GET (même Content-Length) mais pas le body.
-
-// Keep-Alive : si tu veux conserver la connexion, envoie Content-Length (ou chunked) ; 
-//si tu préfères fermer à la fin, envoie Connection: close et ferme le fd.
-
-// Fichiers volumineux : évite de charger tout en mémoire ;
-//fais un read/send en boucle (comme ci-dessus).
-
-// Transfer-Encoding: chunked : utile pour le streaming dynamique si tu ne peux pas connaître la taille. Implémentation plus complexe (exemples ci-dessus).
-
-// Encodage & charset : pour text/* indique charset=utf-8 (utile pour navigateurs).
-
-// Sécurité : fais attention aux chemins (..) dans request.path — normalise et refuse si hors racine.
-
-// Allow header pour 405 (tu peux construire la chaîne depuis la config Location).
-
-// Si tu veux, je peux :
-
-// Adapter le sendResponse ci-dessus pour intégrer le mapping request.error
-//(si tu utilises d’autres codes spéciaux) ou pour inclure Allow: en cas de 405 à partir de ta config Location.
-
-// Rédiger une version chunked si tu veux servir du streaming dynamique.
-
-// Ajouter la gestion des Range requests (206 Partial Content) (un peu plus délicat mais faisable).
-
-// Tu veux que j’ajoute l’une de ces options
-
-
+//For 4xx and 5xx responses: send a small HTML page explaining the error.
+//For 3xx responses (redirections): you usually do not need a body, but you should send a Location: <url> header.
+//For 204 (No Content): you must not send a body at all.
