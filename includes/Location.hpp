@@ -7,6 +7,7 @@
 # include <iostream>     // For cout
 # include <unistd.h>     // For read
 # include <string>
+# include <dirent.h>	 // for opendir
 # include <algorithm>
 
 #include <cstring>      // memset
@@ -43,6 +44,7 @@ class Location
 {
 	private:
 		std::string _path;
+		bool		_autoIndex;
 
 	protected:
 		std::vector<Location>				_locations;
@@ -60,11 +62,13 @@ class Location
 		std::map<std::string, std::string> const	getData() const;
 		uint8_t										getMethods() const;
 		std::string									getPath() const;
+		bool										getAutoIndex() const;
 		void										addLocations(Location newLoc);
 		void										addData(std::string key, std::string value);
 		void										cpyData(std::map<std::string, std::string> data);
 		void										setMethods(uint8_t methods);
 		void										setPath(std::string path);
+		void										setAutoIndex(bool flag);
 };
 
 
