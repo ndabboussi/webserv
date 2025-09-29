@@ -9,13 +9,16 @@ class	 Server;
 
 struct HttpRequest
 {
-	int			error;
-	std::string method;
-	std::string path;
-	std::string version;
-	std::map<std::string, std::string> header;
-	std::map<std::string, std::string> body;
-	std::string JsonBody;
+	int									error;
+	std::string 						method;
+	std::string							path;
+	uint8_t								methodPath;
+	std::string							version;
+	std::map<std::string, std::string>	header;
+	std::map<std::string, std::string>	body;
+	std::string							url;
+	std::string							autoIndexFile;
+	std::string							JsonBody;
 };
 
 HttpRequest	parseHttpRequest(const std::string &rawRequest, const Server &server);

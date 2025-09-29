@@ -14,7 +14,6 @@ static int findLocations(std::string str, Location &location)
 
 	for (it = tmp.begin(); it != tmp.end(); it++)
 	{
-		std::map<std::string, std::string> map = it->getData();
 		if (str == it->getPath())
 		{
 			location = *it;
@@ -94,6 +93,39 @@ static int checkAccess(HttpRequest &req)
 	return 0;
 }
 
+static int fillIndexFile(HttpRequest &req)
+{
+    DIR *dir = opendir(req.path.c_str());
+    if (dir == NULL)
+	{
+		std::cerr << RED "Error 500: Internal server error: "<< RESET << std::endl;
+		req.error = 500;
+        return 1;
+    }
+	req.autoIndexFile = "<!doctype html>\n<html lang=\"en\">\n\t<head>\n\t\t<meta charset=\"utf-8\" />\n\t\t<title>Page List</title>\n";
+	req.autoIndexFile += "\t</head>\n\t<body>\n\t\t<div>\n\t\t\t<h1>List of files in the directory</h1>\n";
+	req.autoIndexFile += "\t\t\t<ul>\n";
+
+    struct dirent *entry;
+	if (req.header.find("Host") == req.header.end())
+	{
+		std::cerr << RED "Error 400: Bad request: "<< RESET << std::endl;
+		req.error = 400;
+        return 1;
+	}
+	std::string port = req.header.find("Host")->second;
+    while ((entry = readdir(dir)) != NULL)
+	{
+		if (entry->d_name[0] != '.')
+			req.autoIndexFile += "\t\t\t\t<li><a href=\"http://" + port + req.url + '/' + std::string(entry->d_name)
+				+ "\">" + std::string(entry->d_name) + "</a></li>\n";
+	}
+	req.autoIndexFile += "\t\t\t</ul>\n\t\t</div>\n\t</body>\n</html>";
+	std::cout << req.autoIndexFile << std::endl;
+    closedir(dir);
+	return 0;
+}
+
 int parsePath(HttpRequest &req, const Server &server)
 {
 	std::vector<Location> tmp = server.getLocations();
@@ -115,6 +147,11 @@ int parsePath(HttpRequest &req, const Server &server)
 		std::map<std::string, std::string>::const_iterator it = data.find("index");
 		if (it != data.end())
 			req.path += "/" + it->second;
+		else if (loc.getAutoIndex())
+		{
+			if (fillIndexFile(req))
+				return 1;
+		}
 		else
 			return error404(req, req.path);
 	}
@@ -122,5 +159,6 @@ int parsePath(HttpRequest &req, const Server &server)
 		return error404(req, req.path);
 	if (checkAccess(req))
 		return 1;
+	req.methodPath = loc.getMethods();
 	return (0);
 }

@@ -6,7 +6,7 @@ static void parseType1(HttpRequest &req, std::istringstream &requestStream)
 }
 
 
-static void createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::string &name)
+static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::string &name)
 {
 	int depth = 0, i = 0;
 	for (size_t j = 0; j < path.size(); j++)
@@ -20,21 +20,26 @@ static void createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::
 			i = 0;
 	}
 	if (chdir(path.c_str()))
-	{
-		;//impossible d'aller dans le repertoire
-	}
+		return 1;
 	Fout.open(name.c_str(), std::ios::binary);
 	while (depth--)
 		chdir("..");
+	return 0;
+}
+
+static void error400(HttpRequest &req)
+{
+	std::cerr << RED "Error 400: Bad request: "<< RESET << std::endl;
+	req.error = 400;
 }
 
 static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::string &boundary)
 {
 	std::ofstream Fout;
-	createFileAtRightPlace(Fout, req.path, req.body.find("filename")->second);
-	if (!Fout.is_open())
+	if (createFileAtRightPlace(Fout, req.path, req.body.find("filename")->second) || !Fout.is_open())
 	{
-		//error dest file couldnt be oppened
+		std::cerr << RED "Error 500: Internal server error: "<< RESET << std::endl;
+		req.error = 500;
 		return 1;
 	}
 	std::string pat1 = "--" + boundary + "--";
@@ -61,21 +66,23 @@ static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::st
 			break ;
 	}
 	if (requestStream.eof())
-		;//error bad request 400
+		return error400(req), 1;
 	Fout.close();
 	return 0;
 }
 
 static void parseType2(HttpRequest &req, std::istringstream &requestStream, std::string &ContentType)
 {
-	if (!ContentType.find("boundary="))
-		return ;//error in header
-
+	if (ContentType.find("boundary=") == std::string::npos || requestStream.eof())
+		return error400(req);
+		
 	size_t pos = ContentType.find("boundary=") + 9;
 	std::string boundary = ContentType.substr(pos, ContentType.size() - pos);
+	if (boundary.empty())
+		return error400(req);
 	std::string line, key, value;
-
 	int header = 0, body = 0, file = 0;
+
 	while (std::getline(requestStream, line))
 	{
 		if (line.find('\r') != std::string::npos)
@@ -92,11 +99,11 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 			{
 				size_t first = line.find("name=\"");
 				if (first == std::string::npos)
-					return ;//bad request 400
+					return error400(req);
 				first += 6;
 				size_t end = line.find("\"", first + 1);
 				if (end == std::string::npos)
-					return ;//bad request 400
+					return error400(req);
 				key = line.substr(first, end - first);
 				first = line.find("filename=\"");
 				if (first != std::string::npos) // if filename is found
@@ -104,7 +111,7 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 					first += 10;
 					end = line.find("\"", first + 1);
 					if (end == std::string::npos)
-						return ;//bad request 400
+						return error400(req);
 					std::string name = line.substr(first, end - first);
 					if (!name.empty())
 						req.body.insert(std::make_pair("filename", name));
@@ -118,19 +125,17 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 					req.body.insert(std::make_pair("Content-Type", type));
 			}
 			else
-				return ;//bad request 400
+				return error400(req);
 		}
 		else if (body)
 			req.body.insert(std::make_pair(key, line));
 		if (body && req.body.find("filename") != req.body.end() && !file)
 		{
 			if (fillFile(req, requestStream, boundary))
-				return ;//error bad request 400
+				return ;
 			file = 1;
 		}
 	}
-	for (std::map<std::string, std::string>::const_iterator it = req.body.begin(); it != req.body.end(); it++)
-		std::cout << "key = " << it->first << ", value = " << it->second << std::endl;
 }
 
 static void parseType3(HttpRequest &req, std::istringstream &requestStream)
@@ -141,11 +146,10 @@ static void parseType3(HttpRequest &req, std::istringstream &requestStream)
 int parseBody(HttpRequest &req, std::istringstream &requestStream)
 {
 	std::string ContentType;
-	(void)requestStream;
 	if (req.header.find("Content-Type") != req.header.end())
 		ContentType = req.header.find("Content-Type")->second;
 	else
-		return 1;//error in header
+		return error400(req), 1;//error in header
 	if (ContentType == "application/x-www-form-urlencoded")
 		parseType1(req, requestStream);
 	else if (ContentType.find("multipart/form-data"))
@@ -153,7 +157,6 @@ int parseBody(HttpRequest &req, std::istringstream &requestStream)
 	else if (ContentType == "application/json")
 		parseType3(req, requestStream);
 	else
-		return 1;//Content-Type body not supported
-
+		return error400(req), 1;//Content-Type body not supported
 	return 0;
 }

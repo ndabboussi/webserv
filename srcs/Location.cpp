@@ -10,12 +10,13 @@ Location &Location::operator=(Location const &src)
 	this->_data = src._data;
 	this->_methods = src._methods;
 	this->_path = src._path;
+	this->_autoIndex = src._autoIndex;
 	return (*this);
 }
 
 //Constructor/Destructors--------------------------------------------------
 
-Location::Location(void): _path(""), _locations(), _data(), _methods(0){};
+Location::Location(void): _path(""), _autoIndex(false), _locations(), _data(), _methods(0){};
 
 Location::Location(Location const &src)
 {
@@ -47,6 +48,11 @@ std::string Location::getPath() const
 	return (this->_path);
 }
 
+bool Location::getAutoIndex(void) const
+{
+	return this->_autoIndex;
+}
+
 void Location::addLocations(Location newLoc)
 {
 	this->_locations.push_back(newLoc);
@@ -72,6 +78,12 @@ void Location::addData(std::string key, std::string value)
 void Location::setMethods(uint8_t methods)
 {
 	this->_methods = methods;
+	return ;
+}
+
+void Location::setAutoIndex(bool flag)
+{
+	this->_autoIndex = flag;
 	return ;
 }
 
