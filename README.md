@@ -15,6 +15,18 @@ This project is part of **[42 Paris](https://42.fr/)** curriculum and aims to he
 
 ---
 
+## ▶️ Usage
+Run the server with a configuration file:  
+./webserv path/to/config.conf
+
+Example:  
+./webserv configs/default.conf  
+
+Then open your browser and go to:  
+http://localhost:8080
+
+---
+
 ### 🔌 Sockets & TCP/IP
 A socket is an endpoint for communication between two machines.  
 Steps involved in a basic server:
