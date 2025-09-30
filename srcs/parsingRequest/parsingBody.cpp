@@ -1,8 +1,77 @@
 #include "parsingRequest.hpp"
 
+static void error400(HttpRequest &req)
+{
+	std::cerr << RED "Error 400: Bad request "<< RESET << std::endl;
+	req.error = 400;
+}
+
+static void decodeStr(std::string &info)
+{
+	for (size_t i = 0; i < info.size(); i++)
+	{
+		if (info[i] == '+')
+			info[i] = ' ';
+		else if (info[i] == '%' && i + 2 < info.size())
+		{
+			char hex[3] = {info[i + 1], info[i + 2], '\0'};
+			int value;
+			std::istringstream(hex) >> std::hex >> value;
+			std::string dest;
+			dest += static_cast<char>(value);
+			info.replace(i, 3, dest);
+			i += 2;
+		}
+	}
+}
+
 static void parseType1(HttpRequest &req, std::istringstream &requestStream)
 {
-	(void)req, (void)requestStream;
+	if (req.header.find("Content-Length") == req.header.end())
+		return error400(req);
+	char buffer[4096] = {0};
+	int bSize = 4096;
+	int nb = std::atoi(req.header.find("Content-Length")->second.c_str());
+	std::string line;
+	if (bSize > nb) //Get the body
+	{
+		requestStream.read(buffer, nb);
+		line += buffer;
+	}
+	else
+	{
+		int tmpNb = bSize;
+		while (1)
+		{
+			if (nb <= 0)
+				break ;
+			if (tmpNb > nb)
+				requestStream.read(buffer, nb);
+			else
+				requestStream.read(buffer, tmpNb);
+			line += buffer;
+			nb -= tmpNb;
+		}
+	}
+	size_t last = 0, next = 0;
+	while ((next = line.find('=', last)) != std::string::npos) //Parse the body
+	{
+		std::string key, value;
+		key = line.substr(last, next - last);
+		last = next + 1;
+		if ((next = line.find('&', last)) != std::string::npos)
+		{
+			value = line.substr(last, next - last);
+			last = next + 1;
+		}
+		else
+			value = line.substr(last, line.size() - last);
+		decodeStr(key);
+		decodeStr(value);
+		req.body.insert(std::make_pair(key, value)); // if no = found in the body
+	}
+	if (next == std::string::npos && last == 0)
+		return error400(req);
 }
 
 
@@ -25,12 +94,6 @@ static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::s
 	while (depth--)
 		chdir("..");
 	return 0;
-}
-
-static void error400(HttpRequest &req)
-{
-	std::cerr << RED "Error 400: Bad request: "<< RESET << std::endl;
-	req.error = 400;
 }
 
 static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::string &boundary)
@@ -75,14 +138,12 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 {
 	if (ContentType.find("boundary=") == std::string::npos || requestStream.eof())
 		return error400(req);
-		
 	size_t pos = ContentType.find("boundary=") + 9;
 	std::string boundary = ContentType.substr(pos, ContentType.size() - pos);
 	if (boundary.empty())
 		return error400(req);
 	std::string line, key, value;
 	int header = 0, body = 0, file = 0;
-
 	while (std::getline(requestStream, line))
 	{
 		if (line.find('\r') != std::string::npos)
@@ -152,11 +213,13 @@ int parseBody(HttpRequest &req, std::istringstream &requestStream)
 		return error400(req), 1;//error in header
 	if (ContentType == "application/x-www-form-urlencoded")
 		parseType1(req, requestStream);
-	else if (ContentType.find("multipart/form-data"))
+	else if (ContentType.find("multipart/form-data") != std::string::npos)
 		parseType2(req, requestStream, ContentType);
 	else if (ContentType == "application/json")
 		parseType3(req, requestStream);
 	else
 		return error400(req), 1;//Content-Type body not supported
+	if (req.error)
+		return 1;
 	return 0;
 }

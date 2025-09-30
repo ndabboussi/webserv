@@ -80,7 +80,7 @@ static int checkAccess(HttpRequest &req)
 {
 	if (access(req.path.c_str(), F_OK) != 0)
 	{
-		std::cerr << RED "in access, Error 404: Not found: " << req.path << RESET << std::endl;
+		std::cerr << RED "in access, Error 404: Not found " << req.path << RESET << std::endl;
 		req.error = 404;
 		return 1;
 	}
@@ -114,6 +114,8 @@ static int fillIndexFile(HttpRequest &req)
         return 1;
 	}
 	std::string port = req.header.find("Host")->second;
+	if (req.url[req.url.size() - 1] == '/')
+		req.url.erase(req.url.size() - 1, 1);
     while ((entry = readdir(dir)) != NULL)
 	{
 		if (entry->d_name[0] != '.')

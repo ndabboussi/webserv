@@ -7,7 +7,7 @@ static int parseHeader(HttpRequest &req, std::istringstream &requestStream)
 	std::getline(requestStream, str);
 	while (std::getline(requestStream, str))
 	{
-		if (str == "\r" && i != 0)
+		if (str == "\r")
 			break;
 		str.erase(str.find_last_of('\r'));
 		std::string key, value;
@@ -43,9 +43,9 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 	requestStream >> req.method >> req.path >> req.version;
 	req.error = 0;
 	req.url = req.path;
-	if (req.method.empty() || req.path.empty() || req.version.empty())
+	if (req.method.empty() || req.path.empty() || req.version.empty())//If either on of these fields is empty, this is a bad request
 	{
-		std::cerr << RED "Error 400: Malformed HTTP request received" << RESET << std::endl;//400 bad request
+		std::cerr << RED "Error 400: Bad request" << RESET << std::endl;
 		req.error = 400;
 		return req;
 	}
@@ -66,14 +66,14 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 	else
 	{
 		if ((!(req.methodPath & 2) && req.method == "POST") || (!(req.methodPath & 1) && req.method == "GET")
-			|| (!(req.methodPath & 4) && req.method == "DELETE"))
+			|| (!(req.methodPath & 4) && req.method == "DELETE"))//If the method can't be used in the directory
 		{
 			std::cerr << RED "Error 405: Method not allowed" << RESET << std::endl;
 			req.error = 405;
 			return req;
 		}
-		if (req.method == "POST" && parseBody(req, requestStream))
-			return req;
+		if (req.method == "POST" && parseBody(req, requestStream))//If request is Post -> parse the body of the request and
+			return req;											  //if there is an error, return the error
 		std::cout << YELLOW "[>] Parsed Request: "
 					<< req.method << " " << req.path << " " << req.version
 					<< RESET << std::endl;
