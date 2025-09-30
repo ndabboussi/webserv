@@ -109,7 +109,7 @@ std::string	getContentType(const std::string &path)
 	}
 }
 
-static std::string  statusCodeReponse(int code)
+static std::string  statusCodeResponse(int code)
 {
 	switch (code)
 	{
@@ -126,6 +126,7 @@ static std::string  statusCodeReponse(int code)
 		case 206: return "Partial Content";
 
 		//redirection messages
+		case 300: return "Multiple Choices";
 		case 301: return "Moved Permanently";
 		case 302: return "Found"; 	
 		case 303: return "See Other";	
@@ -165,7 +166,7 @@ static std::string  statusCodeReponse(int code)
 		//server error responses
 		case 500: return "Internal Server Error";
 		case 501: return "Not Implemented";
-		case 502: return "Bad Gateway";	
+		case 502: return "Bad Gateway";
 		case 503: return "Service Unavailable ";
 		case 504: return "Gateway Timeout";
 		case 505: return "HTTP Version Not Supported";
@@ -174,30 +175,56 @@ static std::string  statusCodeReponse(int code)
 	}
 }
 
+std::string	generateDefaultErrorPage(int code)
+{
+	std::ostringstream body;
+	body << "<!DOCTYPE html>\n"
+		<< "<html lang=\"en\">\n"
+		<< "<head>\n"
+		<< "<meta charset=\"UTF-8\">\n"
+		<< "<title>" << code << " " << statusCodeResponse(code) << "</title>\n"
+		<< "<style>\n"
+		<< "body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }\n"
+		<< "h1 { font-size: 48px; color: #d9534f; }\n"
+		<< "p { font-size: 18px; color: #333; }\n"
+		<< "</style>\n"
+		<< "</head>\n"
+		<< "<body>\n"
+		<< "<h1>" << code << " " << statusCodeResponse(code) << "</h1>\n"
+		<< "<p>The server encountered an error while processing your request.</p>\n"
+		<< "</body>\n"
+		<< "</html>\n";
+	return body.str();
+}
+
+void	buildErrorBody(int client_fd, int code)
+{
+	std::string	statusMessage = statusCodeResponse(code);
+	std::string body = generateDefaultErrorPage(code);
+
+	std::ostringstream response;
+	response << "HTTP/1.1 " << code << " " << statusMessage << "\r\n";
+	response << "Content-Type: text/html\r\n";
+	response << "Content-Length: " << body.size() << "\r\n";
+	response << "Connection: close\r\n\r\n";
+	response << body;
+	std::string resp = response.str();
+	send(client_fd, resp.c_str(), resp.size(), 0);
+	std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
+	return;
+}
+
+static bool statusAllowsBody(int status)
+{
+	if ((status >= 100 && status < 200) || status == 204 || status == 304)
+		return false;
+	return true;
+}
+
 void sendResponse(int client_fd, const HttpRequest &request)
 {
-	int code = 200;
-	std::string statusMessage = "OK";
-
-	if (request.error != 0)
-	{
-		code = request.error;
-		statusMessage = statusCodeReponse(code);
-		std::ostringstream body;
-		body << "<h1>" << code << " " << statusMessage << "<h1>";
-		std::string bd = body.str();
-
-		std::ostringstream response;
-		response << "HTTP/1.1 " << code << " " << statusMessage << "\r\n";
-		response << "Content-Type: text/html\r\n";
-		response << "Content-Length: " << bd.size() << "\r\n";
-		response << "Connection: close\r\n\r\n";
-		response << bd;
-		std::string resp = response.str();
-		send(client_fd, resp.c_str(), resp.size(), 0);
-		std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
-		return;
-	}
+	if (request.error)
+		buildErrorBody(client_fd, request.error);
 
 	struct stat fileStat;
 	if (stat(request.path.c_str(), &fileStat) == -1 || !S_ISREG(fileStat.st_mode))
@@ -232,6 +259,12 @@ void sendResponse(int client_fd, const HttpRequest &request)
 				<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
 }
 
+
 //For 4xx and 5xx responses: send a small HTML page explaining the error.
 //For 3xx responses (redirections): you usually do not need a body, but you should send a Location: <url> header.
 //For 204 (No Content): you must not send a body at all.
+
+
+//redirection 300
+//autoindex !!!!!!
+//changer URL par server_name replace local_host
