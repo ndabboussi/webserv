@@ -3,8 +3,10 @@
 
 # include "Location.hpp"
 # include "parsingRequest.hpp"
+# include "HttpResponse.hpp"
 
-struct HttpRequest;
+struct	HttpRequest;
+struct	HttpResponse;
 
 class	 Server : public Location
 {
