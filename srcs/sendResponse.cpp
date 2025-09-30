@@ -221,52 +221,59 @@ void	buildErrorBody(int client_fd, int code)
 // 	return true;
 // }
 
-// Format current date for HTTP header
-// void	date()
+void	setStatusLine(HttpResponse &response)
+{
+	std::ostringstream line;
+	line << "HTTP/1.1 " << response.code << " " << statusCodeResponse(response.code) << "\r\n";
+	response.statusLine = line.str();
+}
+
+//Format current date for HTTP header
+std::string setDate()
+{
+	char buffer[1000];
+	time_t now = time(0);
+	struct tm *tm = gmtime(&now);
+	strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", tm);
+	std::string date = buffer;
+	date.append("\r\n");
+	return date;
+}
+
+// std::string    setConnection(HttpRequest const &request)
 // {
-// 	char	date[1000];
-// 	time_t	now = time(0);
-// 	struct tm	*tm = gmtime(&now);
-// 	strftime(date, sizeof(date), "%a, %d %b %Y %H:%M:%S %Z", tm);
+// 	std::string	connect;
+// 	if(request.connection == "keep-alive")
+// 		connect = "keep-alive\r\n";
+// 	else
+// 		connect = "close";
+// 	return connect;
 // }
 
-// std::string getDate()
-// {
-//     char buffer[1000];
-//     time_t now = time(0);
-//     struct tm *tm = gmtime(&now);
-//     strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", tm);
-//     return std::string(buffer);
-// }
+std::string	setContentType(HttpRequest const &request)
+{
+	std::string	contentType = getContentType(request.path);
+	contentType.append("\r\n");
+	return contentType;
+}
 
+std::string	setContentLenght(size_t contentLength)
+{
+	std::ostringstream	oss;
+	oss << contentLength;
+	std::string	lenght = oss.str();
+	lenght.append("\r\n");
+	return lenght;
+}
 
-// void	setStatusLine(HttpResponse &response)
-// {
-// 	std::ostringstream line;
-// 	line << "HTTP/1.1 " << response.code << " " << statusCodeResponse(response.code) << "\r\n";
-// 	response.statusLine = line.str();
-// }
-
-// void setHeaders(HttpResponse &response, const HttpRequest &request, size_t contentLength)
-// {
-//     response.headers["Date: "] = getDate();
-//     response.headers["Server: "] = "MyWebServ/1.0";  // tu peux mettre ton nom de projet
-//     response.headers["Connection: "] = "close";
-//     response.headers["Content-Type: "] = getContentType(request.path);
-//     response.headers["Content-Length: "] = std::to_string(contentLength);
-// }
-
-
-// void	setHeaders(HttpResponse &response)
-// {
-// 	date();
-// 	server();
-// 	location();
-// 	connection();
-// 	contentType();
-// 	contentLength();
-// 	_response_content.append("\r\n");
-// }
+void setHeaders(HttpResponse &response, const HttpRequest &request, size_t contentLength)
+{
+	response.headers["Date: "] = setDate();
+	response.headers["Server: "] = "MyWebServ/1.0";  // tu peux mettre ton nom de projet
+	//response.headers["Connection: "] = setConnection(request);
+	response.headers["Content-Type: "] = setContentType(request);
+	response.headers["Content-Length: "] = setContentLenght(contentLength);
+}
 
 void	setStatusCode(HttpRequest const &request, HttpResponse &response)
 {
@@ -280,48 +287,43 @@ void	setStatusCode(HttpRequest const &request, HttpResponse &response)
 void sendResponse(int client_fd, const HttpRequest &request)
 {
 	if (request.error)
+	{
 		buildErrorBody(client_fd, request.error);
+		return;
+	}
 
 	struct stat fileStat;
 	if (stat(request.path.c_str(), &fileStat) == -1 || !S_ISREG(fileStat.st_mode))
 	{
-		// std::string body = "<h1>404 Not Found</h1>";
-		// std::ostringstream response;
-		// response << "HTTP/1.1 404 Not Found\r\n";
-		// response << "Content-Type: text/html\r\n";
-		// response << "Content-Length: " << body.size() << "\r\n";
-		// response << "Connection: close\r\n\r\n";
-		// response << body;
-		// std::string resp = response.str();
-		// send(client_fd, resp.c_str(), resp.size(), 0);
 		buildErrorBody(client_fd, 404);
 		return;
 	}
 
 	// std::ifstream file(request.path.c_str(), std::ios::binary);
-    // std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    
+	// std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
 	// std::string body(fileContent.begin(), fileContent.end());
 
 	// HttpResponse response;
 	// setStatusCode(request, response);
 	// setStatusLine(response);
-	// setHeaders(response);
+	// //setHeaders(response);
 	
 	// setHeaders(response, request, body.size());
 
 	// std::ostringstream fullResponse;
-    // fullResponse << response.statusLine;
+	// fullResponse << response.statusLine;
 
-    // for (std::map<std::string, std::string>::const_iterator it = response.headers.begin();
-    //      it != response.headers.end(); ++it)
-    // {
-    //     fullResponse << it->first << ": " << it->second << "\r\n";
-    // }
-    // fullResponse << "\r\n"; // fin des headers
-    // fullResponse << body;
+	// for (std::map<std::string, std::string>::const_iterator it = response.headers.begin();
+	// 		it != response.headers.end(); ++it)
+	// {
+	// 	fullResponse << it->first << ": " << it->second << "\r\n";
+	// }
+	// fullResponse << "\r\n"; // headers ends
+	// fullResponse << body;
 
-	// send(client_fd, fullResponse.str(), fullResponse.size(), 0);
+	// std::string responseStr = fullResponse.str();
+	// send(client_fd, responseStr.c_str(), responseStr.size(), 0);
 
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
@@ -336,6 +338,7 @@ void sendResponse(int client_fd, const HttpRequest &request)
 	send(client_fd, headers.c_str(), headers.size(), 0);
 	send(client_fd, fileContent.data(), fileContent.size(), 0);
 
+	//std::cout << GREEN "[<] Sent Response:\n" << fullResponse.str() << RESET;
 	std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET;
 	std::cout << GREEN "[<] Sent file: " << request.path
 				<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
