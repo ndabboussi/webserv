@@ -12,6 +12,7 @@ class	 Server : public Location
 		int			_port;
 		std::string	_name;
 		int			_socketFd;
+		long long		_maxClientBodySize;
 
 	public:
 		Server(void);
@@ -23,8 +24,10 @@ class	 Server : public Location
 		int			getPort() const;
 		std::string	getName() const;
 		int         getSocketFd() const;
+		long long		getMaxBodyClientSize() const;
 
 		void		setPort(int port);
+		void		setMaxBodyClientSize(long long size);
 		void		setName(std::string name);
 		void        setSocketFd(int fd);
 };

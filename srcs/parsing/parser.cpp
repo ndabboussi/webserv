@@ -20,7 +20,7 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 			parsingLocation(newLoc, it, end);
 			location.addLocations(newLoc);
 		}
-		else if ((*it == "autoindex" || *it == "autoindex;") && it + 1 != end)
+		else if ((*it == "auto_index" || *it == "auto_index;") && it + 1 != end)
 		{
 			location.setAutoIndex(true);
 			if ((*it)[it->size() - 1] != ';' && *(++it) != ";")
@@ -80,6 +80,25 @@ static void	parsingServer(Server &server, std::vector<std::string>::iterator &it
 				it++;
 			if ((*it)[it->size() - 1] != ';')
 				throw std::runtime_error("Error: Missing ; or too much informations in instruction in server_name field in server scope");
+		}
+		else if (*it == "max_client_body_size" && it + 1 != end)
+		{
+			it++;
+			if (isdigit((*it)[0]))
+			{
+				double nb = std::atof(it->c_str());
+				if (nb > static_cast<double>(9223372036854775807))
+					throw std::runtime_error("Error: Too large number in field max_body_client_size");
+				server.setMaxBodyClientSize(static_cast<long long>(nb));
+			}
+			else if ((*it)[0] == ';')
+				throw std::runtime_error("Error: Missing port in field max_body_client_size");
+			else
+				throw std::runtime_error("Error: Unrecognised char in field max_body_client_size");
+			if (it + 1 != end && *(it + 1) == ";") //check if next str is a ;
+				it++;
+			if ((*it)[it->size() - 1] != ';')
+				throw std::runtime_error("Error: Error: Missing ; or too much informations in instruction in maxClientBodySize field in server scope");
 		}
 		else if (*it != ";" && it + 1 != end)
 			mapElement(server, it, end);

@@ -13,11 +13,11 @@
   <body>
     <h1>Envoyer un formulaire (POST) vers le port 8080</h1>
 
-   <form action="http://localhost:8080/upload" method="POST" enctype="application/x-www-form-urlencoded">
+   <form action="http://localhost:8080/upload" method="POST" enctype="multipart/form-data">
       <label>Nom : <input name="name" required></label>
       <label for="file">Choisir un fichier :</label>
       <input type="file" name="myfile" id="file">
-      <br><br>
+      <input type="file" name="mysecondfile" id="file">
       <label>Email : <input name="email" type="email" required></label>
       <button type="submit">Envoyer</button>
     </form>

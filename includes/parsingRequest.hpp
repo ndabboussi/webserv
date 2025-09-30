@@ -16,9 +16,10 @@ struct HttpRequest
 	std::string							version;
 	std::map<std::string, std::string>	header;
 	std::map<std::string, std::string>	body;
+	std::vector<std::string>			fileNames;
 	std::string							url;
 	std::string							autoIndexFile;
-	std::string							JsonBody;
+	//std::string							JsonBody;
 };
 
 HttpRequest	parseHttpRequest(const std::string &rawRequest, const Server &server);
