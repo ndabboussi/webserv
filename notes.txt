@@ -207,3 +207,50 @@ HTTP Responses: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Message
 // Ajouter la gestion des Range requests (206 Partial Content) (un peu plus délicat mais faisable).
 
 // Tu veux que j’ajoute l’une de ces options
+
+
+
+Responses
+
+1. determiner s'il y a une erreur
+2. determiner s'il faut un body en fonction de la methode + creer body (a stocker qq part)
+3. determiner le code d'erreur
+4. lancer la creation du status line 
+5. creation headers a append
+6. append body
+7. send response, store it
+
+
+location header in response : https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.30
+
+
+📦 Cas où tu dois renvoyer un body
+
+200 OK
+→ Réponse normale : tu rends le fichier demandé (GET), ou une confirmation de POST.
+✅ Body attendu (HTML, JSON, fichier, etc.).
+
+201 Created
+→ Quand un POST a créé une ressource.
+✅ Tu peux renvoyer dans le body soit un message de confirmation, soit la ressource nouvellement créée, soit rien (mais body possible).
+
+4xx erreurs client (404 Not Found, 403 Forbidden, 400 Bad Request, 405 Method Not Allowed, etc.)
+→ Les navigateurs s’attendent à recevoir une petite page HTML expliquant l’erreur.
+✅ Body nécessaire (même juste une page par défaut).
+
+5xx erreurs serveur (500 Internal Server Error, 501 Not Implemented, etc.)
+→ Pareil que 4xx, body avec explication (souvent une page HTML d’erreur).
+✅ Body nécessaire.
+
+🚫 Cas où tu NE DOIS PAS renvoyer de body
+
+204 No Content
+→ Typiquement après un DELETE réussi.
+❌ Interdit d’envoyer un body.
+⚠️ Si tu mets Content-Length: 0, le navigateur comprend.
+
+304 Not Modified (si jamais tu l’implémentes plus tard pour la mise en cache)
+❌ Interdit d’envoyer un body.
+
+1xx réponses informatives (100 Continue, 101 Switching Protocols)
+❌ Pas de body.
