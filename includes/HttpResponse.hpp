@@ -13,6 +13,7 @@ struct HttpResponse
 	std::string							statusLine;
 	std::map<std::string, std::string>	headers;
 	std::map<std::string, std::string>	body;
+	std::string							redirectTo;
 	bool								autoIndex;
 	std::string							autoIndexFile;
 };
