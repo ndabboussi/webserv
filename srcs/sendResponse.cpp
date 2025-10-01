@@ -109,7 +109,7 @@ std::string	getContentType(const std::string &path)
 	}
 }
 
-static std::string  statusCodeReponse(int code)
+static std::string  statusCodeResponse(int code)
 {
 	switch (code)
 	{
@@ -126,6 +126,7 @@ static std::string  statusCodeReponse(int code)
 		case 206: return "Partial Content";
 
 		//redirection messages
+		case 300: return "Multiple Choices";
 		case 301: return "Moved Permanently";
 		case 302: return "Found"; 	
 		case 303: return "See Other";	
@@ -165,7 +166,7 @@ static std::string  statusCodeReponse(int code)
 		//server error responses
 		case 500: return "Internal Server Error";
 		case 501: return "Not Implemented";
-		case 502: return "Bad Gateway";	
+		case 502: return "Bad Gateway";
 		case 503: return "Service Unavailable ";
 		case 504: return "Gateway Timeout";
 		case 505: return "HTTP Version Not Supported";
@@ -174,54 +175,127 @@ static std::string  statusCodeReponse(int code)
 	}
 }
 
-void sendResponse(int client_fd, const HttpRequest &request)
+
+//------------------------- HEADERS UTILS -------------------------//
+
+
+void	setStatusLine(HttpResponse &response)
 {
-	int code = 200;
-	std::string statusMessage = "OK";
+	std::ostringstream line;
+	line << "HTTP/1.1 " << response.code << " " << statusCodeResponse(response.code) << "\r\n";
+	response.statusLine = line.str();
+}
 
-	if (request.error != 0)
+//Format current date for HTTP header
+std::string setDate()
+{
+	char buffer[1000];
+	time_t now = time(0);
+	struct tm *tm = gmtime(&now);
+	strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", tm);
+	std::string date = buffer;
+	date.append("\r\n");
+	return date;
+}
+
+std::string setConnection(HttpRequest const &request)
+{
+	// Look for "Connection" in the request headers
+	std::map<std::string, std::string>::const_iterator it = request.header.find("Connection");
+	if (it != request.header.end())
 	{
-		code = request.error;
-		statusMessage = statusCodeReponse(code);
-		std::ostringstream body;
-		body << "<h1>" << code << " " << statusMessage << "<h1>";
-		std::string bd = body.str();
+		std::string value = it->second;
+		if (value == "keep-alive")
+			return "keep-alive\r\n";
+		if (value == "close")
+			return "close\r\n";
+	}
+	// Default for HTTP/1.1 is keep-alive
+	return "keep-alive\r\n";
+}
 
-		std::ostringstream response;
-		response << "HTTP/1.1 " << code << " " << statusMessage << "\r\n";
-		response << "Content-Type: text/html\r\n";
-		response << "Content-Length: " << bd.size() << "\r\n";
-		response << "Connection: close\r\n\r\n";
-		response << bd;
-		std::string resp = response.str();
-		send(client_fd, resp.c_str(), resp.size(), 0);
-		std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
+
+void	setStatusCode(HttpRequest const &request, HttpResponse &response)
+{
+	if (request.method == "POST")
+		response.code = 204;
+	else if (request.method == "DELETE")
+		response.code = 204; //specifying that we won't send body
+	response.code = 200;
+}
+
+//------------------------- 400-500 ERRORS -------------------------//
+
+std::string	generateDefaultErrorPage(int code)
+{
+	std::ostringstream body;
+	body << "<!DOCTYPE html>\n"
+		<< "<html lang=\"en\">\n"
+		<< "<head>\n"
+		<< "<meta charset=\"UTF-8\">\n"
+		<< "<title>" << code << " " << statusCodeResponse(code) << "</title>\n"
+		<< "<style>\n"
+		<< "body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }\n"
+		<< "h1 { font-size: 48px; color: #d9534f; }\n"
+		<< "p { font-size: 18px; color: #333; }\n"
+		<< "</style>\n"
+		<< "</head>\n"
+		<< "<body>\n"
+		<< "<h1>" << code << " " << statusCodeResponse(code) << "</h1>\n"
+		<< "<p>The server encountered an error while processing your request.</p>\n"
+		<< "</body>\n"
+		<< "</html>\n";
+	return body.str();
+}
+
+void	buildErrorBody(int client_fd, int code)
+{
+	std::string	statusMessage = statusCodeResponse(code);
+	std::string body = generateDefaultErrorPage(code);
+
+	std::ostringstream response;
+	response << "HTTP/1.1 " << code << " " << statusMessage << "\r\n";
+	response << "Content-Type: text/html\r\n";
+	response << "Content-Length: " << body.size() << "\r\n";
+	response << "Connection: close\r\n\r\n";
+	response << body;
+	std::string resp = response.str();
+	send(client_fd, resp.c_str(), resp.size(), 0);
+	std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
+	return;
+}
+
+//------------------------- MAIN SENDRESPONSE() FUNCTION -------------------------//
+
+void	sendResponse(int client_fd, const HttpRequest &request)
+{
+	if (request.error)
+	{
+		buildErrorBody(client_fd, request.error);
 		return;
 	}
 
 	struct stat fileStat;
 	if (stat(request.path.c_str(), &fileStat) == -1 || !S_ISREG(fileStat.st_mode))
 	{
-		std::string body = "<h1>404 Not Found</h1>";
-		std::ostringstream response;
-		response << "HTTP/1.1 404 Not Found\r\n";
-		response << "Content-Type: text/html\r\n";
-		response << "Content-Length: " << body.size() << "\r\n";
-		response << "Connection: close\r\n\r\n";
-		response << body;
-		std::string resp = response.str();
-		send(client_fd, resp.c_str(), resp.size(), 0);
-		std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
+		buildErrorBody(client_fd, 404);
 		return;
 	}
+
+	HttpResponse	resp;
+	setStatusCode(request, resp);
+	setStatusLine(resp);
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
 	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	std::ostringstream response;
-	response << "HTTP/1.1 200 OK\r\n";
+	response << resp.statusLine;
+	response << "Date: " << setDate();
+	response << "Server: " << "MyWebServ/1.0\r\n";
+	response << "Connection: " << setConnection(request);
 	response << "Content-Type: " << getContentType(request.path) << "\r\n";
 	response << "Content-Length: " << fileContent.size() << "\r\n";
-	response << "Connection: close\r\n\r\n";
+	response << "\r\n";
 
 	std::string headers = response.str();
 	send(client_fd, headers.c_str(), headers.size(), 0);
@@ -232,6 +306,12 @@ void sendResponse(int client_fd, const HttpRequest &request)
 				<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
 }
 
+
 //For 4xx and 5xx responses: send a small HTML page explaining the error.
 //For 3xx responses (redirections): you usually do not need a body, but you should send a Location: <url> header.
 //For 204 (No Content): you must not send a body at all.
+
+
+//redirection 300
+//autoindex !!!!!!
+//changer URL par server_name replace local_host
