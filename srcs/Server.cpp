@@ -9,6 +9,7 @@ Server &Server::operator=(Server const &src)
         Location::operator=(src);
         this->_port = src._port;
         this->_name = src._name;
+        this->_maxClientBodySize = src._maxClientBodySize;
     }
     return *this;
 }
@@ -17,10 +18,10 @@ Server &Server::operator=(Server const &src)
 
 // Server::Server(void): Location();
 
-Server::Server(void) : Location(), _port(-1), _name(""), _socketFd(-1)
+Server::Server(void) : Location(), _port(-1), _name(""), _socketFd(-1), _maxClientBodySize(200000)
 {}
 
-Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd)
+Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd), _maxClientBodySize(src._maxClientBodySize)
 {}
 
 Server::~Server(void)
@@ -43,11 +44,21 @@ int Server::getSocketFd() const
     return (this->_socketFd);
 }
 
+long long Server::getMaxBodyClientSize() const
+{
+    return this->_maxClientBodySize;
+}
+
 //SETTERS ---------------------------------------------------------
 
 void Server::setPort(int port)
 {
     this->_port = port;
+}
+
+void Server::setMaxBodyClientSize(long long size)
+{
+    this->_maxClientBodySize = size;
 }
 
 void Server::setName(std::string name)
