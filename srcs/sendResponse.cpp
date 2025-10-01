@@ -120,10 +120,10 @@ static std::string  statusCodeResponse(int code)
 		//succesful responses
 		case 200: return "OK";
 		case 201: return "Created";
-		case 202: return "Accepted";
+		case 202: return "Accepted";//
 		case 204: return "No Content";
 		case 205: return "Reset Content";
-		case 206: return "Partial Content";
+		case 206: return "Partial Content";//
 
 		//redirection messages
 		case 300: return "Multiple Choices";
@@ -182,14 +182,24 @@ void	setStatusCode(HttpRequest const &request, HttpResponse &response)
 {
 	// if (request.getBody().length() > _server.getClientMaxBodySize())
     // {
-    //     _code = 413;
+    //     response.code = 413;
     //     return 1;
     // }
-	if (request.method == "POST")
-		response.code = 204;
-	else if (request.method == "DELETE")
+	if (request.error >= 400)
+		return;
+	if (request.method == "DELETE")
+	{
 		response.code = 204; //specifying that we won't send body
-	response.code = 200;
+		return;
+	}
+	if (request.method == "POST")
+	{
+		// POST created new file → 201 Created
+		response.code = 200;
+		return;
+	}
+	else 
+		response.code = 200;
 }
 
 void	setStatusLine(HttpResponse &response)
@@ -227,7 +237,7 @@ std::string setConnection(HttpRequest const &request)
 	return "keep-alive\r\n";
 }
 
-//------------------------- 400-500 ERRORS -------------------------//
+//------------------------- ERRORS DURING PARSING -------------------------//
 
 std::string	generateDefaultErrorPage(int code)
 {
@@ -251,44 +261,53 @@ std::string	generateDefaultErrorPage(int code)
 	return body.str();
 }
 
-void	buildErrorBody(int client_fd, int code)
-{
-	std::string	statusMessage = statusCodeResponse(code);
-	std::string body = generateDefaultErrorPage(code);
-
-	std::ostringstream response;
-	response << "HTTP/1.1 " << code << " " << statusMessage << "\r\n";
-	response << "Date: " << setDate();
-	response << "Server: " << "MyWebServ/1.0\r\n";
-	response << "Content-Type: text/html\r\n";
-	response << "Content-Length: " << body.size() << "\r\n";
-	//response << "Connection: " << setConnection(request);
-	response << "Connection: close\r\n\r\n";
-	response << body;
-	std::string resp = response.str();
-	send(client_fd, resp.c_str(), resp.size(), 0);
-	std::cout << GREEN "[<] Sent Response:\n" << resp.c_str() << RESET << std::endl;
-	return;
-}
 
 //------------------------- MAIN SENDRESPONSE() FUNCTION -------------------------//
 
+std::string buildHeaders(HttpResponse &resp, const HttpRequest &req, size_t bodySize, const std::string &contentType, bool sendBody)
+{
+	std::ostringstream headers;
 
+	headers << resp.statusLine;
+	headers << "Date: " << setDate();
+	headers << "Server: MyWebServ/1.0\r\n";
+	headers << "Connection: " << setConnection(req);
 
+	// Add headers & body if allowed
+	if (sendBody)
+	{
+		headers << "Content-Type: " << contentType << "\r\n";
+		headers << "Content-Length: " << bodySize << "\r\n";
+	}
+	headers << "\r\n";
+	return headers.str();
+}
 
-
+std::string	toString(size_t value)
+{
+	std::ostringstream oss;
+	oss << value;
+	return oss.str();
+}
 
 
 void	sendResponse(int client_fd, const HttpRequest &request)
 {
 	HttpResponse	resp;
-	setStatusCode(request, resp);
-	setStatusLine(resp);
 
 	// Step 1: Check if request already has an error
-	if (request.error)
+	if (request.error >= 400)
 	{
-		buildErrorBody(client_fd, request.error);
+		resp.code = request.error;
+		setStatusLine(resp);
+		std::string body = generateDefaultErrorPage(request.error);
+		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
+
+		send(client_fd, headers.c_str(), headers.size(), 0);
+		send(client_fd, body.c_str(), body.size(), 0);
+		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
+		std::cout << GREEN "[<] Sent file: " << request.path
+				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
 	//// Step 2: CGI (skip building full response here)
@@ -298,30 +317,20 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 	// Step 3: Autoindex case
 	else if (!request.autoIndexFile.empty())
 	{
-		std::string autoIndexBody= request.autoIndexFile;
-
-		std::ostringstream response;
-		response << resp.statusLine;
-		response << "Date: " << setDate();
-		response << "Server: MyWebServ/1.0\r\n";
-		response << "Connection: " << setConnection(request);
-		response << "Content-Type: text/html\r\n";
-		response << "Content-Length: " << autoIndexBody.size() << "\r\n";
-		response << "\r\n"; // end of headers
-		response << autoIndexBody;
-
-		std::string respStr = response.str();
-		send(client_fd, respStr.c_str(), respStr.size(), 0);
-
-		std::cout << GREEN "[<] Sent Autoindex Response for: " 
-					<< request.path << RESET << std::endl;
+		resp.code = 200;
+		setStatusLine(resp);
+		const std::string body = request.autoIndexFile;
+		std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);
+		send(client_fd, headers.c_str(), headers.size(), 0);
+		send(client_fd, body.c_str(), body.size(), 0);
+		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
+		std::cout << GREEN "[<] Sent file: " << request.path
+				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
-//403 Forbidden : if autoindex is deativated in config but is asked by client and no index.html found
-//404 Not Found : if the directory doesnt exist at all
 	}
 
-	struct stat fileStat;
-
+	setStatusCode(request, resp);
+	setStatusLine(resp);
 
 	// // Step 4: Empty file → 204 No Content
 	// else if (_code == 200 && _response_body.empty() && fileExists(_target_file))
@@ -329,47 +338,49 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 	// 	struct stat st;
 	// 	if (stat(_target_file.c_str(), &st) == 0 && st.st_size == 0)
 	// 	{
-	// 		_code = 204;
+	// 		response.code = 204;
 	// 		_response_body.clear();
 	// 	}
 	// }
 
 	// // Step 5: POST created new file → 201 Created
-	// if (request.getMethod() == POST && _code == 200 && !fileExists(_target_file))
-	// {
-	// 	_code = 201;
-	// }
+	// if (request.method == "POST" && resp.code == 200 && !fileExists(_target_file))
+	// 	resp.code = 201;
 
-
-	if (stat(request.path.c_str(), &fileStat) == -1 || !S_ISREG(fileStat.st_mode))
+	std::ifstream file(request.path.c_str(), std::ios::binary);
+	if (!file.is_open())
 	{
-		buildErrorBody(client_fd, 404);
+		resp.code = 500;
+		setStatusLine(resp);
+		std::string body = generateDefaultErrorPage(resp.code);
+		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
+
+		send(client_fd, headers.c_str(), headers.size(), 0);
+		send(client_fd, body.c_str(), body.size(), 0);
+		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
+		std::cout << GREEN "[<] Sent file: " << request.path
+				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
 
-	std::ifstream file(request.path.c_str(), std::ios::binary);
 	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-	std::ostringstream response;
-	response << resp.statusLine;
-	response << "Date: " << setDate();
-	response << "Server: " << "MyWebServ/1.0\r\n";
-	response << "Connection: " << setConnection(request);
-	// if (_code != 204) // No Content → no Content-Type/Length
-	// {
-	// 	contentType();
-	// 	contentLength();
-	// }
-	response << "Content-Type: " << getContentType(request.path) << "\r\n";
-	response << "Content-Length: " << fileContent.size() << "\r\n";
-	response << "\r\n";
+	std::string	mimeType = getContentType(request.path);
+	if ((resp.code >= 100 && resp.code < 200) || resp.code == 204 || resp.code == 304)
+	{
+		std::string headers = buildHeaders(resp, request, 0, mimeType, false);
+		send(client_fd, headers.c_str(), headers.size(), 0);
+		std::cout << RED "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
+		std::cout << GREEN "[<] Sent 204 No Content for " << request.path << RESET << std::endl;
+		return;
+	}
 
-	std::string headers = response.str();
+	std::string headers = buildHeaders(resp, request, fileContent.size(), mimeType, true);
+	
 	send(client_fd, headers.c_str(), headers.size(), 0);
 	send(client_fd, fileContent.data(), fileContent.size(), 0);
-
-	std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET;
+	std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 	std::cout << GREEN "[<] Sent file: " << request.path
-				<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
+			<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
 }
 
 
@@ -379,5 +390,5 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 
 
 //redirection 300
-//autoindex !!!!!!
+//timeout
 //changer URL par server_name replace local_host
