@@ -1,6 +1,6 @@
 #include "parsingRequest.hpp"
 
-static int parseHeader(HttpRequest &req, std::istringstream &requestStream)
+static int parseHeader(HttpRequest &req, std::istringstream &requestStream, const Server &server)
 {
 	std::string str;
 	int i = 0;
@@ -31,6 +31,13 @@ static int parseHeader(HttpRequest &req, std::istringstream &requestStream)
 	}
 	if (str != "\r")
 		return 1;
+	
+	if (req.header.find("Content-Length") != req.header.end() && std::atoll(req.header.find("Content-Length")->second.c_str()) > server.getMaxBodyClientSize())
+	{
+		std::cerr << RED "Error 413: Entity Too Large" << RESET << std::endl;
+		req.error = 413;
+		return 1;
+	}
 	return 0;
 }
 
@@ -49,7 +56,7 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 		req.error = 400;
 		return req;
 	}
-	if (parseHeader(req, requestStream))
+	if (parseHeader(req, requestStream, server))
 		return req;
 	if (req.method != "GET" && req.method != "POST" && req.method != "DELETE")
 	{

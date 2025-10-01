@@ -162,7 +162,7 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 				if (first == std::string::npos)
 					return error400(req);
 				first += 6;	//advance pos in line to set it where the name of the variable start
-				size_t end = line.find("\"", first + 1);	//error if there is no closing brackets
+				size_t end = line.find("\"", first);	//error if there is no closing brackets
 				if (end == std::string::npos)
 					return error400(req);
 				key = line.substr(first, end - first);	//store the key
@@ -170,7 +170,7 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 				if (first != std::string::npos) 	// if filename is found
 				{
 					first += 10;
-					end = line.find("\"", first + 1);	//error if there is no closing brackets
+					end = line.find("\"", first);	//error if there is no closing brackets
 					if (end == std::string::npos)
 						return error400(req);
 					std::string name = line.substr(first, end - first);	//store the name of the file
@@ -182,13 +182,7 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 				}
 			}
 			else if (line.find("Content-Type:") != std::string::npos)	//if there is a file store it's content type // not really usefull
-			{
-				// size_t first = line.find("Content-Type:") + 14;
-				// std::string type = line.substr(first, line.size() - first);
-				// if (!type.empty())
-				// 	req.body.insert(std::make_pair("Content-Type", type));
 				;
-			}
 			else 	//Header wringly formated (error 400 bad request)
 				return error400(req);
 		}
