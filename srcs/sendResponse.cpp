@@ -237,6 +237,20 @@ std::string setConnection(HttpRequest const &request)
 	return "keep-alive\r\n";
 }
 
+//------------------------- POST confirmation page -------------------------//
+
+std::string buildPostConfirmation(const HttpRequest &request)
+{
+	std::ostringstream body;
+	body << "<!DOCTYPE html>\n<html><head><title>POST Result</title></head><body>";
+	body << "<h1 style='color:green;'>POST request successful!</h1>";
+	body << "<p>Method: " << request.method << "</p>";
+	body << "<p>Path: " << request.path << "</p>";
+	body << "</body></html>";
+	return body.str();
+}
+
+
 //------------------------- ERRORS DURING PARSING -------------------------//
 
 std::string	generateDefaultErrorPage(int code)
@@ -306,7 +320,7 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 		send(client_fd, headers.c_str(), headers.size(), 0);
 		send(client_fd, body.c_str(), body.size(), 0);
 		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
-		std::cout << GREEN "[<] Sent file: " << request.path
+		std::cout << GREEN "[<] Sent ERROR Page: " << request.path
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
@@ -324,7 +338,7 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 		send(client_fd, headers.c_str(), headers.size(), 0);
 		send(client_fd, body.c_str(), body.size(), 0);
 		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
-		std::cout << GREEN "[<] Sent file: " << request.path
+		std::cout << GREEN "[<] Sent AutoIndexFile: " << request.path
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
@@ -363,6 +377,19 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 		return;
 	}
 
+	if (request.method == "POST")
+	{
+		std::string body = buildPostConfirmation(request);
+		std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);
+
+		send(client_fd, headers.c_str(), headers.size(), 0);
+		send(client_fd, body.c_str(), body.size(), 0);
+		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
+		std::cout << GREEN "[<] Sent POST confirmation page: " << request.path
+				<< " (" << body.size() << " bytes)" << RESET << std::endl;
+		return;
+	}
+
 	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	std::string	mimeType = getContentType(request.path);
 	if ((resp.code >= 100 && resp.code < 200) || resp.code == 204 || resp.code == 304)
@@ -392,3 +419,5 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 //redirection 300
 //timeout
 //changer URL par server_name replace local_host
+
+//URI to find updated struct --< request.URL 
