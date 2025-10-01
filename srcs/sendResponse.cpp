@@ -178,6 +178,19 @@ static std::string  statusCodeResponse(int code)
 
 //------------------------- HEADERS UTILS -------------------------//
 
+void	setStatusCode(HttpRequest const &request, HttpResponse &response)
+{
+	// if (request.getBody().length() > _server.getClientMaxBodySize())
+    // {
+    //     _code = 413;
+    //     return 1;
+    // }
+	if (request.method == "POST")
+		response.code = 204;
+	else if (request.method == "DELETE")
+		response.code = 204; //specifying that we won't send body
+	response.code = 200;
+}
 
 void	setStatusLine(HttpResponse &response)
 {
@@ -214,16 +227,6 @@ std::string setConnection(HttpRequest const &request)
 	return "keep-alive\r\n";
 }
 
-
-void	setStatusCode(HttpRequest const &request, HttpResponse &response)
-{
-	if (request.method == "POST")
-		response.code = 204;
-	else if (request.method == "DELETE")
-		response.code = 204; //specifying that we won't send body
-	response.code = 200;
-}
-
 //------------------------- 400-500 ERRORS -------------------------//
 
 std::string	generateDefaultErrorPage(int code)
@@ -255,8 +258,11 @@ void	buildErrorBody(int client_fd, int code)
 
 	std::ostringstream response;
 	response << "HTTP/1.1 " << code << " " << statusMessage << "\r\n";
+	response << "Date: " << setDate();
+	response << "Server: " << "MyWebServ/1.0\r\n";
 	response << "Content-Type: text/html\r\n";
 	response << "Content-Length: " << body.size() << "\r\n";
+	//response << "Connection: " << setConnection(request);
 	response << "Connection: close\r\n\r\n";
 	response << body;
 	std::string resp = response.str();
@@ -267,24 +273,79 @@ void	buildErrorBody(int client_fd, int code)
 
 //------------------------- MAIN SENDRESPONSE() FUNCTION -------------------------//
 
+
+
+
+
+
+
 void	sendResponse(int client_fd, const HttpRequest &request)
 {
+	HttpResponse	resp;
+	setStatusCode(request, resp);
+	setStatusLine(resp);
+
+	// Step 1: Check if request already has an error
 	if (request.error)
 	{
 		buildErrorBody(client_fd, request.error);
 		return;
 	}
+	//// Step 2: CGI (skip building full response here)
+	// if (_cgi)
+	// 	return;
+
+	// Step 3: Autoindex case
+	else if (!request.autoIndexFile.empty())
+	{
+		std::string autoIndexBody= request.autoIndexFile;
+
+		std::ostringstream response;
+		response << resp.statusLine;
+		response << "Date: " << setDate();
+		response << "Server: MyWebServ/1.0\r\n";
+		response << "Connection: " << setConnection(request);
+		response << "Content-Type: text/html\r\n";
+		response << "Content-Length: " << autoIndexBody.size() << "\r\n";
+		response << "\r\n"; // end of headers
+		response << autoIndexBody;
+
+		std::string respStr = response.str();
+		send(client_fd, respStr.c_str(), respStr.size(), 0);
+
+		std::cout << GREEN "[<] Sent Autoindex Response for: " 
+					<< request.path << RESET << std::endl;
+		return;
+//403 Forbidden : if autoindex is deativated in config but is asked by client and no index.html found
+//404 Not Found : if the directory doesnt exist at all
+	}
 
 	struct stat fileStat;
+
+
+	// // Step 4: Empty file → 204 No Content
+	// else if (_code == 200 && _response_body.empty() && fileExists(_target_file))
+	// {
+	// 	struct stat st;
+	// 	if (stat(_target_file.c_str(), &st) == 0 && st.st_size == 0)
+	// 	{
+	// 		_code = 204;
+	// 		_response_body.clear();
+	// 	}
+	// }
+
+	// // Step 5: POST created new file → 201 Created
+	// if (request.getMethod() == POST && _code == 200 && !fileExists(_target_file))
+	// {
+	// 	_code = 201;
+	// }
+
+
 	if (stat(request.path.c_str(), &fileStat) == -1 || !S_ISREG(fileStat.st_mode))
 	{
 		buildErrorBody(client_fd, 404);
 		return;
 	}
-
-	HttpResponse	resp;
-	setStatusCode(request, resp);
-	setStatusLine(resp);
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
 	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -293,6 +354,11 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 	response << "Date: " << setDate();
 	response << "Server: " << "MyWebServ/1.0\r\n";
 	response << "Connection: " << setConnection(request);
+	// if (_code != 204) // No Content → no Content-Type/Length
+	// {
+	// 	contentType();
+	// 	contentLength();
+	// }
 	response << "Content-Type: " << getContentType(request.path) << "\r\n";
 	response << "Content-Length: " << fileContent.size() << "\r\n";
 	response << "\r\n";
