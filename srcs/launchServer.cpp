@@ -4,6 +4,120 @@
 #define BUFSIZE 4096
 #define SERVER_BACKLOG 100
 
+static int readLine(int &client_fd, std::string &line)
+{
+	int byteRead = 0;
+	char c = 0;
+
+	line.clear();
+	while (c != '\n')
+	{
+		int res = read(client_fd, &c, 1);
+		if (res < 0)
+			return -1;
+		else if (!res)
+			return byteRead;
+		byteRead += res;
+		line += c;
+	}
+	return byteRead;
+}
+
+static void deleteChunkSize(std::string data, std::string &src)
+{
+	std::istringstream  before(data);
+	std::string			buffer;
+	long long			size;
+	std::vector<char>	buff;
+	char				crlf[2];
+	size_t pos = src.find("\r\n\r\n") + 4;
+	
+	while (std::getline(before, buffer))
+	{
+		if (!buffer.empty())
+		{
+			std::stringstream ss;
+			ss << std::hex << buffer;
+			ss >> size;
+			buff.resize(size);
+			src.erase(pos, buffer.size() + 1);
+			if (size == 0)
+				break ;
+			pos += size;
+			before.read(buff.data(), size);
+			before.read(crlf, 2);
+			if (crlf[0] != '\r' && crlf[1] != '\n')
+				break ;//error bad request
+			src.erase(pos, 2);
+		}
+	}
+}
+
+static int	loadByChunk(std::string &data, std::string afterHeader, const Server &server, int &client_fd)
+{
+	std::istringstream  before(afterHeader);
+	long long			bodySize = 0;
+	std::string			buffer;
+	std::vector<char>	buff;
+	long long			ByteRead;
+	long long			size;
+	long long			left = 0;
+	
+	while (std::getline(before, buffer))
+	{
+		if (!buffer.empty() && buffer[buffer.size() - 1] == '\r')
+			buffer.erase(buffer.size() - 1);
+		if (!buffer.empty())
+		{
+			std::stringstream ss;
+			ss << std::hex << buffer;
+			ss >> size;
+			buff.resize(size + 2);
+			before.read(buff.data(), size + 2);
+			bodySize += before.gcount();
+			if (size + 2 > before.gcount())
+				left = size + 2 - before.gcount();
+		}
+	}
+	if (bodySize > server.getMaxBodyClientSize())
+	{
+		std::cerr << RED "Error 413: Entity Too Large" << RESET << std::endl;
+		return 413;
+	}
+	if (left > 0)
+	{
+		buff.resize(left + 2);
+		ByteRead = read(client_fd, buff.data(), left + 2);
+		if (ByteRead < 0)
+			return -1;
+		data.append(buff.data(), ByteRead);
+	}
+	while ((left = readLine(client_fd, buffer)) > 0)
+	{
+		data.append(buffer, 0, buffer.size());
+		std::stringstream ss;
+		ss << std::hex << buffer;
+		ss >> size;
+		if (size == 0)
+			break ;
+		buff.resize(size + 2);
+		ByteRead = read(client_fd, buff.data(), size + 2);
+		if (ByteRead < 0)
+			return -1;
+		bodySize += ByteRead;
+		data.append(buff.data(), ByteRead);
+		if (bodySize > server.getMaxBodyClientSize())
+		{
+			std::cerr << RED "Error 413: Entity Too Large" << RESET << std::endl;
+			return 413;
+		}
+	}
+	size_t pos = data.find("\r\n\r\n") + 4;
+	deleteChunkSize(data.substr(pos, data.size() - pos), data);
+	return 0;
+}
+
+
 bool	handleClient(int client_fd, const Server &servers)
 {
 	std::string	data;
@@ -17,7 +131,7 @@ bool	handleClient(int client_fd, const Server &servers)
 		bytes_read = read(client_fd, buffer, sizeof(buffer));
 		if (bytes_read < 0)
 		{
-			std::cerr << RED "Erreur de lecture depuis le client. errno: " << errno << RESET << std::endl;
+			std::cerr << RED "Erreur de lecture depuis le client." << RESET << std::endl;// error 500 ?
 			return (false);
 		}
 		if (bytes_read == 0)
@@ -31,13 +145,23 @@ bool	handleClient(int client_fd, const Server &servers)
 			{
 				stored_header = true;
 
-				size_t pos = data.find("Content-Length:");
-				if (pos != std::string::npos)
+				size_t pos;
+				if ((pos = data.find("Content-Length:")) != std::string::npos)
 				{
 					pos += 15;
 					content_length = std::atoi(data.c_str() + pos);
 				}
-
+				else if (data.find("Transfer-Encoding: chunked") != std::string::npos)
+				{
+					int res = loadByChunk(data, data.substr(end + 4, data.size() - end + 4), servers, client_fd);
+					if (res)
+					{
+						HttpRequest req;
+						req.error = res;
+						sendResponse(client_fd, req);
+						return true;
+					}
+				}
 				if (content_length > 0)
 				{
 					size_t	content_start = data.find("\r\n\r\n");
@@ -51,10 +175,8 @@ bool	handleClient(int client_fd, const Server &servers)
 						data.append(buffer, bytes_read);
 						size += bytes_read;
 					}
-					break;
 				}
-				else
-					break;
+				break;
 			}
 		}
 	}

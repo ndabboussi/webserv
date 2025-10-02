@@ -58,6 +58,19 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 	}
 	if (parseHeader(req, requestStream, server))
 		return req;
+	if (req.header.find("Content-Length") == req.header.end() && req.header.find("Transfer-Encoding") != req.header.end())
+	{
+		size_t pos = rawRequest.find("\r\n\r\n") + 4;
+		if (pos == std::string::npos)
+		{
+			std::cerr << RED "Error 400: Bad request" << RESET << std::endl;
+			req.error = 400;
+			return req;
+		}
+		std::ostringstream oss;
+    	oss << rawRequest.size() - pos;
+		req.header.insert(std::make_pair("Content-Length", oss.str()));
+	}
 	if (req.method != "GET" && req.method != "POST" && req.method != "DELETE")
 	{
 		std::cerr << RED "Error 400: Bad request" << RESET << std::endl;
