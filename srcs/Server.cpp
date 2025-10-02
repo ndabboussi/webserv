@@ -29,7 +29,7 @@ Server::~Server(void)
 
 //GETTERS ---------------------------------------------------------
 
-int Server::getPort() const
+std::vector<int> Server::getPort() const
 {
     return (this->_port);
 }
@@ -39,7 +39,7 @@ std::string Server::getName() const
     return (this->_name);
 }
 
-int Server::getSocketFd() const
+std::vector<int> Server::getSocketFd() const
 {
     return (this->_socketFd);
 }
@@ -51,9 +51,9 @@ long long Server::getMaxBodyClientSize() const
 
 //SETTERS ---------------------------------------------------------
 
-void Server::setPort(int port)
+void Server::addPort(int port)
 {
-    this->_port = port;
+    this->_port.push_back(port);
 }
 
 void Server::setMaxBodyClientSize(long long size)
@@ -67,7 +67,7 @@ void Server::setName(std::string name)
 }
 
 
-void Server::setSocketFd(int fd)
+void Server::addSocketFd(int fd)
 {
-    this->_socketFd = fd;
+    this->_socketFd.push_back(fd);
 }

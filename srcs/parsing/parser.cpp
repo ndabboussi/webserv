@@ -58,7 +58,7 @@ static void	parsingServer(Server &server, std::vector<std::string>::iterator &it
 				long nb = std::atol(it->c_str());
 				if (nb > 2147483648)
 					throw std::runtime_error("Error: Too large number in field listen"); //too large number in field listen
-				server.setPort(nb);
+				server.addPort(nb);
 			}
 			else if ((*it)[0] == ';')
 				throw std::runtime_error("Error: Missing port in field listen"); //missing port in field listen
@@ -160,16 +160,6 @@ void parsing(std::vector<Server> &servers, std::string configFile)
 			parsingServer(server, it, end);
 			servers.push_back(server);
 		}
-		// else if (*it == "location" && it + 1 != end && *(it + 1) == "{")
-		// {
-		// 	if (servers.empty())
-		// 		throw std::runtime_error("Error: 'location' outside of a 'server' block");
-
-		// 	it += 2;
-		// 	Location loc;
-		// 	parsingLocation(loc, it, end);
-		// 	servers.back().addLocations(loc);
-		// }
 	}
 
 	if (flagBrackets != 0)
