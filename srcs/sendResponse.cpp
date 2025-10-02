@@ -364,7 +364,7 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 
 	if (request.method == "POST")
 	{
-		if (resp.code == 201)// File created, showing confirmation page
+		if (resp.code == 200)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
 		{
 			std::string body = buildPostConfirmation(request);
 			std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);
@@ -376,7 +376,7 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 					<< " (" << body.size() << " bytes)" << RESET << std::endl;
 			return;
 		}
-		else if (resp.code == 205) // File already existed, redirecting
+		else // File already existed, redirect to where to find it
 		{
 			resp.code = 303;
 			setStatusLine(resp);
@@ -430,13 +430,13 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 
 //URI to find updated struct --> request.URL 
 
-	// // Step 4: Empty file → 204 No Content
-	// else if (_code == 200 && _response_body.empty() && fileExists(_target_file))
-	// {
-	// 	struct stat st;
-	// 	if (stat(_target_file.c_str(), &st) == 0 && st.st_size == 0)
-	// 	{
-	// 		response.code = 204;
-	// 		_response_body.clear();
-	// 	}
-	// }
+// // Step 4: Empty file → 204 No Content
+// else if (_code == 200 && _response_body.empty() && fileExists(_target_file))
+// {
+// 	struct stat st;
+// 	if (stat(_target_file.c_str(), &st) == 0 && st.st_size == 0)
+// 	{
+// 		response.code = 204;
+// 		_response_body.clear();
+// 	}
+// }
