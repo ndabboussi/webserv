@@ -4,6 +4,8 @@
 #define BUFSIZE 4096
 #define SERVER_BACKLOG 100
 
+//------------------------------------ CHUNKS -------------------------------------//
+
 static int readLine(int &client_fd, std::string &line)
 {
 	int byteRead = 0;
@@ -117,6 +119,7 @@ static int	loadByChunk(std::string &data, std::string afterHeader, const Server 
 	return 0;
 }
 
+//------------------------------------ HANDLE CLIENTS -------------------------------------//
 
 bool	handleClient(int client_fd, const Server &servers)
 {
@@ -191,6 +194,8 @@ bool	handleClient(int client_fd, const Server &servers)
 	return true;
 }
 
+//------------------------------------ SOCKETS AND BIND -------------------------------------//
+
 void	bindAndListen(int server_fd, int port)
 {
 	struct sockaddr_in sockAddress;
@@ -236,7 +241,41 @@ int createServerSocket(int port)
 	return server_fd;
 }
 
-// ------------------------------------ LAUNCHSERVER ------------------------------------- //
+//------------------------------------ LAUNCHSERVER -------------------------------------//
+
+void	createServersSockets(std::vector<Server> &servers)
+{
+	for(size_t i = 0; i < servers.size(); i++)
+	{
+		std::vector<int> ports = servers[i].getPorts();
+		for (size_t j = 0; j < ports.size(); j++)
+		{
+			int	port = 8080;
+			if (ports[j] > 0)
+				port = ports[j];
+			int server_fd = createServerSocket(port);
+			// if (server_fd < 0)
+			// 	//return 1; throw exception 
+			servers[i].addSocketFd(server_fd);
+		}
+	}
+}
+
+void	setServersSockets(std::vector<Server> &servers, int maxFd, fd_set &readfds)
+{
+		for (size_t	i = 0; i < servers.size(); i++)
+	{
+		std::vector<int> serverFds = servers[i].getSocketFds();
+		for (size_t j = 0; j < serverFds.size(); j++)
+		{
+			int	fd = serverFds[j];
+			FD_SET(fd, &readfds);
+			if (fd > maxFd)
+				maxFd = fd;
+		}
+	}
+}
+
 int launchServer(std::vector<Server> &servers)
 {
 	if (servers.empty())
@@ -245,15 +284,21 @@ int launchServer(std::vector<Server> &servers)
 		return 1;
 	}
 
+	//createServersSockets(servers);
+	//create one socket per each servers's port
 	for(size_t i = 0; i < servers.size(); i++)
 	{
-		int	port = 8080;
-		if (servers[i].getPort() > 0)
-			port = servers[i].getPort();
-		int server_fd = createServerSocket(port);
-		if (server_fd < 0)
-			return 1;
-		servers[i].setSocketFd(server_fd);
+		std::vector<int> ports = servers[i].getPorts();
+		for (size_t j = 0; j < ports.size(); j++)
+		{
+			int	port = 8080;
+			if (ports[j] > 0)
+				port = ports[j];
+			int server_fd = createServerSocket(port);
+			if (server_fd < 0)
+				return 1;
+			servers[i].addSocketFd(server_fd);
+		}
 	}
 
 	std::vector<int>	client_fds_vec;
@@ -263,47 +308,58 @@ int launchServer(std::vector<Server> &servers)
 	{
 		fd_set	readfds;
 		FD_ZERO(&readfds);
-		int	max_fd = 0;
+		int	maxFd = 0;
 
-		//servers
+		//setServersSockets(servers, maxFd, readfds);
+		//servers --> handle multiple servers sockets
 		for (size_t	i = 0; i < servers.size(); i++)
 		{
-			int	fd = servers[i].getSocketFd();
-			FD_SET(fd, &readfds);
-			if (fd > max_fd)
-				max_fd = fd;
+			std::vector<int> serverFds = servers[i].getSocketFds();
+			for (size_t j = 0; j < serverFds.size(); j++)
+			{
+				int	fd = serverFds[j];
+				FD_SET(fd, &readfds);
+				if (fd > maxFd)
+					maxFd = fd;
+			}
 		}
 
 		//clients
 		for (size_t i = 0 ; i < client_fds_vec.size(); i++)
 		{
 			FD_SET(client_fds_vec[i], &readfds);
-			if (client_fds_vec[i] > max_fd)
-				max_fd = client_fds_vec[i];
+			if (client_fds_vec[i] > maxFd)
+				maxFd = client_fds_vec[i];
 		}
 
-		int activity = select(max_fd + 1, &readfds, NULL, NULL, NULL);
+		int activity = select(maxFd + 1, &readfds, NULL, NULL, NULL);
 		if (activity < 0)
 		{
 			std::cerr << RED "Select() error. errno: " << errno << RESET << std::endl;
 			continue;
 		}
 
-		//check if incoming connexion
+		//check if incoming connexion, accept client on the correct port
 		for (size_t i = 0; i < servers.size(); i++)
 		{
-			int server_fd = servers[i].getSocketFd();
-			if (FD_ISSET(server_fd, &readfds))
+			const std::vector<int> socketsFds = servers[i].getSocketFds();
+			const std::vector<int> serverPorts = servers[i].getPorts();
+
+			for (size_t j = 0; j < socketsFds.size(); j++)
 			{
-				struct sockaddr_in clientAddr;
-				socklen_t 			len = sizeof(clientAddr);
-				int client_fd = accept(server_fd, (struct sockaddr *)&clientAddr, &len);
-				if (client_fd >= 0)
+				int	server_fd = socketsFds[j];
+				if (FD_ISSET(server_fd, &readfds))
 				{
-					std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
-                              << servers[i].getPort() << RESET << std::endl;
-					client_fds_vec.push_back(client_fd);
-					client_server_map[client_fd] = i;
+					struct sockaddr_in clientAddr;
+					socklen_t 			len = sizeof(clientAddr);
+					int client_fd = accept(server_fd, (struct sockaddr *)&clientAddr, &len);
+					if (client_fd >= 0)
+					{
+						std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
+									<< serverPorts[j] << RESET << std::endl;
+						client_fds_vec.push_back(client_fd);
+						client_server_map[client_fd] = i;
+					}
 				}
 			}
 		}
@@ -321,8 +377,8 @@ int launchServer(std::vector<Server> &servers)
 					close(fd);
 					client_server_map.erase(fd);
 					client_fds_vec.erase(client_fds_vec.begin() + i);
-					std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
-                              << servers[server_index].getPort() << RESET << std::endl;
+					// std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
+					// 		<< servers[server_index].getPorts() << RESET << std::endl;
 					continue;
 				}
 			}
@@ -330,7 +386,11 @@ int launchServer(std::vector<Server> &servers)
 		}
 	}
 	for(size_t i = 0; i < servers.size(); i++)
-		close(servers[i].getSocketFd());
+	{
+		const std::vector<int> fds = servers[i].getSocketFds();
+		for (size_t j = 0; j < fds.size(); j++)
+			close(fds[j]);
+	}
 	for(size_t i = 0; i < client_fds_vec.size(); i++)
 		close(client_fds_vec[i]);
 	return 0;

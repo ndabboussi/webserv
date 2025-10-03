@@ -25,15 +25,15 @@ class	 Server : public Location
 		Server &operator=(Server const &src);
 
 	public:
-		std::vector<int>	getPort() const;
+		std::vector<int>	getPorts() const;
+		std::vector<int>	getSocketFds() const;
 		std::string			getName() const;
-		std::vector<int>	getSocketFd() const;
 		long long			getMaxBodyClientSize() const;
 
 		void				addPort(int port);
+		void				addSocketFd(int fd);
 		void				setMaxBodyClientSize(long long size);
 		void				setName(std::string name);
-		void        		addSocketFd(int fd);
 };
 
 void	parsing(std::vector<Server> &servers, std::string configFile);

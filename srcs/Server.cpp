@@ -18,7 +18,7 @@ Server &Server::operator=(Server const &src)
 
 // Server::Server(void): Location();
 
-Server::Server(void) : Location(), _port(-1), _name(""), _socketFd(-1), _maxClientBodySize(200000)
+Server::Server(void) : Location(), _name(""), _maxClientBodySize(200000)
 {}
 
 Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd), _maxClientBodySize(src._maxClientBodySize)
@@ -29,7 +29,7 @@ Server::~Server(void)
 
 //GETTERS ---------------------------------------------------------
 
-std::vector<int> Server::getPort() const
+std::vector<int> Server::getPorts() const
 {
     return (this->_port);
 }
@@ -39,7 +39,7 @@ std::string Server::getName() const
     return (this->_name);
 }
 
-std::vector<int> Server::getSocketFd() const
+std::vector<int> Server::getSocketFds() const
 {
     return (this->_socketFd);
 }
