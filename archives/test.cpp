@@ -91,9 +91,9 @@ int launchServer(const std::vector<Server> &servers)
 	int	port = 8080;
 	if (!servers.empty())
 	{
-		if (servers[0].getPort() > 0)
+		if (servers[0].getPorts() > 0)
 		{
-			port = servers[0].getPort();
+			port = servers[0].getPorts();
 		}
 	}
 
