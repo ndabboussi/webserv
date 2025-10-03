@@ -35,7 +35,7 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 		throw std::runtime_error("Error: Unexpected EOF in location scope"); //Unexpexted EOF
 }
 
-static int isStrDigit(std::string &str)
+static int isStrDigit(std::string str)
 {
 	for (size_t i = 0; i < str.size(); i++)
 	{
@@ -64,21 +64,26 @@ static void	parsingServer(Server &server, std::vector<std::string>::iterator &it
 		{
 			it++;
 			int nb = 0;
-			while (isStrDigit(*it))
+			if (isStrDigit(*it) || (isStrDigit(it->substr(0, it->size() - 1)) && (*it)[it->size() - 1] == ';'))
 			{
-				nb++;
-				long nb = std::atol(it->c_str());
-				if (nb > 2147483648)
-					throw std::runtime_error("Error: Too large number in field listen"); //too large number in field listen
-				server.addPort(nb);
-				it++;
+				while (it != end && ( isStrDigit(*it) || (isStrDigit(it->substr(0, it->size() - 1)) && (*it)[it->size() - 1] == ';')))
+				{
+					nb++;
+					long nb = std::atol(it->c_str());
+					if (nb > 2147483648)
+						throw std::runtime_error("Error: Too large number in field listen"); //too large number in field listen
+					server.addPort(nb);
+					it++;
+				}
+				if (it == end)
+					throw std::runtime_error("Error: Unexpected EOF");
 			}
-			if ((*it)[0] == ';' && !nb)
+			else if ((*it)[0] == ';' && !nb)
 				throw std::runtime_error("Error: Missing port in field listen"); //missing port in field listen
 			else
 				throw std::runtime_error("Error: Unrecognised char in field listen"); //unrecognise char in field listen
-			if (it + 1 != end && *(it + 1) == ";") //check if next str is a ;
-				it++;				
+			if ((*(it - 1))[(it - 1)->size() - 1] == ';') //check if next str is a ;
+				it--;
 			if ((*it)[it->size() - 1] != ';')
 				throw std::runtime_error("Error: Error: Missing ; or too much informations in instruction in listen field in server scope"); //missing ; or too much informations in instruction
 		}
