@@ -3,7 +3,7 @@
 static void error400(HttpRequest &req)
 {
 	std::cerr << RED "Error 400: Bad request "<< RESET << std::endl;
-	req.error = 400;
+	req.statusCode = 400;
 }
 
 static void decodeStr(std::string &info)
@@ -106,7 +106,7 @@ static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::st
 	if (createFileAtRightPlace(Fout, req.path, *req.fileNames.rbegin(), req) || !Fout.is_open())
 	{
 		std::cerr << RED "Error 500: Internal server error: "<< RESET << std::endl;
-		req.error = 500;
+		req.statusCode = 500;
 		return 1;
 	}
 	std::string pat1 = "--" + boundary + "--";
@@ -221,7 +221,7 @@ int parseBody(HttpRequest &req, std::istringstream &requestStream)
 		parseType3(req, requestStream);
 	else
 		return error400(req), 1;	//Content-Type body not supported
-	if (req.error)
+	if (req.statusCode)
 		return 1;
 	return 0;
 }

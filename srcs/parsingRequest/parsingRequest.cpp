@@ -15,14 +15,14 @@ static int parseHeader(HttpRequest &req, std::istringstream &requestStream, cons
 		if (pos == std::string::npos)
 		{
 			std::cerr << RED "Error 400: Bad request" << RESET << std::endl;//400 bad request
-			req.error = 400;
+			req.statusCode = 400;
 			return 1;
 		}
 		key = str.substr(0, pos);
 		if (pos + 1 >= str.size() || pos + 2 >= str.size())
 		{
 			std::cerr << RED "Error 400: Bad request" << RESET << std::endl;//400 bad request
-			req.error = 400;
+			req.statusCode = 400;
 			return 1;
 		}
 		value = str.substr(pos + 2, str.size() - pos + 2);
@@ -35,7 +35,7 @@ static int parseHeader(HttpRequest &req, std::istringstream &requestStream, cons
 	if (req.header.find("Content-Length") != req.header.end() && std::atoll(req.header.find("Content-Length")->second.c_str()) > server.getMaxBodyClientSize())
 	{
 		std::cerr << RED "Error 413: Entity Too Large" << RESET << std::endl;
-		req.error = 413;
+		req.statusCode = 413;
 		return 1;
 	}
 	return 0;
@@ -48,12 +48,12 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 
 	std::istringstream requestStream(rawRequest, std::ios::binary);
 	requestStream >> req.method >> req.path >> req.version;
-	req.error = 0;
+	req.statusCode = 0;
 	req.url = req.path;
 	if (req.method.empty() || req.path.empty() || req.version.empty())//If either on of these fields is empty, this is a bad request
 	{
 		std::cerr << RED "Error 400: Bad request" << RESET << std::endl;
-		req.error = 400;
+		req.statusCode = 400;
 		return req;
 	}
 	if (parseHeader(req, requestStream, server))
@@ -64,7 +64,7 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 		if (pos == std::string::npos)
 		{
 			std::cerr << RED "Error 400: Bad request" << RESET << std::endl;
-			req.error = 400;
+			req.statusCode = 400;
 			return req;
 		}
 		std::ostringstream oss;
@@ -74,12 +74,12 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 	if (req.method != "GET" && req.method != "POST" && req.method != "DELETE")
 	{
 		std::cerr << RED "Error 400: Bad request" << RESET << std::endl;
-		req.error = 405;
+		req.statusCode = 405;
 	}
 	else if (req.version != "HTTP/1.1")
 	{
 		std::cerr << RED "Error 505: HTTP Version Not Supported" << RESET << std::endl;
-		req.error = 505;
+		req.statusCode = 505;
 	}
 	else if (parsePath(req, server))
 		;
@@ -89,7 +89,7 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 			|| (!(req.methodPath & 4) && req.method == "DELETE"))//If the method can't be used in the directory
 		{
 			std::cerr << RED "Error 405: Method not allowed" << RESET << std::endl;
-			req.error = 405;
+			req.statusCode = 405;
 			return req;
 		}
 		if (req.method == "POST" && parseBody(req, requestStream))//If request is Post -> parse the body of the request and

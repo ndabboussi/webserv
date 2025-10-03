@@ -185,7 +185,7 @@ void	setStatusCode(HttpRequest const &request, HttpResponse &response)
     //     response.code = 413;
     //     return 1;
     // }
-	if (request.error >= 400)
+	if (request.statusCode >= 400)
 		return;
 	if (request.method == "DELETE")
 	{
@@ -308,12 +308,13 @@ std::string	toString(size_t value)
 void	sendResponse(int client_fd, const HttpRequest &request)
 {
 	HttpResponse	resp;
+
 	// Step 1: Check if request already has an error
-	if (request.error >= 400)
+	if (request.statusCode >= 400)
 	{
-		resp.code = request.error;
+		resp.code = request.statusCode;
 		setStatusLine(resp);
-		std::string body = generateDefaultErrorPage(request.error);
+		std::string body = generateDefaultErrorPage(request.statusCode);
 		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
 
 		send(client_fd, headers.c_str(), headers.size(), 0);
@@ -386,7 +387,7 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 			headers << resp.statusLine;
 			headers << "Date: " << setDate();
 			headers << "Server: MyWebServ/1.0\r\n";
-			headers << "Location: " << location << "\r\n";
+			headers << "Location: " << location + '/' << "\r\n";
 			headers << "Content-Length: 0\r\n";
 			headers << "Connection: " << setConnection(request) << "\r\n\r\n";
 			

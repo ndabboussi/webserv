@@ -9,7 +9,6 @@ class	 Server;
 
 struct HttpRequest
 {
-	int									error;
 	int									statusCode;
 	std::string 						method;
 	std::string							path;

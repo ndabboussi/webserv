@@ -3,7 +3,21 @@
 static int error404(HttpRequest &req, std::string &tmp)
 {
 	std::cerr << RED "Error 404: Not found: " << tmp << RESET << std::endl;
-	req.error = 404;
+	req.statusCode = 404;
+	return 1;
+}
+
+static int error301(HttpRequest &req)
+{
+	std::cerr << RED "Error 301: Moved permanently" << RESET << std::endl;
+	req.statusCode = 301;
+	return 1;
+}
+
+static int error403(HttpRequest &req, std::string &tmp)
+{
+	std::cerr << RED "Error 403: Forbidden: " << tmp << RESET << std::endl;
+	req.statusCode = 403;
 	return 1;
 }
 
@@ -58,8 +72,6 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 		i++;
 		findLocations(str, loc);
 	}
-	if (str[0] == '/' && str.size() == 1)
-		str.clear();
 	data = loc.getData();
 	if (data.find("alias") != data.end())
 	{
@@ -81,13 +93,13 @@ static int checkAccess(HttpRequest &req)
 	if (access(req.path.c_str(), F_OK) != 0)
 	{
 		std::cerr << RED "in access, Error 404: Not found " << req.path << RESET << std::endl;
-		req.error = 404;
+		req.statusCode = 404;
 		return 1;
 	}
 	if (access(req.path.c_str(), R_OK) != 0)
 	{
 		std::cerr << RED "Error 403: Forbidden" << RESET << std::endl;
-		req.error = 403;
+		req.statusCode = 403;
 		return 1;
 	}
 	return 0;
@@ -99,7 +111,7 @@ static int fillIndexFile(HttpRequest &req)
     if (dir == NULL)
 	{
 		std::cerr << RED "Error 500: Internal server error: "<< RESET << std::endl;
-		req.error = 500;
+		req.statusCode = 500;
         return 1;
     }
 	req.autoIndexFile = "<!doctype html>\n<html lang=\"en\">\n\t<head>\n\t\t<meta charset=\"utf-8\" />\n\t\t<title>Page List</title>\n";
@@ -110,7 +122,7 @@ static int fillIndexFile(HttpRequest &req)
 	if (req.header.find("Host") == req.header.end())
 	{
 		std::cerr << RED "Error 400: Bad request: "<< RESET << std::endl;
-		req.error = 400;
+		req.statusCode = 400;
         return 1;
 	}
 	std::string port = req.header.find("Host")->second;
@@ -144,17 +156,20 @@ int parsePath(HttpRequest &req, const Server &server)
 	int res = isAFile(req.path);
 	if (res == 0 && req.method == "GET")//if the path is a directory
 	{
+		if (req.path[req.path.size() - 1] != '/')
+			return error301(req);
 		data = loc.getData();
 		std::map<std::string, std::string>::const_iterator it = data.find("index");
 		if (it != data.end())
-			req.path += "/" + it->second;
+			req.path +=  it->second;
 		else if (loc.getAutoIndex())
 		{
 			if (fillIndexFile(req))
 				return 1;
 		}
-		else
-			return error404(req, req.path);
+		else if (!loc.getAutoIndex())
+			return error403(req, req.path);
+		
 	}
 	else if (res < 0) //if the path isn't found
 		return error404(req, req.path);

@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Response.cpp                                       :+:      :+:    :+:   */
+/*   file.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: arakhurs <arakhurs@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mprokosc <mprokosc@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/10/05 20:35:01 by arakhurs          #+#    #+#             */
-/*   Updated: 2023/11/04 18:44:12 by arakhurs         ###   ########.fr       */
+/*   Updated: 2025/10/03 18:22:53 by mprokosc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -173,9 +173,9 @@ void    Response::buildErrorBody()
 
 bool    Response::reqError()
 {
-    if(request.errorCode())
+    if(request.statusCodeCode())
     {
-        _code = request.errorCode();
+        _code = request.statusCodeCode();
         return (1);
     }
     return (0);

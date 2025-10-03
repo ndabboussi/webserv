@@ -5,9 +5,9 @@
 // 	setStatusLine(resp);
 
 // 	// Step 1: Check if request already has an error
-// 	if (request.error)
+// 	if (request.statusCode)
 // 	{
-// 		buildErrorBody(client_fd, request.error);
+// 		buildErrorBody(client_fd, request.statusCode);
 // 		return;
 // 	}
 // 	//// Step 2: CGI (skip building full response here)
