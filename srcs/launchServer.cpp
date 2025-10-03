@@ -160,7 +160,7 @@ bool	handleClient(int client_fd, const Server &servers)
 					if (res)
 					{
 						HttpRequest req;
-						req.error = res;
+						req.statusCode = res;
 						sendResponse(client_fd, req);
 						return true;
 					}

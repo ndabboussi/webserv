@@ -199,7 +199,7 @@ HTTP Responses: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Message
 
 // Si tu veux, je peux :
 
-// Adapter le sendResponse ci-dessus pour intégrer le mapping request.error
+// Adapter le sendResponse ci-dessus pour intégrer le mapping request.statusCode
 //(si tu utilises d’autres codes spéciaux) ou pour inclure Allow: en cas de 405 à partir de ta config Location.
 
 // Rédiger une version chunked si tu veux servir du streaming dynamique.
