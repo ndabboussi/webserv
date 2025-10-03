@@ -364,7 +364,7 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 
 	if (request.method == "POST")
 	{
-		if (resp.code == 200)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
+		if (resp.code == 201)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
 		{
 			std::string body = buildPostConfirmation(request);
 			std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);

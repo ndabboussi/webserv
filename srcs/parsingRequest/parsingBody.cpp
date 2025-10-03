@@ -75,7 +75,7 @@ static void parseType1(HttpRequest &req, std::istringstream &requestStream)
 }
 
 
-static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::string &name)
+static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::string &name, HttpRequest &req)
 {
 	int depth = 0, i = 0;
 	for (size_t j = 0; j < path.size(); j++)
@@ -88,6 +88,10 @@ static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::s
 		else if (path[j] == '/')
 			i = 0;
 	}
+	if (isAFile(path))
+		req.statusCode = 205;
+	else
+		req.statusCode = 201;
 	if (chdir(path.c_str()))
 		return 1;
 	Fout.open(name.c_str(), std::ios::binary);
@@ -99,7 +103,7 @@ static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::s
 static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::string &boundary)
 {
 	std::ofstream Fout;
-	if (createFileAtRightPlace(Fout, req.path, *req.fileNames.rbegin()) || !Fout.is_open())
+	if (createFileAtRightPlace(Fout, req.path, *req.fileNames.rbegin(), req) || !Fout.is_open())
 	{
 		std::cerr << RED "Error 500: Internal server error: "<< RESET << std::endl;
 		req.error = 500;
