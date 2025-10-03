@@ -191,29 +191,6 @@ bool	handleClient(int client_fd, const Server &servers)
 	return true;
 }
 
-// void acceptConnect(const Server &servers)
-// {
-// 	while (true)
-// 	{
-// 		struct sockaddr_in clientAdrr;
-// 		socklen_t clientLen = sizeof(clientAdrr);
-
-// 		int client_fd = accept(servers.getSocketFd(), (struct sockaddr *)&clientAdrr, &clientLen);
-// 		if (client_fd < 0)
-// 		{
-// 			std::cerr << RED "Failed to grab connection. errno: " << errno << RESET << std::endl;
-// 			continue;
-// 		}
-// 		//char client_address[INET_ADDRSTRLEN];
-// 		char client_address[BUFSIZE];
-// 		inet_ntop(AF_INET, &clientAdrr, client_address, BUFSIZE);//debug
-// 		printf(PINK "Client connection: %s\n" RESET, client_address);//debug
-
-// 		handleClient(client_fd, servers);
-// 		close(client_fd);
-// 	}
-// }
-
 void	bindAndListen(int server_fd, int port)
 {
 	struct sockaddr_in sockAddress;

@@ -346,21 +346,6 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 	setStatusCode(request, resp);
 	setStatusLine(resp);
 
-	// // Step 4: Empty file → 204 No Content
-	// else if (_code == 200 && _response_body.empty() && fileExists(_target_file))
-	// {
-	// 	struct stat st;
-	// 	if (stat(_target_file.c_str(), &st) == 0 && st.st_size == 0)
-	// 	{
-	// 		response.code = 204;
-	// 		_response_body.clear();
-	// 	}
-	// }
-
-	// // Step 5: POST created new file → 201 Created
-	// if (request.method == "POST" && resp.code == 200 && !fileExists(_target_file))
-	// 	resp.code = 201;
-
 	std::ifstream file(request.path.c_str(), std::ios::binary);
 	if (!file.is_open())
 	{
@@ -379,15 +364,38 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 
 	if (request.method == "POST")
 	{
-		std::string body = buildPostConfirmation(request);
-		std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);
+		if (resp.code == 200)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
+		{
+			std::string body = buildPostConfirmation(request);
+			std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);
 
-		send(client_fd, headers.c_str(), headers.size(), 0);
-		send(client_fd, body.c_str(), body.size(), 0);
-		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
-		std::cout << GREEN "[<] Sent POST confirmation page: " << request.path
-				<< " (" << body.size() << " bytes)" << RESET << std::endl;
-		return;
+			send(client_fd, headers.c_str(), headers.size(), 0);
+			send(client_fd, body.c_str(), body.size(), 0);
+			std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
+			std::cout << GREEN "[<] Sent POST confirmation page: " << request.path
+					<< " (" << body.size() << " bytes)" << RESET << std::endl;
+			return;
+		}
+		else // File already existed, redirect to where to find it
+		{
+			resp.code = 303;
+			setStatusLine(resp);
+
+			std::string location = request.url;
+			std::ostringstream headers;
+			headers << resp.statusLine;
+			headers << "Date: " << setDate();
+			headers << "Server: MyWebServ/1.0\r\n";
+			headers << "Location: " << location << "\r\n";
+			headers << "Content-Length: 0\r\n";
+			headers << "Connection: " << setConnection(request) << "\r\n\r\n";
+			
+			send(client_fd, headers.str().c_str(), headers.str().size(), 0);
+			std::cout << GREEN "[<] Sent Response:\n" << headers.str().c_str() << RESET << std::endl;
+			std::cout << GREEN "[<] Sent 303 See Other to "
+						<< location << RESET << std::endl;
+			return;
+		}
 	}
 
 	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -420,4 +428,15 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 //timeout
 //changer URL par server_name replace local_host
 
-//URI to find updated struct --< request.URL 
+//URI to find updated struct --> request.URL 
+
+// // Step 4: Empty file → 204 No Content
+// else if (_code == 200 && _response_body.empty() && fileExists(_target_file))
+// {
+// 	struct stat st;
+// 	if (stat(_target_file.c_str(), &st) == 0 && st.st_size == 0)
+// 	{
+// 		response.code = 204;
+// 		_response_body.clear();
+// 	}
+// }
