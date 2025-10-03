@@ -1,0 +1,128 @@
+E 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+HERE 6: 0
+HERE 1: 0
+HERE 2: 0
+HERE 3: 0
+HERE 4: 0
+HERE 5: 0
+GET /favicon.ico HTTP/1.1
+Host: localhost:8080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br, zstd
+Connection: keep-alive
+Referer: http://localhost:8080/
+Sec-Fetch-Dest: image
+Sec-Fetch-Mode: no-cors
+Sec-Fetch-Site: same-origin
+Priority: u=6
+
+
+Error 404: Not found: conf/data/test/favicon.ico
+QUITTING parseRequest
+
+
+ENTERING sendResponse
+
+
+==3016060== 
+==3016060== Process terminating with default action of signal 13 (SIGPIPE)
+==3016060==    at 0x4CCF920: send (send.c:28)
+==3016060==    by 0x41FF94: sendResponse(int, HttpRequest const&) (sendResponse.cpp:321)
+==3016060==    by 0x422DC7: handleClient(int, Server const&) (launchServer.cpp:193)
+==3016060==    by 0x424C23: launchServer(std::vector<Server, std::allocator<Server> >&) (launchServer.cpp:380)
+==3016060==    by 0x404EBC: main (main.cpp:21)
+==3016060== 
+==3016060== HEAP SUMMARY:
+==3016060==     in use at exit: 82,577 bytes in 74 blocks
+==3016060==   total heap usage: 173,074 allocs, 173,000 frees, 1,095,805 bytes allocated
+==3016060== 
+==3016060== LEAK SUMMARY:
+==3016060==    definitely lost: 0 bytes in 0 blocks
+==3016060==    indirectly lost: 0 bytes in 0 blocks
+==3016060==      possibly lost: 0 bytes in 0 blocks
+==3016060==    still reachable: 82,577 bytes in 74 blocks
+==3016060==         suppressed: 0 bytes in 0 blocks
+==3016060== Rerun with --leak-check=full to see details of leaked memory
+==3016060== 
+==3016060== For lists of detected and suppressed errors, rerun with: -s
+==3016060== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
