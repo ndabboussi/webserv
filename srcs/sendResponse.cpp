@@ -308,7 +308,6 @@ std::string	toString(size_t value)
 void	sendResponse(int client_fd, const HttpRequest &request)
 {
 	HttpResponse	resp;
-	std::cout << BOLD UNDERLINE "ENTERING sendResponse\n\n" RESET << std::endl;
 	// Step 1: Check if request already has an error
 	if (request.error >= 400)
 	{
@@ -343,7 +342,6 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
-	std::cout << BOLD UNDERLINE "After request.error and autoindex\n\n" RESET << std::endl;
 
 	setStatusCode(request, resp);
 	setStatusLine(resp);
@@ -410,7 +408,6 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 		std::cout << GREEN "[<] Sent 204 No Content for " << request.path << RESET << std::endl;
 		return;
 	}
-	std::cout << BOLD UNDERLINE "Normal behaviour\n\n" RESET << std::endl;
 	std::string headers = buildHeaders(resp, request, fileContent.size(), mimeType, true);
 	
 	send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
@@ -418,7 +415,6 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 	std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 	std::cout << GREEN "[<] Sent file: " << request.path
 			<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
-	std::cout << BOLD UNDERLINE "Quits sendResponse\n\n" RESET << std::endl;
 }
 
 
