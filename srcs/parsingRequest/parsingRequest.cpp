@@ -98,5 +98,6 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server
 					<< req.method << " " << req.path << " " << req.version
 					<< RESET << std::endl;
 	}
+	std::cout << BOLD UNDERLINE "QUITTING parseRequest\n\n" RESET << std::endl;
 	return req;
 }

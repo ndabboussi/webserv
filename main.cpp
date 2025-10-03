@@ -1,7 +1,9 @@
 #include "Server.hpp"
+#include <signal.h>
 
 int	main(int ac, char **av)
 {
+	signal(SIGPIPE, SIG_IGN);
 	std::string	configFile = "./conf/nanana.conf";
 	if (ac > 2)
 		return (std::cout << "Error: too many arguments." << std::endl, 1);

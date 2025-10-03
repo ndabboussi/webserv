@@ -306,10 +306,12 @@ int launchServer(std::vector<Server> &servers)
 
 	while (true)
 	{
+		//int cpt = 0;
 		fd_set	readfds;
 		FD_ZERO(&readfds);
 		int	maxFd = 0;
 
+		//std::cout << UNDERLINE "HERE 1: " << cpt << RESET << std::endl;
 		//setServersSockets(servers, maxFd, readfds);
 		//servers --> handle multiple servers sockets
 		for (size_t	i = 0; i < servers.size(); i++)
@@ -323,6 +325,7 @@ int launchServer(std::vector<Server> &servers)
 					maxFd = fd;
 			}
 		}
+		//std::cout << UNDERLINE "HERE 2: " << cpt << RESET << std::endl;
 
 		//clients
 		for (size_t i = 0 ; i < client_fds_vec.size(); i++)
@@ -331,7 +334,9 @@ int launchServer(std::vector<Server> &servers)
 			if (client_fds_vec[i] > maxFd)
 				maxFd = client_fds_vec[i];
 		}
-
+		//std::cout << UNDERLINE "HERE 3: " << cpt << RESET << std::endl;
+		//timeval tv = {0, 0};
+		//int activity = select(maxFd + 1, &readfds, NULL, NULL, &tv);
 		int activity = select(maxFd + 1, &readfds, NULL, NULL, NULL);
 		if (activity < 0)
 		{
@@ -339,6 +344,7 @@ int launchServer(std::vector<Server> &servers)
 			continue;
 		}
 
+		//std::cout << UNDERLINE "HERE 4: " << cpt << RESET << std::endl;
 		//check if incoming connexion, accept client on the correct port
 		for (size_t i = 0; i < servers.size(); i++)
 		{
@@ -364,6 +370,7 @@ int launchServer(std::vector<Server> &servers)
 			}
 		}
 
+		//std::cout << UNDERLINE "HERE 5: " << cpt << RESET << std::endl;
 		//check clients activity
 		for (size_t i = 0; i < client_fds_vec.size(); i++)
 		{
@@ -372,6 +379,7 @@ int launchServer(std::vector<Server> &servers)
 			{
 				size_t	server_index = client_server_map[fd];
 				bool keep = handleClient(fd, servers[server_index]);
+				//bool keep = 0;
 				if (!keep)
 				{
 					close(fd);
@@ -379,11 +387,14 @@ int launchServer(std::vector<Server> &servers)
 					client_fds_vec.erase(client_fds_vec.begin() + i);
 					// std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
 					// 		<< servers[server_index].getPorts() << RESET << std::endl;
+					i--;
 					continue;
 				}
 			}
-			i++;
+			//i++;
 		}
+		//std::cout << UNDERLINE "HERE 6: " << cpt << RESET << std::endl;
+		//cpt++;
 	}
 	for(size_t i = 0; i < servers.size(); i++)
 	{

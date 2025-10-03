@@ -308,7 +308,7 @@ std::string	toString(size_t value)
 void	sendResponse(int client_fd, const HttpRequest &request)
 {
 	HttpResponse	resp;
-
+	std::cout << BOLD UNDERLINE "ENTERING sendResponse\n\n" RESET << std::endl;
 	// Step 1: Check if request already has an error
 	if (request.error >= 400)
 	{
@@ -318,12 +318,13 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
 
 		send(client_fd, headers.c_str(), headers.size(), 0);
-		send(client_fd, body.c_str(), body.size(), 0);
+		send(client_fd, body.c_str(), body.size(), 0);////
 		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 		std::cout << GREEN "[<] Sent ERROR Page: " << request.path
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
+
 	//// Step 2: CGI (skip building full response here)
 	// if (_cgi)
 	// 	return;
@@ -335,13 +336,14 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 		setStatusLine(resp);
 		const std::string body = request.autoIndexFile;
 		std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);
-		send(client_fd, headers.c_str(), headers.size(), 0);
-		send(client_fd, body.c_str(), body.size(), 0);
+		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
+		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
 		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 		std::cout << GREEN "[<] Sent AutoIndexFile: " << request.path
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
+	std::cout << BOLD UNDERLINE "After request.error and autoindex\n\n" RESET << std::endl;
 
 	setStatusCode(request, resp);
 	setStatusLine(resp);
@@ -354,8 +356,8 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 		std::string body = generateDefaultErrorPage(resp.code);
 		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
 
-		send(client_fd, headers.c_str(), headers.size(), 0);
-		send(client_fd, body.c_str(), body.size(), 0);
+		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
+		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
 		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 		std::cout << GREEN "[<] Sent file: " << request.path
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
@@ -364,13 +366,14 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 
 	if (request.method == "POST")
 	{
-		if (resp.code == 200)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
+		std::cout << BOLD UNDERLINE "Inside POST\n\n" RESET << std::endl;
+		if (resp.code == 201)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
 		{
 			std::string body = buildPostConfirmation(request);
 			std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);
 
-			send(client_fd, headers.c_str(), headers.size(), 0);
-			send(client_fd, body.c_str(), body.size(), 0);
+			send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
+			send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
 			std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 			std::cout << GREEN "[<] Sent POST confirmation page: " << request.path
 					<< " (" << body.size() << " bytes)" << RESET << std::endl;
@@ -390,7 +393,7 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 			headers << "Content-Length: 0\r\n";
 			headers << "Connection: " << setConnection(request) << "\r\n\r\n";
 			
-			send(client_fd, headers.str().c_str(), headers.str().size(), 0);
+			send(client_fd, headers.str().c_str(), headers.str().size(), MSG_NOSIGNAL);
 			std::cout << GREEN "[<] Sent Response:\n" << headers.str().c_str() << RESET << std::endl;
 			std::cout << GREEN "[<] Sent 303 See Other to "
 						<< location << RESET << std::endl;
@@ -403,19 +406,20 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 	if ((resp.code >= 100 && resp.code < 200) || resp.code == 204 || resp.code == 304)
 	{
 		std::string headers = buildHeaders(resp, request, 0, mimeType, false);
-		send(client_fd, headers.c_str(), headers.size(), 0);
+		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 		std::cout << RED "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 		std::cout << GREEN "[<] Sent 204 No Content for " << request.path << RESET << std::endl;
 		return;
 	}
-
+	std::cout << BOLD UNDERLINE "Normal behaviour\n\n" RESET << std::endl;
 	std::string headers = buildHeaders(resp, request, fileContent.size(), mimeType, true);
 	
-	send(client_fd, headers.c_str(), headers.size(), 0);
-	send(client_fd, fileContent.data(), fileContent.size(), 0);
+	send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
+	send(client_fd, fileContent.data(), fileContent.size(), MSG_NOSIGNAL);
 	std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 	std::cout << GREEN "[<] Sent file: " << request.path
 			<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
+	std::cout << BOLD UNDERLINE "Quits sendResponse\n\n" RESET << std::endl;
 }
 
 
