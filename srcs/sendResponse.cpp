@@ -366,7 +366,6 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 
 	if (request.method == "POST")
 	{
-		std::cout << BOLD UNDERLINE "Inside POST\n\n" RESET << std::endl;
 		if (resp.code == 201)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
 		{
 			std::string body = buildPostConfirmation(request);

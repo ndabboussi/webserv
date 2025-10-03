@@ -23,7 +23,7 @@ static int findLocations(std::string str, Location &location)
 	return 0;
 }
 
-static int isAFile(std::string path)
+int isAFile(std::string path)
 {
 	struct stat st;
 	if (stat(path.c_str(), &st) == 0)
