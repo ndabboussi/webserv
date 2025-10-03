@@ -11,10 +11,12 @@ struct	HttpResponse;
 class	 Server : public Location
 {
 	private:
-		int			_port;
-		std::string	_name;
-		int			_socketFd;
-		long long		_maxClientBodySize;
+		std::vector<int>			_port;
+		std::string					_name;
+		std::vector<int>			_socketFd;
+		long long					_maxClientBodySize;
+		std::map<int, std::string>	_errorPages;	
+
 
 	public:
 		Server(void);
@@ -23,15 +25,15 @@ class	 Server : public Location
 		Server &operator=(Server const &src);
 
 	public:
-		int			getPort() const;
-		std::string	getName() const;
-		int         getSocketFd() const;
-		long long		getMaxBodyClientSize() const;
+		std::vector<int>	getPort() const;
+		std::string			getName() const;
+		std::vector<int>	getSocketFd() const;
+		long long			getMaxBodyClientSize() const;
 
-		void		setPort(int port);
-		void		setMaxBodyClientSize(long long size);
-		void		setName(std::string name);
-		void        setSocketFd(int fd);
+		void				addPort(int port);
+		void				setMaxBodyClientSize(long long size);
+		void				setName(std::string name);
+		void        		addSocketFd(int fd);
 };
 
 void	parsing(std::vector<Server> &servers, std::string configFile);

@@ -35,6 +35,16 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 		throw std::runtime_error("Error: Unexpected EOF in location scope"); //Unexpexted EOF
 }
 
+static int isStrDigit(std::string &str)
+{
+	for (size_t i = 0; i < str.size(); i++)
+	{
+		if (!isdigit(str[i]))
+			return 0;
+	}
+	return 1;
+}
+
 static void	parsingServer(Server &server, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
 {
 	for (; it != end && *it != "}" ; it++)
@@ -53,19 +63,22 @@ static void	parsingServer(Server &server, std::vector<std::string>::iterator &it
 		else if (*it == "listen" && it + 1 != end)
 		{
 			it++;
-			if (isdigit((*it)[0]))
+			int nb = 0;
+			while (isStrDigit(*it))
 			{
+				nb++;
 				long nb = std::atol(it->c_str());
 				if (nb > 2147483648)
 					throw std::runtime_error("Error: Too large number in field listen"); //too large number in field listen
-				server.setPort(nb);
+				server.addPort(nb);
+				it++;
 			}
-			else if ((*it)[0] == ';')
+			if ((*it)[0] == ';' && !nb)
 				throw std::runtime_error("Error: Missing port in field listen"); //missing port in field listen
 			else
 				throw std::runtime_error("Error: Unrecognised char in field listen"); //unrecognise char in field listen
 			if (it + 1 != end && *(it + 1) == ";") //check if next str is a ;
-				it++;
+				it++;				
 			if ((*it)[it->size() - 1] != ';')
 				throw std::runtime_error("Error: Error: Missing ; or too much informations in instruction in listen field in server scope"); //missing ; or too much informations in instruction
 		}
@@ -160,16 +173,6 @@ void parsing(std::vector<Server> &servers, std::string configFile)
 			parsingServer(server, it, end);
 			servers.push_back(server);
 		}
-		// else if (*it == "location" && it + 1 != end && *(it + 1) == "{")
-		// {
-		// 	if (servers.empty())
-		// 		throw std::runtime_error("Error: 'location' outside of a 'server' block");
-
-		// 	it += 2;
-		// 	Location loc;
-		// 	parsingLocation(loc, it, end);
-		// 	servers.back().addLocations(loc);
-		// }
 	}
 
 	if (flagBrackets != 0)

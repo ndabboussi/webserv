@@ -123,7 +123,6 @@ static int fillIndexFile(HttpRequest &req)
 				+ "\">" + std::string(entry->d_name) + "</a></li>\n";
 	}
 	req.autoIndexFile += "\t\t\t</ul>\n\t\t</div>\n\t</body>\n</html>";
-	std::cout << req.autoIndexFile << std::endl;
     closedir(dir);
 	return 0;
 }

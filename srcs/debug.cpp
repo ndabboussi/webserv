@@ -27,7 +27,7 @@ void	printServers(const std::vector<Server> &servers)
 		
 		std::cout << "\n------Server no " << i << "------" << std::endl << std::endl;
 		std::cout << "server name: " << it->getName() << std::endl;
-		std::cout << "server port: " << it->getPort() << std::endl;
+		//std::cout << "server port: " << it->getPort() << std::endl;
 		std::cout << "server methods: " << (int)it->getMethods() << std::endl;
 		std::cout << "-----server data-----" << std::endl;
 		const std::map<std::string, std::string> data = it->getData();
