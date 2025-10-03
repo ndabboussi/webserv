@@ -440,3 +440,9 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 // 		_response_body.clear();
 // 	}
 // }
+
+//create redirect for directory if 301
+// handle 300 and redirect to the right locatin
+//301 faire la redirection vers le bon directory
+
+//protect launchServer() and sendResponse() functions

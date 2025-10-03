@@ -230,6 +230,10 @@ int createServerSocket(int port)
 	}
 
 	const int flag = 1;
+	// struct timeval tv;
+	// tv.tv_sec = 5;
+	// tv.tv_usec = 0;
+	// if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int)) < 0)
 	{
 		std::cerr << RED "Failed to set socket options. errno: " << errno << RESET << std::endl;
@@ -240,6 +244,14 @@ int createServerSocket(int port)
 	bindAndListen(server_fd, port);
 	return server_fd;
 }
+
+// Option 1: Set client socket non-blocking
+// Option 2: Keep blocking sockets, but enforce timeouts
+// Use setsockopt:
+// This way, read() won’t block forever – it will return -1 with errno == EAGAIN after 5s.
+// Right now your sockets = blocking.
+// This explains the “slow loading” → you’re stuck in read() waiting for clients.
+// To fix: either make sockets non-blocking or enforce a timeout with SO_RCVTIMEO
 
 //------------------------------------ LAUNCHSERVER -------------------------------------//
 
@@ -333,6 +345,7 @@ int launchServer(std::vector<Server> &servers)
 		}
 		//timeval tv = {0, 0};
 		//int activity = select(maxFd + 1, &readfds, NULL, NULL, &tv);
+
 		int activity = select(maxFd + 1, &readfds, NULL, NULL, NULL);
 		if (activity < 0)
 		{
