@@ -118,6 +118,30 @@ static void	parsingServer(Server &server, std::vector<std::string>::iterator &it
 			if ((*it)[it->size() - 1] != ';')
 				throw std::runtime_error("Error: Error: Missing ; or too much informations in instruction in maxClientBodySize field in server scope");
 		}
+		else if (*it == "error_page" && it + 1 != end)
+		{
+			it++;
+			int key;
+			std::string value;
+			if (isStrDigit(*it) && it + 1 != end)
+			{
+				key = std::atoi(it->c_str());
+				it++;
+				if ((*it)[it->size() - 1] == ';' && it->size() > 1)
+					server.addErrorPage(key, it->substr(0, it->size() - 1));
+				else
+				{
+					server.addErrorPage(key, *it);
+					it++;
+				}
+				if ((*it)[it->size() - 1] != ';')
+					throw std::runtime_error("Error: Error: Missing ; or too much informations in instruction in error_page field in server scope");
+			}
+			else if ((*it)[0] == ';')
+				throw std::runtime_error("Error: Missing error number in field error_page");
+			else
+				throw std::runtime_error("Error: Unrecognised char in field error_page");
+		}
 		else if (*it != ";" && it + 1 != end)
 			mapElement(server, it, end);
 	}

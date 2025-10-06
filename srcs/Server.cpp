@@ -44,12 +44,26 @@ std::vector<int> Server::getSocketFds() const
     return (this->_socketFd);
 }
 
+std::map<int, std::string>	Server::getErrorPages() const
+{
+    return (this->_errorPages);
+}
+
+
 long long Server::getMaxBodyClientSize() const
 {
     return this->_maxClientBodySize;
 }
 
 //SETTERS ---------------------------------------------------------
+
+void Server::addErrorPage(int key, std::string value)
+{
+    if (this->_errorPages.find(key) == this->_errorPages.end())
+		this->_errorPages.insert(std::make_pair(key, value));
+	else
+		this->_errorPages[key] = value;
+}
 
 void Server::addPort(int port)
 {
