@@ -202,7 +202,6 @@ void	setStatusCode(HttpRequest const &request, HttpResponse &response)
 	}
 	else
 		response.code = request.statusCode;
-	//std::cout << BOLD UNDERLINE "here\n" RESET << std::endl;
 }
 
 void	setStatusLine(HttpResponse &response)
@@ -279,6 +278,16 @@ std::string	generateDefaultErrorPage(int code)
 	return body.str();
 }
 
+std::string readFileToString(const std::string &path)
+{
+	std::ifstream file(path.c_str(), std::ios::binary);
+	if (!file.is_open())
+		throw std::runtime_error("Cannot open file: " + path);
+	std::ostringstream ss;
+	ss << file.rdbuf();
+	return ss.str();
+}
+
 //------------------------- MAIN SENDRESPONSE() FUNCTION -------------------------//
 
 std::string buildHeaders(HttpResponse &resp, const HttpRequest &req, size_t bodySize, const std::string &contentType, bool sendBody)
@@ -306,7 +315,6 @@ void sendRedirectResponse(int client_fd, int code, const std::string &location, 
 	resp.code = code;
 	setStatusLine(resp);
 
-	//std::cout << BOLD UNDERLINE "INSIDE SENDREDIRECT" RESET << std::endl;
 	std::ostringstream body;
 	body << "<!DOCTYPE html>\n<html><head><title>"
 			<< code << " " << statusCodeResponse(code) 
@@ -344,24 +352,53 @@ void sendRedirectResponse(int client_fd, int code, const std::string &location, 
 
 //------------------------- MAIN SENDRESPONSE() FUNCTION -------------------------//
 
-void	sendResponse(int client_fd, const HttpRequest &request)
+void	sendResponse(int client_fd, const HttpRequest &request, const Server &server)
 {
 	HttpResponse	resp;
 
-	// std::cout << BOLD UNDERLINE "Begin resp.code= " << resp.code << RESET << std::endl;
-	// std::cout << BOLD UNDERLINE "begin req.status= " << request.statusCode <<RESET << std::endl;
 	// Step 1: Check if request already has an error
 	if (request.statusCode >= 400)
 	{
 		resp.code = request.statusCode;
 		setStatusLine(resp);
 
-		std::string body = generateDefaultErrorPage(request.statusCode);
-		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
+		const std::map<int, std::string> errorPages = server.getErrorPages();
+		std::cout << YELLOW "[DEBUG] Error pages configured for this server:\n" RESET;
+		for (std::map<int, std::string>::const_iterator e = errorPages.begin(); e != errorPages.end(); ++e)
+			std::cout << "  " << e->first << " => " << e->second << std::endl;
 
-		send(client_fd, headers.c_str(), headers.size(), 0);
-		send(client_fd, body.c_str(), body.size(), 0);////
-		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
+		std::map<int, std::string>::const_iterator it = errorPages.find(resp.code);
+		std::string body;
+
+		if (it != errorPages.end())
+		{
+			try
+			{
+				std::string errorPagePath = it->second;
+				std::string root = (server.getData().find("root") != server.getData().end())
+								? server.getData().find("root")->second : "";
+				if (!errorPagePath.empty() && errorPagePath[0] == '/')
+   					 errorPagePath = "." + root + errorPagePath;
+				body = readFileToString(errorPagePath);
+			}
+			catch (const std::exception &e)
+			{
+				std::cerr << RED "[!] Failed to read custom error page: " 
+							<< e.what() << RESET << std::endl;
+				body = generateDefaultErrorPage(resp.code);
+			}
+		}
+		else
+		{
+			body = generateDefaultErrorPage(resp.code);
+		}
+
+		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
+		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
+		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
+
+		std::cout << GREEN "[<] Sent Error " << resp.code 
+					<< " for " << request.path << RESET << std::endl;
 		std::cout << GREEN "[<] Sent ERROR Page: " << request.path
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
@@ -465,14 +502,3 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 	std::cout << GREEN "[<] Sent file: " << request.path
 			<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
 }
-
-//timeout
-
-//redirection 300
-//create redirect for directory if 301
-// handle 300 and redirect to the right locatin
-//301 faire la redirection vers le bon directory
-
-//replace 400 error pages dynamic
-
-//protect launchServer() and sendResponse() functions
