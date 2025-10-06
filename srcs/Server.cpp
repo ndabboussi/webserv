@@ -10,6 +10,7 @@ Server &Server::operator=(Server const &src)
         this->_port = src._port;
         this->_name = src._name;
         this->_maxClientBodySize = src._maxClientBodySize;
+        this->_errorPages = src._errorPages;
     }
     return *this;
 }
@@ -21,7 +22,7 @@ Server &Server::operator=(Server const &src)
 Server::Server(void) : Location(), _name(""), _maxClientBodySize(200000)
 {}
 
-Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd), _maxClientBodySize(src._maxClientBodySize)
+Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd), _maxClientBodySize(src._maxClientBodySize), _errorPages(src._errorPages)
 {}
 
 Server::~Server(void)
