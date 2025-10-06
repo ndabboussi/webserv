@@ -4,6 +4,9 @@
 # include "Location.hpp"
 # include "parsingRequest.hpp"
 # include "HttpResponse.hpp"
+# include "Cookies.hpp"
+
+# include <fcntl.h> // for open
 
 struct	HttpRequest;
 struct	HttpResponse;
@@ -15,7 +18,9 @@ class	 Server : public Location
 		std::string					_name;
 		std::vector<int>			_socketFd;
 		long long					_maxClientBodySize;
-		std::map<int, std::string>	_errorPages;	
+		std::map<int, std::string>	_errorPages;
+		std::vector<Cookies>		_cookies;
+		int			_modified;
 
 
 	public:
@@ -30,12 +35,15 @@ class	 Server : public Location
 		std::map<int, std::string>	getErrorPages() const;
 		std::string					getName() const;
 		long long					getMaxBodyClientSize() const;
+		std::vector<Cookies>		getCookies() const;
 
 		void						addPort(int port);
 		void						addSocketFd(int fd);
 		void						addErrorPage(int key, std::string value);
 		void						setMaxBodyClientSize(long long size);
 		void						setName(std::string name);
+		void						addCookies(Cookies newCookie);
+		void						delCookies(std::string id);
 };
 
 void	parsing(std::vector<Server> &servers, std::string configFile);
