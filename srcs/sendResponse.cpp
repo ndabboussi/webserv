@@ -126,18 +126,19 @@ static std::string  statusCodeResponse(int code)
 		case 206: return "Partial Content";//
 
 		//redirection messages
-		case 300: return "Multiple Choices";
+		case 300: return "Multiple Choices"; //dont handle
 		case 301: return "Moved Permanently";
-		case 302: return "Found"; 	
-		case 303: return "See Other";	
-		case 304: return "Not Modified"; 	
-		case 305: return "Use Proxy"; 	
-		case 307: return "Temporary Redirect";
+		case 302: return "Found"; // handle ?
+		case 303: return "See Other";
+		case 304: return "Not Modified"; // handle ?
+		case 305: return "Use Proxy"; //dont handle
+		case 307: return "Temporary Redirect"; //handle ?
+	//301/302/307 → you must send a Location header
 
 		//client error responses
 		case 400: return "Bad Request";
 		case 401: return "Unauthorized";
-		case 402: return "Bad Request";
+		case 402: return "Payment Required";
 		case 403: return "Forbidden";
 		case 404: return "Not Found";
 		case 405: return "Method Not Allowed";
@@ -178,13 +179,15 @@ static std::string  statusCodeResponse(int code)
 
 //------------------------- HEADERS UTILS -------------------------//
 
+std::string	toString(size_t value)
+{
+	std::ostringstream oss;
+	oss << value;
+	return oss.str();
+}
+
 void	setStatusCode(HttpRequest const &request, HttpResponse &response)
 {
-	// if (request.getBody().length() > _server.getClientMaxBodySize())
-    // {
-    //     response.code = 413;
-    //     return 1;
-    // }
 	if (request.statusCode >= 400)
 		return;
 	if (request.method == "DELETE")
@@ -192,14 +195,14 @@ void	setStatusCode(HttpRequest const &request, HttpResponse &response)
 		response.code = 204; //specifying that we won't send body
 		return;
 	}
-	if (request.method == "POST")
+	else if (request.statusCode == 0)
 	{
-		// POST created new file → 201 Created
 		response.code = 200;
 		return;
 	}
-	else 
-		response.code = 200;
+	else
+		response.code = request.statusCode;
+	//std::cout << BOLD UNDERLINE "here\n" RESET << std::endl;
 }
 
 void	setStatusLine(HttpResponse &response)
@@ -253,6 +256,7 @@ std::string buildPostConfirmation(const HttpRequest &request)
 
 //------------------------- ERRORS DURING PARSING -------------------------//
 
+//need to make it dynamic with an explanation sentance
 std::string	generateDefaultErrorPage(int code)
 {
 	std::ostringstream body;
@@ -275,7 +279,6 @@ std::string	generateDefaultErrorPage(int code)
 	return body.str();
 }
 
-
 //------------------------- MAIN SENDRESPONSE() FUNCTION -------------------------//
 
 std::string buildHeaders(HttpResponse &resp, const HttpRequest &req, size_t bodySize, const std::string &contentType, bool sendBody)
@@ -297,23 +300,62 @@ std::string buildHeaders(HttpResponse &resp, const HttpRequest &req, size_t body
 	return headers.str();
 }
 
-std::string	toString(size_t value)
+void sendRedirectResponse(int client_fd, int code, const std::string &location, const HttpRequest &req)
 {
-	std::ostringstream oss;
-	oss << value;
-	return oss.str();
+	HttpResponse resp;
+	resp.code = code;
+	setStatusLine(resp);
+
+	//std::cout << BOLD UNDERLINE "INSIDE SENDREDIRECT" RESET << std::endl;
+	std::ostringstream body;
+	body << "<!DOCTYPE html>\n<html><head><title>"
+			<< code << " " << statusCodeResponse(code) 
+			<< "</title></head><body>"
+			<< "<h1>" << code << " " << statusCodeResponse(code) << "</h1>"
+			<< "<p>See: <a href=\"" << location + '/' << "\">" << location + '/' << "</a></p>"
+			<< "</body></html>";
+	std::string bodyStr = body.str();
+
+	std::ostringstream headers;
+	headers << resp.statusLine;
+	headers << "Date: " << setDate();
+	headers << "Server: MyWebServ/1.0\r\n";
+	headers << "Connection: " << setConnection(req);
+	headers << "Location: " << location + '/' << "\r\n";
+
+	//add body only if not 304(not modified)
+	if (code != 304)
+	{
+		headers << "Content-Type: text/html\r\n";
+		headers << "Content-Length: " << bodyStr.size() << "\r\n\r\n";
+		headers << bodyStr;
+	}
+	else
+		headers << "Content-Length: 0\r\n\r\n";
+
+	std::string fullResponse = headers.str();
+
+	send(client_fd, fullResponse.c_str(), fullResponse.size(), MSG_NOSIGNAL);
+
+	std::cout << GREEN "[<] Sent Response:\n" << fullResponse.c_str() << RESET << std::endl;
+	std::cout << GREEN "[<] Sent Redirect " << code << " to "
+				<< location << RESET << std::endl;
 }
 
+//------------------------- MAIN SENDRESPONSE() FUNCTION -------------------------//
 
 void	sendResponse(int client_fd, const HttpRequest &request)
 {
 	HttpResponse	resp;
 
+	// std::cout << BOLD UNDERLINE "Begin resp.code= " << resp.code << RESET << std::endl;
+	// std::cout << BOLD UNDERLINE "begin req.status= " << request.statusCode <<RESET << std::endl;
 	// Step 1: Check if request already has an error
 	if (request.statusCode >= 400)
 	{
 		resp.code = request.statusCode;
 		setStatusLine(resp);
+
 		std::string body = generateDefaultErrorPage(request.statusCode);
 		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
 
@@ -344,8 +386,11 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 		return;
 	}
 
-	setStatusCode(request, resp);
-	setStatusLine(resp);
+	if (request.statusCode >= 300 && request.statusCode <= 399)
+	{
+		sendRedirectResponse(client_fd, request.statusCode, request.url, request);
+		return;
+	}
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
 	if (!file.is_open())
@@ -362,6 +407,9 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
+
+	setStatusCode(request, resp);
+	setStatusLine(resp);
 
 	if (request.method == "POST")
 	{
@@ -418,31 +466,13 @@ void	sendResponse(int client_fd, const HttpRequest &request)
 			<< " (" << fileContent.size() << " bytes)" << RESET << std::endl;
 }
 
-
-//For 4xx and 5xx responses: send a small HTML page explaining the error.
-//For 3xx responses (redirections): you usually do not need a body, but you should send a Location: <url> header.
-//For 204 (No Content): you must not send a body at all.
-
+//timeout
 
 //redirection 300
-//timeout
-//changer URL par server_name replace local_host
-
-//URI to find updated struct --> request.URL 
-
-// // Step 4: Empty file → 204 No Content
-// else if (_code == 200 && _response_body.empty() && fileExists(_target_file))
-// {
-// 	struct stat st;
-// 	if (stat(_target_file.c_str(), &st) == 0 && st.st_size == 0)
-// 	{
-// 		response.code = 204;
-// 		_response_body.clear();
-// 	}
-// }
-
 //create redirect for directory if 301
 // handle 300 and redirect to the right locatin
 //301 faire la redirection vers le bon directory
+
+//replace 400 error pages dynamic
 
 //protect launchServer() and sendResponse() functions
