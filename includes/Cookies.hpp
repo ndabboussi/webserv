@@ -6,14 +6,13 @@
 
 struct HttpRequest;
 
-
 class Cookies
 {
 	private:
-		std::string													_id;
-		std::map<std::string, std::map<std::string, std::string> >	_data;
-		int															_modified;
-		std::map<std::string, std::string>							_outputData;
+		std::string					_id;
+		std::string					_authToken;
+		int							_modified;
+		std::vector<std::string>	_outputData;
 
 	public:
 		Cookies(void);
@@ -22,16 +21,17 @@ class Cookies
 		~Cookies(void);
 
 	public:
-		std::string													getId(void) const;
-		std::map<std::string, std::map<std::string, std::string> >	getData(void) const;
-		int															getModified(void) const;
-		std::map<std::string, std::string>							getOutputData(void) const;
+		std::string					getId(void) const;
+		std::string					getAuth(void) const;
+		int							getModified(void) const;
+		std::vector<std::string>	getOutputData(void) const;
 
-		void														addData(std::string path, std::string key, std::string value);
-		void														setModified(int index);
-		void														addOutputData(std::string key, std::string value);
+		void						setId(std::string value);
+		void						setAuth(std::string value);
+		void						setModified(int index);
+		void						addOutputData(std::string value);
 
-		void														genCookieId(std::vector<Cookies> const &cookies);
+		static std::string			genCookieId(std::vector<Cookies> const &cookies, int n);
 };
 
 void	manageCookies(Server &server, HttpRequest &request);

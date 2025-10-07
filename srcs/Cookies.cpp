@@ -7,7 +7,7 @@ Cookies &Cookies::operator=(Cookies const &src)
     if (this != &src)
     {
     	this->_id = src._id;
-		this->_data = src._data;
+		this->_authToken = src._authToken;
 		this->_modified = src._modified;
 		this->_outputData = src._outputData;
     }
@@ -16,9 +16,9 @@ Cookies &Cookies::operator=(Cookies const &src)
 
 //Constructor/Destructors--------------------------------------------------
 
-Cookies::Cookies(void){}
+Cookies::Cookies(void): _modified(-1){}
 
-Cookies::Cookies(Cookies const &src): _id(src._id), _data(src._data), _modified(src._modified), _outputData(src._outputData)
+Cookies::Cookies(Cookies const &src): _id(src._id), _authToken(src._authToken), _modified(src._modified), _outputData(src._outputData)
 {}
 
 Cookies::~Cookies(void)
@@ -31,9 +31,9 @@ std::string	Cookies::getId(void) const
 	return this->_id;
 }
 
-std::map<std::string, std::map<std::string, std::string> >	Cookies::getData(void) const
+std::string Cookies::getAuth(void) const
 {
-	return this->_data;
+	return this->_authToken;
 }
 
 int Cookies::getModified(void) const
@@ -41,84 +41,114 @@ int Cookies::getModified(void) const
 	return this->_modified;
 }
 
-std::map<std::string, std::string> Cookies::getOutputData(void) const
+std::vector<std::string> Cookies::getOutputData(void) const
 {
 	return this->_outputData;
 }
 
 //SETTERS------------------------------------------------------------------
 
-void Cookies::addData(std::string path, std::string key, std::string value)
-{
-	std::map<std::string, std::map<std::string, std::string> >::iterator it = this->_data.find(path);
-	if (it == this->_data.end())
-	{
-		std::map<std::string,std::string> newMap;
-		newMap.insert(std::make_pair(key, value));
-		this->_data.insert(std::make_pair(path, newMap));
-		return ;
-	}
-	std::map<std::string, std::string> &map = it->second;
-	if (map.find(key) == map.end())
-		map.insert(std::make_pair(key, value));
-	else
-		map[key] = value;
-}
-
 void Cookies::setModified(int index)
 {
 	this->_modified = index;
 }
 
-void Cookies::addOutputData(std::string key, std::string value)
+void Cookies::setId(std::string value)
 {
-	if (this->_outputData.find(key) == this->_outputData.end())
-		this->_outputData.insert(std::make_pair(key, value));
-	else
-		this->_outputData[key] = value;
+	this->_id = value;
+}
+
+void Cookies::setAuth(std::string value)
+{
+	this->_authToken = value;
+}
+
+void Cookies::addOutputData(std::string value)
+{
+	this->_outputData.push_back(value);
 }
 
 //Member function----------------------------------------------------------
 
-
-void Cookies::genCookieId(std::vector<Cookies> const &cookies)
+std::string Cookies::genCookieId(std::vector<Cookies> const &cookies, int nb)
 {
-	int file = open("/dev/urandom", O_RDONLY);
-	unsigned char rd[21] = {0};
+	int					file = open("/dev/urandom", O_RDONLY);
+	std::vector<unsigned char>	rd(nb);
+	std::string			dest;
 
 	if (file < 0)
 		throw std::runtime_error("Error: cannot open file");
 	while (1)
 	{
-		if (read(file, rd, 20) < 0)
+		int total = 0;
+		while (total != nb)
 		{
-			close(file);
-			throw std::runtime_error("Error: Read function failed");
+			int n = read(file, rd.data() + total, nb - total);
+			if (n < 0)
+			{
+				close(file);
+				throw std::runtime_error("Error: Read function failed");
+			}
+			total += n;
 		}
-		for (size_t i = 0; i < 20; i++)
+		for (int i = 0; i < nb; i++)
 		{
 			if (rd[i] > 126)
-				rd[i] %= 127;
-			if (rd[i] < 32)
-				rd[i] += 32;
-			this->_id += rd[i];
+				rd[i] = (rd[i] % 92) + 32;
+			dest += rd[i];
 		}
 		size_t i;
 		for (i = 0; i < cookies.size(); i++)
-			if (cookies[i]._id == this->_id)
+			if (cookies[i]._id == dest)
 				break ;
 		if (i == cookies.size())
 			break ; 
-		this->_id.clear();
+		dest.clear();
 	}
 	close(file);
+	return dest;
 }
 
 //Others functions---------------------------------------------------------
 
-static void	fillData(std::vector<Cookies> &cookies, HttpRequest &request)
+static std::string extractCookieValue(std::string &cookieLine, std::string key)
 {
-	;
+	size_t pos;
+	if ((pos = cookieLine.find(key)) == std::string::npos)
+		return "";
+	pos += key.size();
+	size_t end;
+	if ((end = cookieLine.find(';')) == std::string::npos)
+		end = cookieLine.size() - 1;
+	return cookieLine.substr(pos, end - pos);
+}
+
+static void	fillData(std::vector<Cookies> cookies, std::string &cookieLine)
+{
+	for (size_t i = 0; i < cookies.size(); i++)
+	{
+		if (cookies[i].getId() == extractCookieValue(cookieLine, "id"))
+		{
+			if (!extractCookieValue(cookieLine, "auth_token").empty() && cookies[i].getAuth().empty())
+			{
+				cookies[i].setAuth(Cookies::genCookieId(cookies, 25));
+				cookies[i].setModified(1);
+				std::string path = "/images"; //temporary
+				cookies[i].addOutputData("id=" + cookies[i].getId() + "; " + "auth_token=" + cookies[i].getAuth() + "; Path=" + path + "; HttpOnly");
+			}
+		}
+	}
+	
+}
+
+static void createNewSession(Server &server)
+{
+	Cookies newCookie;
+	newCookie.setId(Cookies::genCookieId(server.getCookies(), 20));
+	newCookie.setModified(0);
+	newCookie.addOutputData("id=" + newCookie.getId() + "; Path=/; HttpOnly");
+	server.addCookies(newCookie);
+	return ;
 }
 
 void	manageCookies(Server &server, HttpRequest &request)
@@ -126,16 +156,9 @@ void	manageCookies(Server &server, HttpRequest &request)
 	try
 	{
 		std::map<std::string, std::string>::iterator it = request.header.find("Cookie");
-		if (it == request.header.end())
-		{
-			Cookies newCookie;
-			newCookie.genCookieId(server.getCookies());
-			newCookie.setModified(0);
-			newCookie.addOutputData("/", "id=" + newCookie.getId() + "; HttpOnly");
-			server.addCookies(newCookie);
-			return ;
-		}
-		//fillData(newCookie, request);
+		if (it == request.header.end() || extractCookieValue(it->second, "id").empty())
+			return createNewSession(server);
+		fillData(server.getCookies(), it->second);
 	}
 	catch(const std::exception& e)
 	{
