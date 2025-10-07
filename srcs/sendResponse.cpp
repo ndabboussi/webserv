@@ -405,8 +405,11 @@ void	sendResponse(int client_fd, const HttpRequest &request, const Server &serve
 	}
 
 	//// Step 2: CGI (skip building full response here)
-	// if (_cgi)
-	// 	return;
+	if (request.isCgi)
+	{
+		executeCgi(client_fd, request, server);
+		return;
+	}
 
 	// Step 3: Autoindex case
 	else if (!request.autoIndexFile.empty())
