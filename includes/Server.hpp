@@ -23,6 +23,7 @@ class	 Server : public Location
 		Server(Server const &src);
 		~Server(void);
 		Server &operator=(Server const &src);
+		
 
 	public:
 		std::vector<int>			getPorts() const;

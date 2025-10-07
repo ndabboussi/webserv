@@ -20,6 +20,49 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 			parsingLocation(newLoc, it, end);
 			location.addLocations(newLoc);
 		}
+		else if (*it == "cgi_path" && it + 1 != end)
+		{
+			it++;
+
+			while (it != end && (*it)[it->size() - 1] != ';')
+			{
+				std::string	token = *it;
+				bool	endOfLine = (token[token.size() - 1]);
+
+				if (endOfLine)
+					token = token.substr(0, token.size() - 1);
+				if (!token.empty())
+					location.addCgiPath(token);
+				if(endOfLine)
+					break;
+				it++;
+			}
+			if (it == end)
+				throw std::runtime_error("Error: Unexpected EOF in cgi_path field");
+		}
+
+		else if (*it == "cgi_ext" && it + 1 != end)
+		{
+			++it;
+			while (it != end)
+			{
+				std::string token = *it;
+				bool endOfLine = (token[token.size() - 1] == ';');
+
+				if (endOfLine)
+					token = token.substr(0, token.size() - 1);
+
+				if (!token.empty())
+					location.addCgiExt(token); // <-- assumes addCgiExt() stores multiple extensions
+
+				if (endOfLine)
+					break;
+
+				++it;
+			}
+			if (it == end)
+				throw std::runtime_error("Error: Unexpected EOF in cgi_ext field");
+		}
 		else if ((*it == "auto_index" || *it == "auto_index;") && it + 1 != end)
 		{
 			location.setAutoIndex(true);
@@ -34,6 +77,8 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 	if (it == end)
 		throw std::runtime_error("Error: Unexpected EOF in location scope"); //Unexpexted EOF
 }
+
+
 
 static int isStrDigit(std::string str)
 {
