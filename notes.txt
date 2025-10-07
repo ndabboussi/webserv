@@ -254,3 +254,15 @@ location header in response : https://www.w3.org/Protocols/rfc2616/rfc2616-sec14
 
 1xx réponses informatives (100 Continue, 101 Switching Protocols)
 ❌ Pas de body.
+-
+
+NINA TO DO
+
+//timeout
+
+//redirection 300
+//create redirect for directory if 301
+// handle 300 and redirect to the right locatin
+//301 faire la redirection vers le bon directory
+
+//protect launchServer() and sendResponse() functions
