@@ -156,12 +156,12 @@ bool	handleClient(int client_fd, Server &servers)
 				}
 				else if (data.find("Transfer-Encoding: chunked") != std::string::npos)
 				{
-					int res = loadByChunk(data, data.substr(end + 4, data.size() - end + 4), server, client_fd);
+					int res = loadByChunk(data, data.substr(end + 4, data.size() - end + 4), servers, client_fd);
 					if (res)
 					{
 						HttpRequest req;
 						req.statusCode = res;
-						sendResponse(client_fd, req, server);
+						sendResponse(client_fd, req, servers);
 						return true;
 					}
 				}
@@ -191,7 +191,7 @@ bool	handleClient(int client_fd, Server &servers)
 
 	HttpRequest request = parseHttpRequest(data, servers);
 	manageCookies(servers, request);
-	sendResponse(client_fd, request);
+	sendResponse(client_fd, request, servers);
 	return true;
 }
 
