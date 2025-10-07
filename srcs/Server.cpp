@@ -19,7 +19,7 @@ Server &Server::operator=(Server const &src)
 
 //Constructor/Destructors--------------------------------------------------
 
-Server::Server(void) : Location(), _name(""), _maxClientBodySize(200000)
+Server::Server(void) : Location(), _name(""), _maxClientBodySize(2000000), _modified(-1)
 {}
 
 Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd),
@@ -57,9 +57,14 @@ long long Server::getMaxBodyClientSize() const
     return this->_maxClientBodySize;
 }
 
-std::vector<Cookies> Server::getCookies() const
+std::vector<Cookies> &Server::getCookies()
 {
     return this->_cookies;
+}
+
+int Server::getModified() const 
+{
+    return this->_modified;
 }
 
 //SETTERS ---------------------------------------------------------
@@ -87,6 +92,10 @@ void Server::setName(std::string name)
     this->_name = name;
 }
 
+void Server::setModified(int index)
+{
+    this->_modified = index;
+}
 
 void Server::addSocketFd(int fd)
 {

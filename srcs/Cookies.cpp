@@ -7,6 +7,7 @@ Cookies &Cookies::operator=(Cookies const &src)
     if (this != &src)
     {
     	this->_id = src._id;
+		this->_prevId = src._prevId;
 		this->_authToken = src._authToken;
 		this->_modified = src._modified;
 		this->_outputData = src._outputData;
@@ -18,7 +19,7 @@ Cookies &Cookies::operator=(Cookies const &src)
 
 Cookies::Cookies(void): _modified(-1){}
 
-Cookies::Cookies(Cookies const &src): _id(src._id), _authToken(src._authToken), _modified(src._modified), _outputData(src._outputData)
+Cookies::Cookies(Cookies const &src): _id(src._id), _prevId(src._prevId), _authToken(src._authToken), _modified(src._modified), _outputData(src._outputData)
 {}
 
 Cookies::~Cookies(void)
@@ -29,6 +30,11 @@ Cookies::~Cookies(void)
 std::string	Cookies::getId(void) const
 {
 	return this->_id;
+}
+
+std::string	Cookies::getPrevId(void) const
+{
+	return this->_prevId;
 }
 
 std::string Cookies::getAuth(void) const
@@ -56,6 +62,11 @@ void Cookies::setModified(int index)
 void Cookies::setId(std::string value)
 {
 	this->_id = value;
+}
+
+void Cookies::setPrevId(std::string value)
+{
+	this->_prevId = value;
 }
 
 void Cookies::setAuth(std::string value)
@@ -94,7 +105,11 @@ std::string Cookies::genCookieId(std::vector<Cookies> const &cookies, int nb)
 		for (int i = 0; i < nb; i++)
 		{
 			if (rd[i] > 126)
-				rd[i] = (rd[i] % 92) + 32;
+				rd[i] %= 127;
+			if (rd[i] < 33)
+				rd[i] += 33;
+			if (rd[i] == ',' || rd[i] == ';')
+				rd[i] -= 1;
 			dest += rd[i];
 		}
 		size_t i;
@@ -119,46 +134,66 @@ static std::string extractCookieValue(std::string &cookieLine, std::string key)
 	pos += key.size();
 	size_t end;
 	if ((end = cookieLine.find(';')) == std::string::npos)
-		end = cookieLine.size() - 1;
+		end = cookieLine.size();
 	return cookieLine.substr(pos, end - pos);
 }
 
-static void	fillData(std::vector<Cookies> cookies, std::string &cookieLine)
+static void	fillData(Server &server, std::vector<Cookies> &cookies, std::string &cookieLine)
 {
+	std::string str = extractCookieValue(cookieLine, "id");
 	for (size_t i = 0; i < cookies.size(); i++)
 	{
-		if (cookies[i].getId() == extractCookieValue(cookieLine, "id"))
+		if (cookies[i].getId() == str)
 		{
 			if (!extractCookieValue(cookieLine, "auth_token").empty() && cookies[i].getAuth().empty())
 			{
 				cookies[i].setAuth(Cookies::genCookieId(cookies, 25));
 				cookies[i].setModified(1);
+				server.setModified(i);
 				std::string path = "/images"; //temporary
 				cookies[i].addOutputData("id=" + cookies[i].getId() + "; " + "auth_token=" + cookies[i].getAuth() + "; Path=" + path + "; HttpOnly");
 			}
 		}
 	}
-	
 }
 
-static void createNewSession(Server &server)
+static void createNewSession(Server &server, std::string oldId)
 {
 	Cookies newCookie;
+	if (!oldId.empty())
+		newCookie.setPrevId(oldId);
 	newCookie.setId(Cookies::genCookieId(server.getCookies(), 20));
 	newCookie.setModified(0);
 	newCookie.addOutputData("id=" + newCookie.getId() + "; Path=/; HttpOnly");
 	server.addCookies(newCookie);
+	server.setModified(server.getCookies().size() - 1);
 	return ;
+}
+
+static int verifyCookieId(std::vector<Cookies> cookies, std::string &str)
+{
+	for (size_t i = 0; i < cookies.size(); i++)
+	{
+		if (cookies[i].getId() == str)
+			return 0;
+	}
+	return 1;
 }
 
 void	manageCookies(Server &server, HttpRequest &request)
 {
 	try
 	{
+		std::string idVal;
 		std::map<std::string, std::string>::iterator it = request.header.find("Cookie");
-		if (it == request.header.end() || extractCookieValue(it->second, "id").empty())
-			return createNewSession(server);
-		fillData(server.getCookies(), it->second);
+
+		if (it != request.header.end())
+			idVal = extractCookieValue(it->second, "id=");
+		if (it == request.header.end() || idVal.empty())
+			return createNewSession(server, "");
+		if ((!idVal.empty() && verifyCookieId(server.getCookies(), idVal)))
+			return createNewSession(server, idVal);
+		fillData(server, server.getCookies(), it->second);
 	}
 	catch(const std::exception& e)
 	{

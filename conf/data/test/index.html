@@ -6,11 +6,72 @@
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
-    <div>
+    <div class="content" id="content">
       <h1>Welcome to my site</h1>
       <p>This is the home page.</p>
       <img src="/images/logo.jpg" alt="Site Logo" width="150">
       <p><a href="/about/">About us</a> | <a href="/contact/">Contact</a></p>
     </div>
+    <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+    <div class="sidebar" id="sidebar">
+      <h2>Préférences</h2>
+      <button onclick="setTheme('light'); location.reload();">Thème clair</button>
+      <button onclick="setTheme('dark'); location.reload();">Thème sombre</button>
+      <hr>
+      <button onclick="setFontSize('small'); location.reload();">Texte petit</button>
+      <button onclick="setFontSize('normal'); location.reload();">Texte normal</button>
+      <button onclick="setFontSize('large'); location.reload();">Texte grand</button>
+      <hr>
+      <button onclick="resetPreferences()">Réinitialiser</button>
+    </div>
+     <script>
+      // --- Fonctions utilitaires pour les cookies ---
+      function setCookie(name, value, days = 365) {
+        const expires = new Date(Date.now() + days*864e5).toUTCString();
+        document.cookie = `${name}=${value}; path=/; expires=${expires}`;
+      }
+
+      function getCookie(name) {
+        return document.cookie
+          .split('; ')
+          .find(row => row.startsWith(name + '='))
+          ?.split('=')[1];
+      }
+
+      function eraseCookie(name) {
+        document.cookie = `${name}=; Max-Age=0; path=/`;
+      }
+
+      // --- Fonctions de gestion des préférences ---
+      function setTheme(theme) {
+       document.body.dataset.theme = theme;
+        setCookie('theme', theme);
+      }
+
+      function setFontSize(size) {
+       document.body.dataset.fontsize = size;
+        setCookie('fontsize', size);
+      }
+
+      function resetPreferences() {
+        eraseCookie('theme');
+        eraseCookie('fontsize');
+       document.body.dataset.theme = 'light';
+       document.body.dataset.fontsize = 'normal';
+      }
+
+      // --- Afficher / masquer la sidebar ---
+      function toggleSidebar() {
+        document.body.classList.toggle('sidebar-visible');
+      }
+
+      // --- Au chargement, applique les préférences existantes ---
+      window.onload = function() {
+        const theme = getCookie('theme') || 'light';
+        const fontsize = getCookie('fontsize') || 'normal';
+        document.body.dataset.theme = theme;
+       document.body.dataset.fontsize = fontsize;
+      };
+    </script>
   </body>
 </html>
