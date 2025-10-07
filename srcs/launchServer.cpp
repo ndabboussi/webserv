@@ -121,7 +121,7 @@ static int	loadByChunk(std::string &data, std::string afterHeader, const Server 
 
 //------------------------------------ HANDLE CLIENTS -------------------------------------//
 
-bool	handleClient(int client_fd, const Server &server)
+bool	handleClient(int client_fd, Server &servers)
 {
 	std::string	data;
 	char		buffer[BUFSIZE] = {0};
@@ -189,8 +189,9 @@ bool	handleClient(int client_fd, const Server &server)
 
 	std::cout << PINK << data << RESET << std::endl;//logger
 
-	HttpRequest request = parseHttpRequest(data, server);
-	sendResponse(client_fd, request, server);
+	HttpRequest request = parseHttpRequest(data, servers);
+	manageCookies(servers, request);
+	sendResponse(client_fd, request);
 	return true;
 }
 

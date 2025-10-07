@@ -181,7 +181,6 @@ static std::vector<std::string> tokenizeConfig(const std::string &configFile)
 void parsing(std::vector<Server> &servers, std::string configFile)
 {
 	std::vector<std::string> tokens = tokenizeConfig(configFile);
-	//printTokens(tokens); //debug
 
 	int flagBrackets = 0;
 	std::vector<std::string>::iterator end = tokens.end();
@@ -203,7 +202,6 @@ void parsing(std::vector<Server> &servers, std::string configFile)
 			servers.push_back(server);
 		}
 	}
-
 	if (flagBrackets != 0)
 		throw std::runtime_error("Error: unmatched brackets in config file");
 }

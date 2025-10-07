@@ -11,18 +11,19 @@ Server &Server::operator=(Server const &src)
         this->_name = src._name;
         this->_maxClientBodySize = src._maxClientBodySize;
         this->_errorPages = src._errorPages;
+        this->_cookies = src._cookies;
+        this->_modified = src._modified;
     }
     return *this;
 }
 
 //Constructor/Destructors--------------------------------------------------
 
-// Server::Server(void): Location();
-
 Server::Server(void) : Location(), _name(""), _maxClientBodySize(200000)
 {}
 
-Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd), _maxClientBodySize(src._maxClientBodySize), _errorPages(src._errorPages)
+Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd),
+    _maxClientBodySize(src._maxClientBodySize), _errorPages(src._errorPages), _cookies(src._cookies), _modified(src._modified)
 {}
 
 Server::~Server(void)
@@ -56,6 +57,11 @@ long long Server::getMaxBodyClientSize() const
     return this->_maxClientBodySize;
 }
 
+std::vector<Cookies> Server::getCookies() const
+{
+    return this->_cookies;
+}
+
 //SETTERS ---------------------------------------------------------
 
 void Server::addErrorPage(int key, std::string value)
@@ -85,4 +91,21 @@ void Server::setName(std::string name)
 void Server::addSocketFd(int fd)
 {
     this->_socketFd.push_back(fd);
+}
+
+void Server::addCookies(Cookies newCookie)
+{
+    this->_cookies.push_back(newCookie);
+}
+
+void Server::delCookies(std::string id)
+{
+    for (size_t i = 0; i < this->_cookies.size(); i++)
+    {
+        if (this->_cookies[i].getId() == id)
+        {
+            this->_cookies.erase(this->_cookies.begin() + i);
+            return ;
+        }
+    }
 }
