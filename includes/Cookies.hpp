@@ -38,5 +38,6 @@ class Cookies
 };
 
 void	manageCookies(Server &server, HttpRequest &request);
+void	modifyFile(std::vector<char> &fileContent, const HttpRequest &req);
 
 #endif

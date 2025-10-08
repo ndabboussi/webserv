@@ -1,130 +1,36 @@
-body {
+body
+{
   font-family: Arial, sans-serif;
   margin: 0;
   height: 30vh;
   display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
   justify-content: center;
   align-items: center;
   transition: background 0.3s, color 0.3s;
 }
 
-div {
+div
+{
   text-align: center;
 }
 
-h1 {
+h1
+{
   color: #2c3e50;
   margin-bottom: 1rem;
 }
 
-a {
+a
+{
   color: #0077cc;
   text-decoration: none;
   margin: 0 0.5rem;
 }
 
-a:hover {
+a:hover
+{
   text-decoration: underline;
 }
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  display: flex;
-
-}
-
-/* Bouton pour afficher/masquer la sidebar */
-.toggle-btn {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  background: #444;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  z-index: 1000;
-  transition: background 0.2s, left 0.3s ease;
-}
-
-.toggle-btn:hover {
-  background: #666;
-}
-
-/* Quand la sidebar est visible, on décale le bouton */
-body.sidebar-visible .toggle-btn {
-  left: 220px;
-}
-
-/* Barre latérale */
-.sidebar {
-  width: 200px;
-  background: #222;
-  color: #fff;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  height: 100vh;
-  box-sizing: border-box;
-  position: fixed;
-  top: 0;
-  left: 0;
-  transform: translateX(-220px);
-  transition: transform 0.3s ease;
-  z-index: 500;
-}
-
-/* Sidebar visible */
-body.sidebar-visible .sidebar {
-  transform: translateX(0);
-}
-
-.sidebar h2 {
-  margin-top: 0;
-  font-size: 1.2rem;
-  text-align: center;
-}
-
-.sidebar button {
-  padding: 10px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  background: #444;
-  color: white;
-  transition: background 0.2s;
-}
-
-.sidebar button:hover {
-  background: #666;
-}
-
-/* Contenu principal */
-.content {
-  flex: 6;
-  transition: margin-left 0.7s, font-size 0.7s;
-}
-
-/* Quand la sidebar est visible */
-body.sidebar-visible .content {
-  margin-left: 240px;
-}
-
-/* Thèmes dynamiques */
-body[data-theme="dark"] {
-  background: #111;
-  color: #ddd;
-}
-
-body[data-theme="light"] {
-  background: #f5f5f5;
-  color: #111;
-}
-
-/* Tailles de texte dynamiques */
-body[data-fontsize="small"] .content { font-size: 14px; }
-body[data-fontsize="normal"] .content { font-size: 18px; }
-body[data-fontsize="large"] .content { font-size: 22px; }
