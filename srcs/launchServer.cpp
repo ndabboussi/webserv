@@ -190,6 +190,7 @@ bool	handleClient(int client_fd, const Server &server)
 	std::cout << PINK << data << RESET << std::endl;//logger
 
 	HttpRequest request = parseHttpRequest(data, server);
+	//debugPrintRequest(request);
 	sendResponse(client_fd, request, server);
 	return true;
 }

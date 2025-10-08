@@ -266,3 +266,8 @@ NINA TO DO
 //301 faire la redirection vers le bon directory
 
 //protect launchServer() and sendResponse() functions
+
+
+https://www.garshol.priv.no/download/text/http-tut.html
+
+CGI = https://www.ibm.com/docs/en/i/7.6.0?topic=programming-setting-up-cgi-programs

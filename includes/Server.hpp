@@ -4,6 +4,7 @@
 # include "Location.hpp"
 # include "parsingRequest.hpp"
 # include "HttpResponse.hpp"
+#include "debugUtils.hpp"
 
 struct	HttpRequest;
 struct	HttpResponse;
