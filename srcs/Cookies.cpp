@@ -133,9 +133,42 @@ static std::string extractCookieValue(std::string &cookieLine, std::string key)
 		return "";
 	pos += key.size();
 	size_t end;
-	if ((end = cookieLine.find(';')) == std::string::npos)
+	if ((end = cookieLine.find(';', pos)) == std::string::npos)
 		end = cookieLine.size();
 	return cookieLine.substr(pos, end - pos);
+}
+
+void modifyFile(std::vector<char> &fileContent, const HttpRequest &req)
+{
+	std::string tmpContentFile(fileContent.begin(), fileContent.end());
+	size_t pos;
+	std::string cookieTheme;
+
+	if (req.header.find("Cookie") == req.header.end())
+		return ;
+	cookieTheme = req.header.find("Cookie")->second;
+	cookieTheme = extractCookieValue(cookieTheme, "theme=");
+	if (cookieTheme.empty())
+		return ;
+	if ((pos = tmpContentFile.find("data-theme=\"")) != std::string::npos)
+	{
+		pos += 12;
+		size_t end;
+		if ((end = tmpContentFile.find('\"', pos)) != std::string::npos)
+		{
+			if (end - pos <= 30 && tmpContentFile.substr(pos, end - pos) != cookieTheme)
+			{
+				fileContent.erase(fileContent.begin() + pos, fileContent.begin() + end);
+				fileContent.insert(fileContent.begin() + pos, cookieTheme.begin(), cookieTheme.end());
+			}
+		}
+	}
+	else if ((pos = tmpContentFile.find("<html")) != std::string::npos)
+	{
+		pos += 5;
+		std::string theme = " data-theme=\"" + cookieTheme + "\"";
+		fileContent.insert(fileContent.begin() + pos, theme.begin(), theme.end());
+	}
 }
 
 static void	fillData(Server &server, std::vector<Cookies> &cookies, std::string &cookieLine)
