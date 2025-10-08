@@ -9,7 +9,6 @@ body
   color: var(--text);
   justify-content: center;
   align-items: center;
-  transition: background 0.3s, color 0.3s;
 }
 
 div

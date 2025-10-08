@@ -410,7 +410,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		std::vector<char> tmpBody(body.begin(), body.end()); // cookies
 		modifyFile(tmpBody, request); // cookies
 		body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
-		std::cout << body << std::endl;
+
 		std::string headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
 		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
@@ -439,7 +439,10 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 	{
 		resp.code = 200;
 		setStatusLine(resp);
-		const std::string body = request.autoIndexFile;
+		std::string body = request.autoIndexFile;
+		std::vector<char> tmpBody(body.begin(), body.end()); // cookies
+		modifyFile(tmpBody, request); // cookies
+		body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
 		std::string	headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
 		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
@@ -522,7 +525,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		return;
 	}
 	if (mimeType == "text/html")
-		modifyFile(fileContent, request);
+		modifyFile(fileContent, request);// cookies
 	std::string headers = buildHeaders(server, resp, request, fileContent.size(), mimeType, true);
 	
 	send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);

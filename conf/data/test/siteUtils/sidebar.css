@@ -1,6 +1,7 @@
 body{
   background-color: var(--bg);
   color: var(--text);
+  transition: background 0.3s, color 0.3s;
 }
 
 /* Bouton pour afficher/masquer la sidebar */
@@ -104,9 +105,11 @@ body.sidebar-visible .content
 }
 
 /* Tailles de texte dynamiques */
-body[data-fontsize="small"] .content
-{ font-size: 14px; }
-body[data-fontsize="normal"] .content
-{ font-size: 18px; }
-body[data-fontsize="large"] .content
-{ font-size: 22px; }
+html[data-fontsize="small"]
+  { font-size: 14px; }
+html[data-fontsize="normal"]
+  { font-size: 18px; }
+html[data-fontsize="large"]
+  { font-size: 22px; }
+html[data-fontsize="giant"]
+  { font-size: 28px; }
