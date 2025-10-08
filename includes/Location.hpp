@@ -46,6 +46,9 @@ class Location
 		std::string _path;
 		bool		_autoIndex;
 
+		std::vector<std::string>	_cgiPaths;
+		std::vector<std::string>	_cgiExts;
+
 	protected:
 		std::vector<Location>				_locations;
 		std::map<std::string, std::string>	_data;
@@ -63,13 +66,20 @@ class Location
 		uint8_t										getMethods() const;
 		std::string									getPath() const;
 		bool										getAutoIndex() const;
+
 		void										addLocations(Location newLoc);
 		void										addData(std::string key, std::string value);
+
+
 		void										cpyData(std::map<std::string, std::string> data);
 		void										setMethods(uint8_t methods);
 		void										setPath(std::string path);
 		void										setAutoIndex(bool flag);
-};
 
+		std::vector<std::string>					getCgiPath() const;
+		std::vector<std::string>					getCgiExt() const;
+		void										addCgiPath(const std::string &path);
+		void										addCgiExt(const std::string &ext);
+};
 
 #endif

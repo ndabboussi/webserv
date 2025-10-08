@@ -53,6 +53,7 @@ bool Location::getAutoIndex(void) const
 	return this->_autoIndex;
 }
 
+
 void Location::addLocations(Location newLoc)
 {
 	this->_locations.push_back(newLoc);
@@ -91,4 +92,27 @@ void Location::setPath(std::string path)
 {
 	this->_path = path;
 	return ;
+}
+
+//------------------------------------ CGI ------------------------------------//
+
+void Location::addCgiPath(const std::string &path)
+{
+	this->_cgiPaths.push_back(path);
+	return ;
+}
+void Location::addCgiExt(const std::string &ext)
+{
+	this->_cgiExts.push_back(ext);
+	return ;
+}
+
+std::vector<std::string>	Location::getCgiPath() const
+{
+	return this->_cgiPaths;
+}
+
+std::vector<std::string>	Location::getCgiExt() const
+{
+	return this->_cgiExts;
 }

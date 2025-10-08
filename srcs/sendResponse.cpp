@@ -415,10 +415,18 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
+	
 
-	//// Step 2: CGI (skip building full response here)
-	// if (_cgi)
-	// 	return;
+	// Step 2: CGI (skip building full response here)
+	if (request.isCgi)
+	{
+		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
+		// std::string output = executeCgi(request, loc);
+		// send(client_fd, output.c_str(), output.size(), 0);
+		return;
+	}
+		// executeCgi(client_fd, request, server);
+		// return;
 
 	// Step 3: Autoindex case
 	else if (!request.autoIndexFile.empty())
