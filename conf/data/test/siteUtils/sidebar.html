@@ -1,12 +1,13 @@
 <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 <div class="sidebar" id="sidebar">
 	<h2>Préférences</h2>
-	<button onclick="setTheme('light'); location.reload();">Thème clair</button>
-	<button onclick="setTheme('dark'); location.reload();">Thème sombre</button>
+	<button onclick="setTheme('light'); location.reload();">Light theme</button>
+	<button onclick="setTheme('dark'); location.reload();">dark theme</button>
 	<hr>
-	<button onclick="setFontSize('small'); location.reload();">Texte petit</button>
-	<button onclick="setFontSize('normal'); location.reload();">Texte normal</button>
-	<button onclick="setFontSize('large'); location.reload();">Texte grand</button>
+	<button onclick="setFontSize('small'); location.reload();">Small text</button>
+	<button onclick="setFontSize('normal'); location.reload();">Normal text</button>
+	<button onclick="setFontSize('large'); location.reload();">Large text</button>
+	<button onclick="setFontSize('giant'); location.reload();">Giant text</button>
 	<hr>
-	<button onclick="resetPreferences()">Réinitialiser</button>
+	<button onclick="resetPreferences(); location.reload();">Reset</button>
 </div>

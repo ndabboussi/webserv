@@ -138,19 +138,15 @@ static std::string extractCookieValue(std::string &cookieLine, std::string key)
 	return cookieLine.substr(pos, end - pos);
 }
 
-void modifyFile(std::vector<char> &fileContent, const HttpRequest &req)
+static void ModifyCookie(std::vector<char> &fileContent, std::string cookieTheme, std::string target, std::string targetHtml)
 {
 	std::string tmpContentFile(fileContent.begin(), fileContent.end());
 	size_t pos;
-	std::string cookieTheme;
 
-	if (req.header.find("Cookie") == req.header.end())
-		return ;
-	cookieTheme = req.header.find("Cookie")->second;
-	cookieTheme = extractCookieValue(cookieTheme, "theme=");
+	cookieTheme = extractCookieValue(cookieTheme, target);
 	if (cookieTheme.empty())
 		return ;
-	if ((pos = tmpContentFile.find("data-theme=\"")) != std::string::npos)
+	if ((pos = tmpContentFile.find(targetHtml)) != std::string::npos)
 	{
 		pos += 12;
 		size_t end;
@@ -166,9 +162,20 @@ void modifyFile(std::vector<char> &fileContent, const HttpRequest &req)
 	else if ((pos = tmpContentFile.find("<html")) != std::string::npos)
 	{
 		pos += 5;
-		std::string theme = " data-theme=\"" + cookieTheme + "\"";
+		std::string theme = ' ' + targetHtml + cookieTheme + "\"";
 		fileContent.insert(fileContent.begin() + pos, theme.begin(), theme.end());
 	}
+}
+
+void modifyFile(std::vector<char> &fileContent, const HttpRequest &req)
+{
+	std::string cookieTheme;
+
+	if (req.header.find("Cookie") == req.header.end())
+		return ;
+	cookieTheme = req.header.find("Cookie")->second;
+	ModifyCookie(fileContent, cookieTheme, "theme=", "data-theme=\"");
+	ModifyCookie(fileContent, cookieTheme, "fontsize=", "data-fontsize=\"");
 }
 
 static void	fillData(Server &server, std::vector<Cookies> &cookies, std::string &cookieLine)
