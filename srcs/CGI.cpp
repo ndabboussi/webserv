@@ -298,3 +298,5 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 	freeEnvCharVec(envp);
 	return response.str();
 }
+
+//need to modify process to directly send from CGI function, and not copy a result inside sendResponse()
