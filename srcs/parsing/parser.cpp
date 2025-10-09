@@ -27,14 +27,12 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 			while (it != end && (*it)[it->size() - 1] != ';')
 			{
 				std::string	token = *it;
-				bool	endOfLine = (token[token.size() - 1]);
+				bool endOfLine = (token[token.size() - 1] == ';');
 
 				if (endOfLine)
 					token = token.substr(0, token.size() - 1);
 				if (!token.empty())
 					location.addCgiPath(token);
-				if(endOfLine)
-					break;
 				it++;
 			}
 			if (it == end)
@@ -54,10 +52,8 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 
 				if (!token.empty())
 					location.addCgiExt(token); // <-- assumes addCgiExt() stores multiple extensions
-
 				if (endOfLine)
 					break;
-
 				++it;
 			}
 			if (it == end)

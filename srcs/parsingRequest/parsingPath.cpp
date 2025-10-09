@@ -152,7 +152,7 @@ int parsePath(HttpRequest &req, const Server &server)
 	Location loc = server;
 	std::map<std::string,std::string> data;
 	std::string str;
-	
+
 	if (buildPath(newPath, req.path, loc, req)) //build the first part of the path (composed by directories)
 		return 1;
 	req.path = newPath;
@@ -184,12 +184,25 @@ int parsePath(HttpRequest &req, const Server &server)
 
 	// CGI config file ?
 
+	// std::vector<std::string> cgiExt = loc.getCgiExt();
+	// if (cgiExt.empty())
+	// 	req.isCgi = false;
+	// else
+	// 	req.isCgi = true;
+	req.isCgi = false;
 	std::vector<std::string> cgiExt = loc.getCgiExt();
-	if (cgiExt.empty())
-		req.isCgi = false;
-	else
-		req.isCgi = true;
-	
-	std::cout << "HELOOOOOOOO" << loc.getPath() << std::endl;
+
+	for (size_t i = 0; i < cgiExt.size(); i++)
+	{
+		if (req.path.size() >= cgiExt[i].size() &&
+			req.path.compare(req.path.size() - cgiExt[i].size(),
+							cgiExt[i].size(),
+							cgiExt[i]) == 0)
+		{
+			req.isCgi = true;
+			break;
+		}
+	}
+
 	return (0);
 }

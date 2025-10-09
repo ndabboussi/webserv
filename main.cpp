@@ -13,6 +13,7 @@ int	main(int ac, char **av)
 	try
 	{
 		parsing(servers, configFile);
+		//debugPrintConfig(servers);
 	}
 	catch(const std::exception &e)
 	{

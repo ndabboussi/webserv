@@ -1,4 +1,5 @@
-#include <Server.hpp>
+#include "Server.hpp"
+#include "CGI.hpp"
 
 enum	MimeCategory
 {
@@ -377,10 +378,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		setStatusLine(resp);
 
 		const std::map<int, std::string> errorPages = server.getErrorPages();
-		std::cout << YELLOW "[DEBUG] Error pages configured for this server:\n" RESET;
-		for (std::map<int, std::string>::const_iterator e = errorPages.begin(); e != errorPages.end(); ++e)
-			std::cout << "  " << e->first << " => " << e->second << std::endl;
-
 		std::map<int, std::string>::const_iterator it = errorPages.find(resp.code);
 		std::string body;
 
@@ -422,17 +419,16 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		return;
 	}
 	
-
 	// Step 2: CGI (skip building full response here)
 	if (request.isCgi)
 	{
 		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
-		// std::string output = executeCgi(request, loc);
-		// send(client_fd, output.c_str(), output.size(), 0);
+	
+		CGI cgi;
+		std::string response = cgi.executeCgi(request, server);
+		send(client_fd, response.c_str(), response.size(), 0);
 		return;
 	}
-		// executeCgi(client_fd, request, server);
-		// return;
 
 	// Step 3: Autoindex case
 	else if (!request.autoIndexFile.empty())

@@ -4,9 +4,9 @@
 # include "Location.hpp"
 # include "parsingRequest.hpp"
 # include "HttpResponse.hpp"
+# include "debugUtils.hpp"
 # include "Cookies.hpp"
-
-# include <fcntl.h> // for open
+# include <fcntl.h> // for openmain
 
 struct	HttpRequest;
 struct	HttpResponse;
