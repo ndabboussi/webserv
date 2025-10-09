@@ -7,8 +7,8 @@ fetch("/siteUtils/sidebar.html")
 
 function setCookie(name, value, days = 0.2)
 {
-const expires = new Date(Date.now() + days*864e5).toUTCString();
-document.cookie = `${name}=${value}; path=/; expires=${expires}`;
+	const expires = new Date(Date.now() + days*864e5).toUTCString();
+	document.cookie = `${name}=${value}; path=/; expires=${expires}`;
 }
 
 function getCookie(name)
@@ -26,13 +26,11 @@ function eraseCookie(name)
 
 function setTheme(theme)
 {
-	//document.body.dataset.theme = theme;
 	setCookie('theme', theme);
 }
 
 function setFontSize(size)
 {
-	//document.body.dataset.fontsize = size;
 	setCookie('fontsize', size);
 }
 
@@ -40,8 +38,6 @@ function resetPreferences()
 {
 	eraseCookie('theme');
 	eraseCookie('fontsize');
-	//document.body.dataset.theme = 'light';
-	//document.body.dataset.fontsize = 'normal';
 }
 
 function toggleSidebar()
@@ -49,10 +45,3 @@ function toggleSidebar()
 	document.body.classList.toggle('sidebar-visible');
 }
 
-window.onload = function()
-{
-	const theme = getCookie('theme') || 'light';
-	const fontsize = getCookie('fontsize') || 'normal';
-	//document.body.dataset.theme = theme;
-	//document.body.dataset.fontsize = fontsize;
-};
