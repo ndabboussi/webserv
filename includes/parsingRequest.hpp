@@ -27,5 +27,14 @@ HttpRequest	parseHttpRequest(const std::string &rawRequest, const Server &server
 int			parsePath(HttpRequest &req, const Server &server);
 int			parseBody(HttpRequest &req, std::istringstream &requestStream);
 int			isAFile(std::string path);
+int			error301(HttpRequest &req);
+int			error400(HttpRequest &req);
+int			error403(HttpRequest &req, std::string &tmp);
+int			error404(HttpRequest &req, std::string &tmp);
+int			error405(HttpRequest &req);
+int			error413(HttpRequest &req);
+int			error500(HttpRequest &req);
+int			error501(HttpRequest &req);
+int			error505(HttpRequest &req);
 
 # endif

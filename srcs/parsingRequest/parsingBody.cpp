@@ -1,11 +1,5 @@
 #include "parsingRequest.hpp"
 
-static void error400(HttpRequest &req)
-{
-	std::cerr << RED "Error 400: Bad request "<< RESET << std::endl;
-	req.statusCode = 400;
-}
-
 static void decodeStr(std::string &info)
 {
 	for (size_t i = 0; i < info.size(); i++)
@@ -28,7 +22,7 @@ static void decodeStr(std::string &info)
 static void parseType1(HttpRequest &req, std::istringstream &requestStream)
 {
 	if (req.header.find("Content-Length") == req.header.end())
-		return error400(req);
+		return (void)error400(req);
 	char buffer[4096] = {0};
 	int bSize = 4096;
 	int nb = std::atoi(req.header.find("Content-Length")->second.c_str());
@@ -71,7 +65,7 @@ static void parseType1(HttpRequest &req, std::istringstream &requestStream)
 		req.body.insert(std::make_pair(key, value)); 	// if no = found in the body
 	}
 	if (next == std::string::npos && last == 0)
-		return error400(req);
+		return (void)error400(req);
 }
 
 
@@ -104,11 +98,7 @@ static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::st
 {
 	std::ofstream Fout;
 	if (createFileAtRightPlace(Fout, req.path, *req.fileNames.rbegin(), req) || !Fout.is_open())
-	{
-		std::cerr << RED "Error 500: Internal server error: "<< RESET << std::endl;
-		req.statusCode = 500;
-		return 1;
-	}
+		return error500(req);
 	std::string pat1 = "--" + boundary + "--";
 	std::string pat2 = "--" + boundary;
 	std::vector<char> buffer(8192);
@@ -141,11 +131,11 @@ static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::st
 static void parseType2(HttpRequest &req, std::istringstream &requestStream, std::string &ContentType)
 {
 	if (ContentType.find("boundary=") == std::string::npos || requestStream.eof())	//checking if the header provides a boundary, if not, bad request
-		return error400(req);
+		return (void)error400(req);
 	size_t pos = ContentType.find("boundary=") + 9;
 	std::string boundary = ContentType.substr(pos, ContentType.size() - pos);
 	if (boundary.empty())
-		return error400(req);	//if there is no boundary, bad request
+		return (void)error400(req);	//if there is no boundary, bad request
 	std::string line, key, value;
 	int header = 0, body = 0, file = 0;	//In this specific post type, info are separated by boundaries, and each information between have it's own header and body
 	while (std::getline(requestStream, line))	//While there is a body to read
@@ -164,11 +154,11 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 			{
 				size_t first = line.find("name=\"");	//if there is a variable to receive
 				if (first == std::string::npos)
-					return error400(req);
+					return (void)error400(req);
 				first += 6;	//advance pos in line to set it where the name of the variable start
 				size_t end = line.find("\"", first);	//error if there is no closing brackets
 				if (end == std::string::npos)
-					return error400(req);
+					return (void)error400(req);
 				key = line.substr(first, end - first);	//store the key
 				first = line.find("filename=\"");
 				if (first != std::string::npos) 	// if filename is found
@@ -176,7 +166,7 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 					first += 10;
 					end = line.find("\"", first);	//error if there is no closing brackets
 					if (end == std::string::npos)
-						return error400(req);
+						return (void)error400(req);
 					std::string name = line.substr(first, end - first);	//store the name of the file
 					if (!name.empty())
 					{
@@ -188,7 +178,7 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 			else if (line.find("Content-Type:") != std::string::npos)	//if there is a file store it's content type // not really usefull
 				;
 			else 	//Header wringly formated (error 400 bad request)
-				return error400(req);
+				return (void)error400(req);
 		}
 		else if (body && !file) //if we're in body mode insert the value according to the key
 			req.body.insert(std::make_pair(key, line));
@@ -212,15 +202,15 @@ int parseBody(HttpRequest &req, std::istringstream &requestStream)
 	if (req.header.find("Content-Type") != req.header.end())
 		ContentType = req.header.find("Content-Type")->second;
 	else
-		return error400(req), 1;	//error in header
+		return error400(req);	//error in header
 	if (ContentType == "application/x-www-form-urlencoded")
 		parseType1(req, requestStream);
 	else if (ContentType.find("multipart/form-data") != std::string::npos)
 		parseType2(req, requestStream, ContentType);
-	else if (ContentType == "application/json")// maybe not mandatory
+	else if (ContentType == "plain/text")//todo
 		parseType3(req, requestStream);
 	else
-		return error400(req), 1;	//Content-Type body not supported
+		return error501(req);	//Content-Type body not supported
 	if (req.statusCode)
 		return 1;
 	return 0;

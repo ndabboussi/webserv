@@ -1,6 +1,8 @@
 #ifndef LOCATION_HPP
 # define LOCATION_HPP
 
+# include <cstdio>
+# include <sys/types.h>
 # include <sys/socket.h> // For socket functions
 # include <netinet/in.h> // For sockaddr_in
 # include <cstdlib>      // For exit() and EXIT_FAILURE
