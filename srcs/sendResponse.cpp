@@ -418,17 +418,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
-	
-	// Step 2: CGI (skip building full response here)
-	if (request.isCgi)
-	{
-		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
-	
-		CGI cgi;
-		std::string response = cgi.executeCgi(request, server);
-		send(client_fd, response.c_str(), response.size(), 0);
-		return;
-	}
 
 	// Step 3: Autoindex case
 	else if (!request.autoIndexFile.empty())
@@ -453,6 +442,27 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		sendRedirectResponse(client_fd, request.statusCode, request.url, request);
 		return;
 	}
+
+	//Step 2: CGI (skip building full response here)
+	if (request.isCgi)
+	{
+		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
+	
+		CGI cgi;
+		std::string response = cgi.executeCgi(request, server);
+		send(client_fd, response.c_str(), response.size(), 0);
+		return;
+	}
+
+	// if (request.isCgi)
+	// {
+	// 	std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
+	
+	// 	CGI cgi;
+	// 	int response = cgi.executeCgi(request, server);
+	// 	std::cout << BLUE "[CGI] finished executing CGI script!" RESET << std::endl;
+	// 	return;
+	// }
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
 	if (!file.is_open())
