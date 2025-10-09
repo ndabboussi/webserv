@@ -63,9 +63,8 @@ std::vector<std::string> CGI::_split(const std::string &s) const
 	return result;
 }
 
-/**
- * Builds an environment vector for execve().
- */
+//------------------------------------ CGI ENV BUILDING ------------------------------------//
+
 std::vector<std::string> CGI::_buildCgiEnv(const HttpRequest &req, const Server &server, const std::string &scriptPath) const
 {
 	std::vector<std::string> env;
@@ -153,9 +152,7 @@ std::string CGI::_parseCgiOutput(const std::string &raw, int &outStatusCode, std
 	return body;
 }
 
-/*--------------------------------------*/
-/*   CGI INTERPRETER RESOLUTION         */
-/*--------------------------------------*/
+//------------------------------------ CGI INTERPRETER ------------------------------------//
 
 /**
  * Automatically maps CGI extensions to interpreters from the config.
@@ -206,9 +203,7 @@ std::string CGI::getCgiInterpreter(const std::string &ext, const Server &server)
 	return "";
 }
 
-/*--------------------------------------*/
-/*   PUBLIC EXECUTION                   */
-/*--------------------------------------*/
+//------------------------------------ EXECUTE CGI ------------------------------------//
 
 std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 {
@@ -216,24 +211,12 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 	std::string	interpreter = getCgiInterpreter(ext, server);
 	int	type = _getCgiType(ext);
 
-	switch (_checkAccess(request.path, type))
-	{
-		case -1:
-			throw std::runtime_error("No request cgi path access: " + ext);
-			//throw CGIException("file " + request.path + " does not exist", false, 404, Server.getUid());
-		case 0:
-			throw std::runtime_error("Do not have permission to access : " + request.path);
-			//throw CGIException("Do not have permission to access :" + request.path + " on this server", false, 403, Server.getUid());
-		case 1:
-			break;
-	}
+		// --- 1. Check access ---
+	if (_checkAccess(request.path, type) <= 0)
+		throw std::runtime_error("CGI file not accessible: " + request.path);
 
-	if (interpreter.empty())
+	if (interpreter.empty() || type == UNKNOWN)
 		throw std::runtime_error("Unsupported CGI extension: " + ext);
-	
-	if (type == UNKNOWN)
-		throw std::runtime_error("Unknown CGI extension: " + ext);
-		//throw CGIException("Webserver does not interpret file: " + path, false, 415, Server.getUid());
 
 	std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
 	std::vector<char*> envp = _envVecToCharPtr(cgiEnv);
@@ -264,24 +247,28 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 		_exit(1);
 	}
 
-	close(pipeIn[0]);
-	close(pipeOut[1]);
+	close(pipeIn[0]); // Close read end of stdin pipe
+	close(pipeOut[1]); // Close write end of stdout pipe
 
+	// Write POST body if present
 	if (request.method == "POST")
 	{
 		std::string body;
 		for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
-			 it != request.body.end(); ++it)
+			 it != request.body.end(); it++)
 			body += it->first + "=" + it->second + "&";
 		if (!body.empty())
-			body.erase(body.size()-1);
+			body.erase(body.size() - 1);
 		write(pipeIn[1], body.c_str(), body.size());
 	}
+	// Close write end of pipeIn so the child sees EOF and terminates
 	close(pipeIn[1]);
 
+	// Read all CGI output until EOF
 	std::string rawOutput = _readFromFd(pipeOut[0]);
 	close(pipeOut[0]);
 
+	// Wait for CGI child to exit
 	int status = 0;
 	waitpid(pid, &status, 0);
 
@@ -291,7 +278,16 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 
 	std::ostringstream response;
 	response << "HTTP/1.1 " << cgiStatus << " OK\r\n";
-	for (std::map<std::string,std::string>::iterator it = headers.begin(); it != headers.end(); ++it)
+
+	// Add Content-Length if CGI didn’t send one!!! Else: infinite select wait
+	if (headers.find("Content-Length") == headers.end())
+	{
+		std::stringstream oss;
+		oss << body.size();
+		headers["Content-Length"] = oss.str();
+	}
+
+	for (std::map<std::string,std::string>::iterator it = headers.begin(); it != headers.end(); it++)
 		response << it->first << ": " << it->second << "\r\n";
 	response << "\r\n" << body;
 
@@ -299,4 +295,94 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 	return response.str();
 }
 
+// int	CGI::executeCgi(const HttpRequest &request, const Server &server)
+// {
+// 	std::string	ext = _getExtension(request.path);
+// 	std::string	interpreter = getCgiInterpreter(ext, server);
+// 	int	type = _getCgiType(ext);
+
+// 	switch (_checkAccess(request.path, type))
+// 	{
+// 		case -1:
+// 			throw std::runtime_error("No request cgi path access: " + ext);
+// 			//throw CGIException("file " + request.path + " does not exist", false, 404, Server.getUid());
+// 		case 0:
+// 			throw std::runtime_error("Do not have permission to access : " + request.path);
+// 			//throw CGIException("Do not have permission to access :" + request.path + " on this server", false, 403, Server.getUid());
+// 		case 1:
+// 			break;
+// 	}
+
+// 	if (interpreter.empty())
+// 		throw std::runtime_error("Unsupported CGI extension: " + ext);
+	
+// 	if (type == UNKNOWN)
+// 		throw std::runtime_error("Unknown CGI extension: " + ext);
+// 		//throw CGIException("Webserver does not interpret file: " + path, false, 415, Server.getUid());
+
+// 	std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
+// 	std::vector<char*> envp = _envVecToCharPtr(cgiEnv);
+
+// 	int pipeIn[2];
+// 	int pipeOut[2];
+// 	if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1)
+// 		throw std::runtime_error("pipe() failed: " + std::string(strerror(errno)));
+
+// 	pid_t pid = fork();
+
+// 	if (pid < 0)
+// 		throw std::runtime_error("fork() failed: " + std::string(strerror(errno)));
+
+// 	if (pid == 0)
+// 	{
+// 		dup2(pipeIn[0], STDIN_FILENO);
+// 		dup2(pipeOut[1], STDOUT_FILENO);
+// 		close(pipeIn[1]);
+// 		close(pipeOut[0]);
+
+// 		char *argv[3];
+// 		argv[0] = const_cast<char*>(interpreter.c_str());
+// 		argv[1] = const_cast<char*>(request.path.c_str());
+// 		argv[2] = NULL;
+
+// 		execve(interpreter.c_str(), argv, &envp[0]);
+// 		std::cerr << "execve failed: " << strerror(errno) << std::endl;
+// 		_exit(1);
+// 	}
+
+// 	close(pipeIn[0]);
+// 	close(pipeOut[1]);
+
+// 	if (request.method == "POST")
+// 	{
+// 		std::string body;
+// 		for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
+// 			 it != request.body.end(); ++it)
+// 			body += it->first + "=" + it->second + "&";
+// 		if (!body.empty())
+// 			body.erase(body.size()-1);
+// 		write(pipeIn[1], body.c_str(), body.size());
+// 	}
+// 	close(pipeIn[1]);
+
+// 	std::string rawOutput = _readFromFd(pipeOut[0]);
+// 	close(pipeOut[0]);
+
+// 	int status = 0;
+// 	waitpid(pid, &status, 0);
+
+// 	int cgiStatus = 200;
+// 	std::map<std::string,std::string> headers;
+// 	std::string body = _parseCgiOutput(rawOutput, cgiStatus, headers);
+
+// 	std::ostringstream response;
+// 	response << "HTTP/1.1 " << cgiStatus << " OK\r\n";
+// 	for (std::map<std::string,std::string>::iterator it = headers.begin(); it != headers.end(); ++it)
+// 		response << it->first << ": " << it->second << "\r\n";
+// 	response << "\r\n" << body;
+
+// 	freeEnvCharVec(envp);
+
+// 	return response.str();
+// }
 //need to modify process to directly send from CGI function, and not copy a result inside sendResponse()

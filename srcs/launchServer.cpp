@@ -251,7 +251,7 @@ int createServerSocket(int port)
 // Option 2: Keep blocking sockets, but enforce timeouts
 // Use setsockopt:
 // This way, read() won’t block forever – it will return -1 with errno == EAGAIN after 5s.
-// Right now your sockets = blocking.
+// Right now sockets = blocking.
 // This explains the “slow loading” → you’re stuck in read() waiting for clients.
 // To fix: either make sockets non-blocking or enforce a timeout with SO_RCVTIMEO
 
@@ -369,13 +369,26 @@ int launchServer(std::vector<Server> &servers)
 					struct sockaddr_in clientAddr;
 					socklen_t 			len = sizeof(clientAddr);
 					int client_fd = accept(server_fd, (struct sockaddr *)&clientAddr, &len);
-					if (client_fd >= 0)
+					if (client_fd < 0)
 					{
-						std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
-									<< serverPorts[j] << RESET << std::endl;
-						client_fds_vec.push_back(client_fd);
-						client_server_map[client_fd] = i;
+						std::cerr << RED "Error: Accept() failure in launchSerevr()" RESET << std::endl;
+						continue;
 					}
+					struct timeval tv;
+					tv.tv_sec = 5; // seconds
+					tv.tv_usec = 0;
+					if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+						perror("setsockopt SO_RCVTIMEO");
+					if (setsockopt(client_fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0)
+						perror("setsockopt SO_SNDTIMEO");
+
+					// if (client_fd >= 0)
+					// {
+					std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
+									<< serverPorts[j] << RESET << std::endl;
+					client_fds_vec.push_back(client_fd);
+					client_server_map[client_fd] = i;
+					//}
 				}
 			}
 		}
@@ -388,7 +401,6 @@ int launchServer(std::vector<Server> &servers)
 			{
 				size_t	server_index = client_server_map[fd];
 				bool keep = handleClient(fd, servers[server_index]);
-				//bool keep = 0;
 				if (!keep)
 				{
 					close(fd);

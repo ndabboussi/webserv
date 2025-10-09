@@ -27,6 +27,7 @@ class	CGI
 	public:
 		std::string	getCgiInterpreter(const std::string &ext, const Server &server) const;
 		std::string	executeCgi(const HttpRequest &request, const Server &server);
+		//int			executeCgi(const HttpRequest &request, const Server &server);
 	
 	// class CGIException : public std::exception
 	// {
