@@ -24,6 +24,8 @@ enum	CgiType
 	UNKNOWN
 };
 
+// Extracts the file extension (including the dot) from a given path
+// Ex: "/cgi-bin/hello.py" → ".py"
 std::string CGI::_getExtension(const std::string &path) const
 {
 	size_t pos = path.find_last_of('.');
@@ -32,6 +34,7 @@ std::string CGI::_getExtension(const std::string &path) const
 	return path.substr(pos); // includes the dot: ".ext"
 }
 
+//Returns an enum representing the CGI type based on the file extension
 int CGI::_getCgiType(const std::string &ext) const
 {
 	if (ext == ".cgi")
@@ -53,6 +56,8 @@ int CGI::_getCgiType(const std::string &ext) const
 	return UNKNOWN;
 }
 
+// Splits a string into a list of words separated by whitespace.
+// Used mainly for parsing configuration values (e.g., multiple CGI extensions)
 std::vector<std::string> CGI::_split(const std::string &s) const
 {
 	std::istringstream iss(s);
@@ -65,6 +70,9 @@ std::vector<std::string> CGI::_split(const std::string &s) const
 
 //------------------------------------ CGI ENV BUILDING ------------------------------------//
 
+// Builds the environment variables passed to the CGI script.
+// Includes standard CGI variables (REQUEST_METHOD, QUERY_STRING, etc.)
+// and also adds HTTP headers with the "HTTP_" prefix
 std::vector<std::string> CGI::_buildCgiEnv(const HttpRequest &req, const Server &server, const std::string &scriptPath) const
 {
 	std::vector<std::string> env;
@@ -72,7 +80,7 @@ std::vector<std::string> CGI::_buildCgiEnv(const HttpRequest &req, const Server 
 	env.push_back("SERVER_PROTOCOL=HTTP/1.1");
 
 	std::ostringstream oss;
-	oss << "SERVER_PORT=" << (server.getPorts().empty() ? 80 : server.getPorts()[0]);//wrong port, need to use our MAPS in LaunchServer
+	oss << "SERVER_PORT=" << req.serverPort;
 	env.push_back(oss.str());
 	env.push_back("SERVER_NAME=" + server.getName());
 	env.push_back("REQUEST_METHOD=" + req.method);
@@ -82,10 +90,11 @@ std::vector<std::string> CGI::_buildCgiEnv(const HttpRequest &req, const Server 
 	env.push_back("CONTENT_LENGTH=" + (req.header.count("Content-Length") ? req.header.find("Content-Length")->second : ""));
 	env.push_back("REDIRECT_STATUS=200"); // required for php-cgi
 
+	// Transform headers into CGI environment format (HTTP_HEADER_NAME=value)
 	for (std::map<std::string, std::string>::const_iterator it = req.header.begin(); it != req.header.end(); it++)
 	{
 		std::string key = it->first;
-		for (size_t i = 0; i < key.size(); ++i)
+		for (size_t i = 0; i < key.size(); i++)
 		{
 			if (key[i] == '-')
 				key[i] = '_';
@@ -97,6 +106,7 @@ std::vector<std::string> CGI::_buildCgiEnv(const HttpRequest &req, const Server 
 	return env;
 }
 
+// Converts a vector of strings into a NULL-terminated array of char* suitable for passing to execve()
 std::vector<char*> CGI::_envVecToCharPtr(const std::vector<std::string> &env) const
 {
 	std::vector<char*> vec;
@@ -106,11 +116,8 @@ std::vector<char*> CGI::_envVecToCharPtr(const std::vector<std::string> &env) co
 	return vec;
 }
 
-void CGI::freeEnvCharVec(std::vector<char*> &vec) const
-{
-	(void)vec; // Nothing to free
-}
-
+// Reads all data from a file descriptor until EOF and returns it as a string
+// Used to collect CGI output from the child process
 std::string CGI::_readFromFd(int fd) const
 {
 	std::string result;
@@ -121,6 +128,8 @@ std::string CGI::_readFromFd(int fd) const
 	return result;
 }
 
+// Parses the raw CGI output into headers and body
+// Extracts "Status" if present, otherwise defaults to 200
 std::string CGI::_parseCgiOutput(const std::string &raw, int &outStatusCode, std::map<std::string,std::string> &outHeaders) const
 {
 	std::string::size_type headerEnd = raw.find("\r\n\r\n");
@@ -146,21 +155,15 @@ std::string CGI::_parseCgiOutput(const std::string &raw, int &outStatusCode, std
 			outHeaders[key] = value;
 		}
 	}
+	//Default to 200 if CGI didn’t send a "Status" header
 	outStatusCode = (outHeaders.find("Status") != outHeaders.end())
-		? atoi(outHeaders["Status"].c_str())
-		: 200;
+		? atoi(outHeaders["Status"].c_str()) : 200;
 	return body;
 }
 
 //------------------------------------ CGI INTERPRETER ------------------------------------//
 
-/**
- * Automatically maps CGI extensions to interpreters from the config.
- * Example:
- *   cgi_ext  = ".php .py"
- *   cgi_path = "/usr/bin/php-cgi /usr/bin/python3"
- */
-
+//Ensures that the target CGI file exists and has proper permissions
 int CGI::_checkAccess(const std::string &path, int type)
 {
 	if (access(path.c_str(), F_OK) == -1)
@@ -171,6 +174,9 @@ int CGI::_checkAccess(const std::string &path, int type)
 		return (0);
 	return (1);
 }
+
+// Determines the interpreter to use for the given CGI extension
+// Reads configuration values, or falls back to system defaults
 
 std::string CGI::getCgiInterpreter(const std::string &ext, const Server &server) const
 {
@@ -205,19 +211,27 @@ std::string CGI::getCgiInterpreter(const std::string &ext, const Server &server)
 
 //------------------------------------ EXECUTE CGI ------------------------------------//
 
+// Main function that:
+//   1. Sets up environment and pipes
+//   2. Forks the process
+//   3. Executes the CGI script via execve()
+//   4. Reads CGI output
+//   5. Builds a proper HTTP response
+// Returns: A complete HTTP/1.1 response as a string
 std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 {
 	std::string	ext = _getExtension(request.path);
 	std::string	interpreter = getCgiInterpreter(ext, server);
 	int	type = _getCgiType(ext);
 
-		// --- 1. Check access ---
+	// 1. Check access and interpreter validity
 	if (_checkAccess(request.path, type) <= 0)
 		throw std::runtime_error("CGI file not accessible: " + request.path);
 
 	if (interpreter.empty() || type == UNKNOWN)
 		throw std::runtime_error("Unsupported CGI extension: " + ext);
 
+	//2. Build environment and create pipes
 	std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
 	std::vector<char*> envp = _envVecToCharPtr(cgiEnv);
 
@@ -230,27 +244,31 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 	if (pid < 0)
 		throw std::runtime_error("fork() failed: " + std::string(strerror(errno)));
 
+	//3. Child process
 	if (pid == 0)
 	{
 		dup2(pipeIn[0], STDIN_FILENO);
 		dup2(pipeOut[1], STDOUT_FILENO);
+		//Close unused ends to prevent deadlock
 		close(pipeIn[1]);
 		close(pipeOut[0]);
-
+		//Prepare args for execve()
 		char *argv[3];
 		argv[0] = const_cast<char*>(interpreter.c_str());
 		argv[1] = const_cast<char*>(request.path.c_str());
 		argv[2] = NULL;
-
+		// Execute CGI interpreter
 		execve(interpreter.c_str(), argv, &envp[0]);
 		std::cerr << "execve failed: " << strerror(errno) << std::endl;
+		// If execve fails, print error and exit
 		_exit(1);
 	}
 
+	//4. Parent process
 	close(pipeIn[0]); // Close read end of stdin pipe
 	close(pipeOut[1]); // Close write end of stdout pipe
 
-	// Write POST body if present
+	// If POST, send body to child's stdin
 	if (request.method == "POST")
 	{
 		std::string body;
@@ -261,10 +279,10 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 			body.erase(body.size() - 1);
 		write(pipeIn[1], body.c_str(), body.size());
 	}
-	// Close write end of pipeIn so the child sees EOF and terminates
-	close(pipeIn[1]);
+	
+	close(pipeIn[1]); // Close write end of pipeIn so the child sees EOF and terminates
 
-	// Read all CGI output until EOF
+	// 5. Read all CGI output until EOF
 	std::string rawOutput = _readFromFd(pipeOut[0]);
 	close(pipeOut[0]);
 
@@ -272,6 +290,7 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 	int status = 0;
 	waitpid(pid, &status, 0);
 
+	//6. Parse and construct HTTP response
 	int cgiStatus = 200;
 	std::map<std::string,std::string> headers;
 	std::string body = _parseCgiOutput(rawOutput, cgiStatus, headers);
@@ -279,7 +298,7 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 	std::ostringstream response;
 	response << "HTTP/1.1 " << cgiStatus << " OK\r\n";
 
-	// Add Content-Length if CGI didn’t send one!!! Else: infinite select wait
+	// Add Content-Length if CGI didn’t send one!!! Important: Without Content-Length, browser never knows response end
 	if (headers.find("Content-Length") == headers.end())
 	{
 		std::stringstream oss;
@@ -291,98 +310,5 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 		response << it->first << ": " << it->second << "\r\n";
 	response << "\r\n" << body;
 
-	freeEnvCharVec(envp);
 	return response.str();
 }
-
-// int	CGI::executeCgi(const HttpRequest &request, const Server &server)
-// {
-// 	std::string	ext = _getExtension(request.path);
-// 	std::string	interpreter = getCgiInterpreter(ext, server);
-// 	int	type = _getCgiType(ext);
-
-// 	switch (_checkAccess(request.path, type))
-// 	{
-// 		case -1:
-// 			throw std::runtime_error("No request cgi path access: " + ext);
-// 			//throw CGIException("file " + request.path + " does not exist", false, 404, Server.getUid());
-// 		case 0:
-// 			throw std::runtime_error("Do not have permission to access : " + request.path);
-// 			//throw CGIException("Do not have permission to access :" + request.path + " on this server", false, 403, Server.getUid());
-// 		case 1:
-// 			break;
-// 	}
-
-// 	if (interpreter.empty())
-// 		throw std::runtime_error("Unsupported CGI extension: " + ext);
-	
-// 	if (type == UNKNOWN)
-// 		throw std::runtime_error("Unknown CGI extension: " + ext);
-// 		//throw CGIException("Webserver does not interpret file: " + path, false, 415, Server.getUid());
-
-// 	std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
-// 	std::vector<char*> envp = _envVecToCharPtr(cgiEnv);
-
-// 	int pipeIn[2];
-// 	int pipeOut[2];
-// 	if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1)
-// 		throw std::runtime_error("pipe() failed: " + std::string(strerror(errno)));
-
-// 	pid_t pid = fork();
-
-// 	if (pid < 0)
-// 		throw std::runtime_error("fork() failed: " + std::string(strerror(errno)));
-
-// 	if (pid == 0)
-// 	{
-// 		dup2(pipeIn[0], STDIN_FILENO);
-// 		dup2(pipeOut[1], STDOUT_FILENO);
-// 		close(pipeIn[1]);
-// 		close(pipeOut[0]);
-
-// 		char *argv[3];
-// 		argv[0] = const_cast<char*>(interpreter.c_str());
-// 		argv[1] = const_cast<char*>(request.path.c_str());
-// 		argv[2] = NULL;
-
-// 		execve(interpreter.c_str(), argv, &envp[0]);
-// 		std::cerr << "execve failed: " << strerror(errno) << std::endl;
-// 		_exit(1);
-// 	}
-
-// 	close(pipeIn[0]);
-// 	close(pipeOut[1]);
-
-// 	if (request.method == "POST")
-// 	{
-// 		std::string body;
-// 		for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
-// 			 it != request.body.end(); ++it)
-// 			body += it->first + "=" + it->second + "&";
-// 		if (!body.empty())
-// 			body.erase(body.size()-1);
-// 		write(pipeIn[1], body.c_str(), body.size());
-// 	}
-// 	close(pipeIn[1]);
-
-// 	std::string rawOutput = _readFromFd(pipeOut[0]);
-// 	close(pipeOut[0]);
-
-// 	int status = 0;
-// 	waitpid(pid, &status, 0);
-
-// 	int cgiStatus = 200;
-// 	std::map<std::string,std::string> headers;
-// 	std::string body = _parseCgiOutput(rawOutput, cgiStatus, headers);
-
-// 	std::ostringstream response;
-// 	response << "HTTP/1.1 " << cgiStatus << " OK\r\n";
-// 	for (std::map<std::string,std::string>::iterator it = headers.begin(); it != headers.end(); ++it)
-// 		response << it->first << ": " << it->second << "\r\n";
-// 	response << "\r\n" << body;
-
-// 	freeEnvCharVec(envp);
-
-// 	return response.str();
-// }
-//need to modify process to directly send from CGI function, and not copy a result inside sendResponse()

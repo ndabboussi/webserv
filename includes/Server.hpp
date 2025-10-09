@@ -54,6 +54,7 @@ void	printTokens(const std::vector<std::string> &tokens);
 int		launchServer(std::vector<Server> &servers);
 void	printServers(const std::vector<Server> &servers);
 void	printLocation(const std::vector<Location> &locations);
+bool	handleClient(int client_fd, Server &servers, int serverPort);
 void	sendResponse(int client_fd, const HttpRequest &request, Server &server);
 
 #endif

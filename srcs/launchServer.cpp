@@ -1,210 +1,30 @@
 #include "Server.hpp"
 
-#define SERVEPORT 8080
-#define BUFSIZE 4096
+#define SERVERPORT 8080
 #define SERVER_BACKLOG 100
-
-//------------------------------------ CHUNKS -------------------------------------//
-
-static int readLine(int &client_fd, std::string &line)
-{
-	int byteRead = 0;
-	char c = 0;
-
-	line.clear();
-	while (c != '\n')
-	{
-		int res = read(client_fd, &c, 1);
-		if (res < 0)
-			return -1;
-		else if (!res)
-			return byteRead;
-		byteRead += res;
-		line += c;
-	}
-	return byteRead;
-}
-
-static void deleteChunkSize(std::string data, std::string &src)
-{
-	std::istringstream  before(data);
-	std::string			buffer;
-	long long			size;
-	std::vector<char>	buff;
-	char				crlf[2];
-	size_t pos = src.find("\r\n\r\n") + 4;
-	
-	while (std::getline(before, buffer))
-	{
-		if (!buffer.empty())
-		{
-			std::stringstream ss;
-			ss << std::hex << buffer;
-			ss >> size;
-			buff.resize(size);
-			src.erase(pos, buffer.size() + 1);
-			if (size == 0)
-				break ;
-			pos += size;
-			before.read(buff.data(), size);
-			before.read(crlf, 2);
-			if (crlf[0] != '\r' && crlf[1] != '\n')
-				break ;//error bad request
-			src.erase(pos, 2);
-		}
-	}
-}
-
-static int	loadByChunk(std::string &data, std::string afterHeader, const Server &server, int &client_fd)
-{
-	std::istringstream  before(afterHeader);
-	long long			bodySize = 0;
-	std::string			buffer;
-	std::vector<char>	buff;
-	long long			ByteRead;
-	long long			size;
-	long long			left = 0;
-	
-	while (std::getline(before, buffer))
-	{
-		if (!buffer.empty() && buffer[buffer.size() - 1] == '\r')
-			buffer.erase(buffer.size() - 1);
-		if (!buffer.empty())
-		{
-			std::stringstream ss;
-			ss << std::hex << buffer;
-			ss >> size;
-			buff.resize(size + 2);
-			before.read(buff.data(), size + 2);
-			bodySize += before.gcount();
-			if (size + 2 > before.gcount())
-				left = size + 2 - before.gcount();
-		}
-	}
-	if (bodySize > server.getMaxBodyClientSize())
-	{
-		std::cerr << RED "Error 413: Entity Too Large" << RESET << std::endl;
-		return 413;
-	}
-	if (left > 0)
-	{
-		buff.resize(left + 2);
-		ByteRead = read(client_fd, buff.data(), left + 2);
-		if (ByteRead < 0)
-			return -1;
-		data.append(buff.data(), ByteRead);
-	}
-	while ((left = readLine(client_fd, buffer)) > 0)
-	{
-		data.append(buffer, 0, buffer.size());
-		std::stringstream ss;
-		ss << std::hex << buffer;
-		ss >> size;
-		if (size == 0)
-			break ;
-		buff.resize(size + 2);
-		ByteRead = read(client_fd, buff.data(), size + 2);
-		if (ByteRead < 0)
-			return -1;
-		bodySize += ByteRead;
-		data.append(buff.data(), ByteRead);
-		if (bodySize > server.getMaxBodyClientSize())
-		{
-			std::cerr << RED "Error 413: Entity Too Large" << RESET << std::endl;
-			return 413;
-		}
-	}
-	size_t pos = data.find("\r\n\r\n") + 4;
-	deleteChunkSize(data.substr(pos, data.size() - pos), data);
-	return 0;
-}
-
-//------------------------------------ HANDLE CLIENTS -------------------------------------//
-
-bool	handleClient(int client_fd, Server &servers)
-{
-	std::string	data;
-	char		buffer[BUFSIZE] = {0};
-	int			bytes_read;
-	size_t		content_length = 0;
-	bool		stored_header = false;
-
-	while (1)
-	{
-		bytes_read = read(client_fd, buffer, sizeof(buffer));
-		if (bytes_read < 0)
-		{
-			std::cerr << RED "Erreur de lecture depuis le client." << RESET << std::endl;// error 500 ?
-			return (false);
-		}
-		if (bytes_read == 0)
-			break;
-		data.append(buffer, bytes_read);
-
-		if (!stored_header)
-		{
-			size_t end = data.find("\r\n\r\n");
-			if (end != std::string::npos)
-			{
-				stored_header = true;
-
-				size_t pos;
-				if ((pos = data.find("Content-Length:")) != std::string::npos)
-				{
-					pos += 15;
-					content_length = std::atoi(data.c_str() + pos);
-				}
-				else if (data.find("Transfer-Encoding: chunked") != std::string::npos)
-				{
-					int res = loadByChunk(data, data.substr(end + 4, data.size() - end + 4), servers, client_fd);
-					if (res)
-					{
-						HttpRequest req;
-						req.statusCode = res;
-						sendResponse(client_fd, req, servers);
-						return true;
-					}
-				}
-				if (content_length > 0)
-				{
-					size_t	content_start = data.find("\r\n\r\n");
-					size_t	size = data.size() - (content_start + 4);
-
-					while (size < content_length)
-					{
-						bytes_read = read(client_fd, buffer, sizeof(buffer));
-						if (bytes_read <= 0)
-							break;
-						data.append(buffer, bytes_read);
-						size += bytes_read;
-					}
-				}
-				break;
-			}
-		}
-	}
-
-	if (data.empty())
-		return false;
-
-	std::cout << PINK << data << RESET << std::endl;//logger
-
-	HttpRequest request = parseHttpRequest(data, servers);
-  //debugPrintRequest(request);
-	manageCookies(servers, request);
-	sendResponse(client_fd, request, servers);
-	return true;
-}
 
 //------------------------------------ SOCKETS AND BIND -------------------------------------//
 
+/* FUNCTION: bindAndListen
+ * -----------------------------------------------------
+ * Binds a socket to a given port and starts listening 
+ * for incoming TCP connections.
+ * Parameters:
+ *  - server_fd: The socket file descriptor
+ *  - port: The port number to bind to
+ * Steps:
+ *  1. Create and configure a sockaddr_in struct
+ *  2. Bind the socket to the specified port
+ *  3. Start listening for incoming connections
+ *  4. If any step fails, print an error and exit */
 void	bindAndListen(int server_fd, int port)
 {
-	struct sockaddr_in sockAddress;
-	sockAddress.sin_family = AF_INET;
-	sockAddress.sin_addr.s_addr = INADDR_ANY;
-	sockAddress.sin_port = htons(port);
+	struct sockaddr_in sockAddress; // Structure describing the socket’s address (IPv4)
+	sockAddress.sin_family = AF_INET; // IPv4 address family
+	sockAddress.sin_addr.s_addr = INADDR_ANY; // Accept connections on any local IP
+	sockAddress.sin_port = htons(port); // Convert port number to network byte order
 
+	// Try binding the socket to the specified port
 	if (bind(server_fd, (struct sockaddr *)&sockAddress, sizeof(sockAddress)) < 0)
 	{
 		std::cerr << RED "Failed to bind to port " << port << ". errno: " << errno << RESET << std::endl;
@@ -212,7 +32,8 @@ void	bindAndListen(int server_fd, int port)
 		exit(EXIT_FAILURE);
 	}
 
-	if (listen(server_fd, 10) < 0)
+	// Start listening for incoming connections
+	if (listen(server_fd, SERVER_BACKLOG) < 0)
 	{
 		std::cerr << RED "Failed to listen on socket. errno: " << errno << RESET << std::endl;
 		close(server_fd);
@@ -222,20 +43,32 @@ void	bindAndListen(int server_fd, int port)
 	std::cout << GREEN "Server running on http://localhost:" << port << RESET << std::endl;
 }
 
+
+/* FUNCTION: createServerSocket
+ * -------------------------------------------------------
+ * Creates a TCP socket, sets basic options (SO_REUSEADDR), binds it to the given port, and starts listening
+ * 
+ * Parameters:
+ *  - port: The port to listen on.
+ *
+ * Returns:
+ *  - A valid server socket file descriptor, or -1 on error
+ *
+ * Notes:
+ *  - SO_REUSEADDR allows quick restart of the server after crash/restart*/
+
 int createServerSocket(int port)
 {
-	int server_fd = socket(AF_INET, SOCK_STREAM, 0);//0 = protocol nb = TCP
+	// Create a TCP socket (AF_INET = IPv4, SOCK_STREAM = TCP, 0 = protocol nb = TCP)
+	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0)
 	{
 		std::cerr << RED "Failed to create socket. errno: " << errno << RESET << std::endl;
 		return -1;
 	}
 
+	// Allow reusing address if the socket is in TIME_WAIT state
 	const int flag = 1;
-	// struct timeval tv;
-	// tv.tv_sec = 5;
-	// tv.tv_usec = 0;
-	// if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
 	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int)) < 0)
 	{
 		std::cerr << RED "Failed to set socket options. errno: " << errno << RESET << std::endl;
@@ -243,52 +76,29 @@ int createServerSocket(int port)
 		return -1;
 	}
 
+	// Bind the socket and start listening
 	bindAndListen(server_fd, port);
 	return server_fd;
 }
 
-// Option 1: Set client socket non-blocking
-// Option 2: Keep blocking sockets, but enforce timeouts
-// Use setsockopt:
-// This way, read() won’t block forever – it will return -1 with errno == EAGAIN after 5s.
-// Right now sockets = blocking.
-// This explains the “slow loading” → you’re stuck in read() waiting for clients.
-// To fix: either make sockets non-blocking or enforce a timeout with SO_RCVTIMEO
-
 //------------------------------------ LAUNCHSERVER -------------------------------------//
 
-void	createServersSockets(std::vector<Server> &servers)
-{
-	for(size_t i = 0; i < servers.size(); i++)
-	{
-		std::vector<int> ports = servers[i].getPorts();
-		for (size_t j = 0; j < ports.size(); j++)
-		{
-			int	port = 8080;
-			if (ports[j] > 0)
-				port = ports[j];
-			int server_fd = createServerSocket(port);
-			// if (server_fd < 0)
-			// 	//return 1; throw exception 
-			servers[i].addSocketFd(server_fd);
-		}
-	}
-}
-
-void	setServersSockets(std::vector<Server> &servers, int maxFd, fd_set &readfds)
-{
-		for (size_t	i = 0; i < servers.size(); i++)
-	{
-		std::vector<int> serverFds = servers[i].getSocketFds();
-		for (size_t j = 0; j < serverFds.size(); j++)
-		{
-			int	fd = serverFds[j];
-			FD_SET(fd, &readfds);
-			if (fd > maxFd)
-				maxFd = fd;
-		}
-	}
-}
+/* FUNCTION: launchServer
+ * -------------------------------------------------------
+ * Main event loop of the server.
+ * It:
+ *  - Creates and binds sockets for all configured servers
+ *  - Uses select() to monitor multiple sockets and clients
+ *  - Accepts new client connections
+ *  - Delegates client handling to handleClient()
+ *
+ * Parameters:
+ *  - servers: a vector of configured `Server` instances
+ *
+ * Behavior:
+ *  - Infinite loop waiting for socket activity
+ *  - Uses select() to multiplex server sockets and clients
+ *  - Cleans up disconnected clients automatically */
 
 int launchServer(std::vector<Server> &servers)
 {
@@ -298,8 +108,7 @@ int launchServer(std::vector<Server> &servers)
 		return 1;
 	}
 
-	//createServersSockets(servers);
-	//create one socket per each servers's port
+	 // STEP 1: Create a listening socket for each port of each server
 	for(size_t i = 0; i < servers.size(); i++)
 	{
 		std::vector<int> ports = servers[i].getPorts();
@@ -315,47 +124,50 @@ int launchServer(std::vector<Server> &servers)
 		}
 	}
 
-	std::vector<int>	client_fds_vec;
-	std::map<int, size_t> client_server_map;
+	// STEP 2: Prepare structures to track clients
+	std::vector<int>	client_fds_vec; // List of all connected clients
+	std::map<int, size_t> client_server_map; // Maps client_fd → index of associated Server
+	std::map<int, int> client_port_map; //client_fd -> port
 
+	 // STEP 3: Main select() event loop
 	while (true)
 	{
-		fd_set	readfds;
-		FD_ZERO(&readfds);
-		int	maxFd = 0;
+		fd_set	readfds; // File descriptor set for select()
+		FD_ZERO(&readfds); // Reset all bits
+		int	maxFd = 0; // Track highest FD for select()
 
-		//setServersSockets(servers, maxFd, readfds);
-		//servers --> handle multiple servers sockets
+		// Register all server sockets --> handle multiple servers sockets
 		for (size_t	i = 0; i < servers.size(); i++)
 		{
 			std::vector<int> serverFds = servers[i].getSocketFds();
 			for (size_t j = 0; j < serverFds.size(); j++)
 			{
 				int	fd = serverFds[j];
-				FD_SET(fd, &readfds);
+				FD_SET(fd, &readfds);// Add to monitored set
 				if (fd > maxFd)
 					maxFd = fd;
 			}
 		}
 
-		//clients
+		// Register all client sockets
 		for (size_t i = 0 ; i < client_fds_vec.size(); i++)
 		{
 			FD_SET(client_fds_vec[i], &readfds);
 			if (client_fds_vec[i] > maxFd)
 				maxFd = client_fds_vec[i];
 		}
-		//timeval tv = {0, 0};
-		//int activity = select(maxFd + 1, &readfds, NULL, NULL, &tv);
-
-		int activity = select(maxFd + 1, &readfds, NULL, NULL, NULL);
-		if (activity < 0)
+	
+		struct timeval tv;
+		tv.tv_sec = 0; // 0 seconds
+		tv.tv_usec = 50000; //50 milliseconds (adjustable tick)
+		int activity = select(maxFd + 1, &readfds, NULL, NULL, &tv);
+		if (activity < 0) // Wait for socket activity (non-blocking)
 		{
 			std::cerr << RED "Select() error. errno: " << errno << RESET << std::endl;
 			continue;
 		}
 
-		//check if incoming connexion, accept client on the correct port
+		// STEP 4: Check if new client is connecting to a server, accept client on the correct port
 		for (size_t i = 0; i < servers.size(); i++)
 		{
 			const std::vector<int> socketsFds = servers[i].getSocketFds();
@@ -364,7 +176,7 @@ int launchServer(std::vector<Server> &servers)
 			for (size_t j = 0; j < socketsFds.size(); j++)
 			{
 				int	server_fd = socketsFds[j];
-				if (FD_ISSET(server_fd, &readfds))
+				if (FD_ISSET(server_fd, &readfds))// If the server_fd is ready → incoming connection
 				{
 					struct sockaddr_in clientAddr;
 					socklen_t 			len = sizeof(clientAddr);
@@ -374,8 +186,9 @@ int launchServer(std::vector<Server> &servers)
 						std::cerr << RED "Error: Accept() failure in launchSerevr()" RESET << std::endl;
 						continue;
 					}
+					// Optional: Set socket timeout (prevents infinite read block)
 					struct timeval tv;
-					tv.tv_sec = 5; // seconds
+					tv.tv_sec = 5; // timeout in seconds
 					tv.tv_usec = 0;
 					if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
 						perror("setsockopt SO_RCVTIMEO");
@@ -386,22 +199,24 @@ int launchServer(std::vector<Server> &servers)
 					// {
 					std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
 									<< serverPorts[j] << RESET << std::endl;
-					client_fds_vec.push_back(client_fd);
-					client_server_map[client_fd] = i;
+					client_fds_vec.push_back(client_fd);// Track the new client
+					client_server_map[client_fd] = i;// Associate with server index
+					client_port_map[client_fd] = serverPorts[j]; //STore the correct port associated to the client
 					//}
 				}
 			}
 		}
 
-		//check clients activity
+		// STEP 5: Handle activity from connected clients
 		for (size_t i = 0; i < client_fds_vec.size(); i++)
 		{
 			int fd = client_fds_vec[i];
 			if (FD_ISSET(fd, &readfds))
 			{
 				size_t	server_index = client_server_map[fd];
-				bool keep = handleClient(fd, servers[server_index]);
-				if (!keep)
+				// Delegate to the HTTP handling logic
+				bool keep = handleClient(fd, servers[server_index], client_port_map[fd]);
+				if (!keep) // If client disconnected or done → cleanup
 				{
 					close(fd);
 					client_server_map.erase(fd);
@@ -414,6 +229,7 @@ int launchServer(std::vector<Server> &servers)
 			}
 		}
 	}
+	// STEP 6: Cleanup on shutdown (not usually reached)
 	for(size_t i = 0; i < servers.size(); i++)
 	{
 		const std::vector<int> fds = servers[i].getSocketFds();
