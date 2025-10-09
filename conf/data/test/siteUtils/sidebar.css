@@ -1,0 +1,115 @@
+body{
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
+}
+
+/* Bouton pour afficher/masquer la sidebar */
+.toggle-btn
+{
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: #444;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: background 0.2s, left 0.3s ease;
+}
+
+.toggle-btn:hover
+{
+  background: #666;
+}
+
+/* Quand la sidebar est visible, on décale le bouton */
+body.sidebar-visible .toggle-btn
+{
+  left: 220px;
+}
+
+/* Barre latérale */
+.sidebar
+{
+  width: 200px;
+  background: #222;
+  color: #fff;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100vh;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translateX(-220px);
+  transition: transform 0.3s ease;
+  z-index: 500;
+}
+
+/* Sidebar visible */
+body.sidebar-visible .sidebar
+{
+  transform: translateX(0);
+}
+
+.sidebar h2
+{
+  margin-top: 0;
+  font-size: 24px;
+  text-align: center;
+}
+
+.sidebar button
+{
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background: #444;
+  color: white;
+  transition: background 0.2s;
+}
+
+.sidebar button:hover
+{
+  background: #666;
+}
+
+.content
+{
+  flex: 6;
+  transition: margin-left 0.7s, font-size 0.7s;
+}
+
+body.sidebar-visible .content
+{
+  margin-left: 240px;
+}
+
+:root
+{
+  --bg: white;
+  --text: black;
+}
+
+/* Si data-theme="dark" sur html */
+[data-theme="dark"]
+{
+  --bg: #121212;
+  --text: #e0e0e0;
+}
+
+/* Tailles de texte dynamiques */
+html[data-fontsize="small"]
+  { font-size: 14px; }
+html[data-fontsize="normal"]
+  { font-size: 18px; }
+html[data-fontsize="large"]
+  { font-size: 22px; }
+html[data-fontsize="giant"]
+  { font-size: 28px; }

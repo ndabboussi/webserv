@@ -115,6 +115,10 @@ static int fillIndexFile(HttpRequest &req)
         return 1;
     }
 	req.autoIndexFile = "<!doctype html>\n<html lang=\"en\">\n\t<head>\n\t\t<meta charset=\"utf-8\" />\n\t\t<title>Page List</title>\n";
+	req.autoIndexFile += "\t\t<link rel=\"stylesheet\"  href=\"/siteUtils/sidebar.css\">\n";
+	req.autoIndexFile += "\t\t<style>\n\t\t\tbody{font-family: \"Segoe UI\", Arial, sans-serif;\n\t\t\tdisplay: flex;\n";
+	req.autoIndexFile += "\t\t\tflex-direction: column;\n\t\t\tjustify-content: center;\n\t\t\talign-items: center;\n\t\t\tmargin: 0;\n";
+	req.autoIndexFile += "\t\t}\n\t\t</style>\n";
 	req.autoIndexFile += "\t</head>\n\t<body>\n\t\t<div>\n\t\t\t<h1>List of files in the directory</h1>\n";
 	req.autoIndexFile += "\t\t\t<ul>\n";
 
@@ -134,7 +138,8 @@ static int fillIndexFile(HttpRequest &req)
 			req.autoIndexFile += "\t\t\t\t<li><a href=\"http://" + port + req.url + '/' + std::string(entry->d_name)
 				+ "\">" + std::string(entry->d_name) + "</a></li>\n";
 	}
-	req.autoIndexFile += "\t\t\t</ul>\n\t\t</div>\n\t</body>\n</html>";
+	req.autoIndexFile += "\t\t\t</ul>\n\t\t</div>\n";
+	req.autoIndexFile += "\t\t<div id=\"sidebar-container\"></div>\n\t\t<script src=\"/siteUtils/cookies.js\"></script>\n\t</body>\n</html>";
     closedir(dir);
 	return 0;
 }

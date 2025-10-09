@@ -261,19 +261,21 @@ std::string	generateDefaultErrorPage(int code)
 {
 	std::ostringstream body;
 	body << "<!DOCTYPE html>\n"
-		<< "<html lang=\"en\">\n"
+		<< "<html lang=\"en\" data-theme=\"light\">\n"
 		<< "<head>\n"
 		<< "<meta charset=\"UTF-8\">\n"
 		<< "<title>" << code << " " << statusCodeResponse(code) << "</title>\n"
+		<< "<link rel=\"stylesheet\"  href=\"/siteUtils/sidebar.css\">\n"
 		<< "<style>\n"
 		<< "body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }\n"
 		<< "h1 { font-size: 48px; color: #d9534f; }\n"
-		<< "p { font-size: 18px; color: #333; }\n"
 		<< "</style>\n"
 		<< "</head>\n"
 		<< "<body>\n"
 		<< "<h1>" << code << " " << statusCodeResponse(code) << "</h1>\n"
 		<< "<p>The server encountered an error while processing your request.</p>\n"
+		<< "<div id=\"sidebar-container\"></div>\n"
+		<< "<script src=\"/siteUtils/cookies.js\"></script>\n"
 		<< "</body>\n"
 		<< "</html>\n";
 	return body.str();
@@ -291,7 +293,7 @@ std::string readFileToString(const std::string &path)
 
 //------------------------- MAIN SENDRESPONSE() FUNCTION -------------------------//
 
-std::string buildHeaders(HttpResponse &resp, const HttpRequest &req, size_t bodySize, const std::string &contentType, bool sendBody)
+std::string buildHeaders(Server &server, HttpResponse &resp, const HttpRequest &req, size_t bodySize, const std::string &contentType, bool sendBody)
 {
 	std::ostringstream headers;
 
@@ -299,6 +301,18 @@ std::string buildHeaders(HttpResponse &resp, const HttpRequest &req, size_t body
 	headers << "Date: " << setDate();
 	headers << "Server: MyWebServ/1.0\r\n";
 	headers << "Connection: " << setConnection(req);
+	if (server.getModified() >= 0)
+	{
+		Cookies &cookie = server.getCookies()[server.getModified()];
+		if (!cookie.getPrevId().empty())
+		{
+			headers << "Set-Cookie: " << "id=" + cookie.getPrevId() + "; Path=/; Max-Age=0; HttpOnly" << "\r\n";
+			cookie.setPrevId("");
+		}
+		headers << "Set-Cookie: " << cookie.getOutputData()[cookie.getModified()] << "\r\n";
+		server.setModified(-1);
+		cookie.setModified(-1);
+	}
 
 	// Add headers & body if allowed
 	if (sendBody)
@@ -353,7 +367,7 @@ void sendRedirectResponse(int client_fd, int code, const std::string &location, 
 
 //------------------------- MAIN SENDRESPONSE() FUNCTION -------------------------//
 
-void	sendResponse(int client_fd, const HttpRequest &request, const Server &server)
+void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 {
 	HttpResponse	resp;
 
@@ -390,7 +404,11 @@ void	sendResponse(int client_fd, const HttpRequest &request, const Server &serve
 			body = generateDefaultErrorPage(resp.code);
 		}
 
-		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
+		std::vector<char> tmpBody(body.begin(), body.end()); // cookies
+		modifyFile(tmpBody, request); // cookies
+		body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
+
+		std::string headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
 		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
 
@@ -417,8 +435,11 @@ void	sendResponse(int client_fd, const HttpRequest &request, const Server &serve
 	{
 		resp.code = 200;
 		setStatusLine(resp);
-		const std::string body = request.autoIndexFile;
-		std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);
+		std::string body = request.autoIndexFile;
+		std::vector<char> tmpBody(body.begin(), body.end()); // cookies
+		modifyFile(tmpBody, request); // cookies
+		body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
+		std::string	headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
 		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
 		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
@@ -439,7 +460,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, const Server &serve
 		resp.code = 500;
 		setStatusLine(resp);
 		std::string body = generateDefaultErrorPage(resp.code);
-		std::string headers = buildHeaders(resp, request, body.size(), "text/html", true);
+		std::string headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
 
 		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
@@ -457,7 +478,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, const Server &serve
 		if (resp.code == 201)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
 		{
 			std::string body = buildPostConfirmation(request);
-			std::string	headers = buildHeaders(resp, request, body.size(), "text/html", true);
+			std::string	headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
 
 			send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 			send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
@@ -488,17 +509,20 @@ void	sendResponse(int client_fd, const HttpRequest &request, const Server &serve
 		}
 	}
 
-	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	std::string	mimeType = getContentType(request.path);
+	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
 	if ((resp.code >= 100 && resp.code < 200) || resp.code == 204 || resp.code == 304)
 	{
-		std::string headers = buildHeaders(resp, request, 0, mimeType, false);
+		std::string headers = buildHeaders(server, resp, request, 0, mimeType, false);
 		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 		std::cout << RED "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 		std::cout << GREEN "[<] Sent 204 No Content for " << request.path << RESET << std::endl;
 		return;
 	}
-	std::string headers = buildHeaders(resp, request, fileContent.size(), mimeType, true);
+	if (mimeType == "text/html")
+		modifyFile(fileContent, request);// cookies
+	std::string headers = buildHeaders(server, resp, request, fileContent.size(), mimeType, true);
 	
 	send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 	send(client_fd, fileContent.data(), fileContent.size(), MSG_NOSIGNAL);
