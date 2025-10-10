@@ -5,9 +5,33 @@
 
 struct HttpRequest;
 
+enum	CgiType
+{
+	BINARY,
+	PYTHON,
+	PERL,
+	PHP,
+	SHELL,
+	JS,
+	HTML,
+	CSS,
+	UNKNOWN
+};
+
 class	CGI
 {
 	private:
+		std::string							_extension;
+		std::string							_path;
+		std::map<std::string, std::string> 	_defaults;;
+		std::string							_interpreter;
+		int									_type;
+		std::vector<std::string>			_env;
+		std::vector<char*>					_envp;
+
+	private:
+		void						_setCgiInfos(const HttpRequest &request, const Server &server);
+
 		std::vector<std::string>	_buildCgiEnv(const HttpRequest &req, const Server &server, const std::string &scriptPath) const;
 		std::vector<char*>			_envVecToCharPtr(const std::vector<std::string> &env) const;
 		void freeEnvCharVec(std::vector<char*> &vec) const;
@@ -15,10 +39,10 @@ class	CGI
 		std::string					_readFromFd(int fd) const;
 		std::string					_parseCgiOutput(const std::string &raw, int &outStatusCode, std::map<std::string,std::string> &outHeaders) const;
 		std::vector<std::string>	_split(const std::string &s) const;
-		int							_checkAccess(const std::string &path, int type);
+		int							_checkAccess() const;
 
-		int 						_getCgiType(const std::string &ext) const;
-		std::string					_getExtension(const std::string &path) const;
+		int 						_getCgiType() const;
+		std::string					_getExtension() const;
 
 	public:
 		CGI();

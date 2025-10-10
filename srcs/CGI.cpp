@@ -11,61 +11,137 @@
 CGI::CGI() {}
 CGI::~CGI() {}
 
-enum	CgiType
-{
-	BINARY,
-	PYTHON,
-	PERL,
-	PHP,
-	SHELL,
-	JS,
-	HTML,
-	CSS,
-	UNKNOWN
-};
-
 // Extracts the file extension (including the dot) from a given path
 // Ex: "/cgi-bin/hello.py" → ".py"
-std::string CGI::_getExtension(const std::string &path) const
+std::string CGI::_getExtension() const
 {
-	size_t pos = path.find_last_of('.');
+	size_t pos = this->_path.find_last_of('.');
 	if (pos == std::string::npos)
 		return "";
-	return path.substr(pos); // includes the dot: ".ext"
+	return this->_path.substr(pos); // includes the dot: ".ext"
 }
 
 //Returns an enum representing the CGI type based on the file extension
-int CGI::_getCgiType(const std::string &ext) const
+int CGI::_getCgiType() const
 {
-	if (ext == ".cgi")
+	if (this->_extension == ".cgi")//meaning its already executable
 		return BINARY;
-	if (ext == ".py") 
+	if (this->_extension == ".py") 
 		return PYTHON;
-	if (ext == "pl")
+	if (this->_extension == "pl")
 		return PERL;
-	if (ext == ".php")
+	if (this->_extension == ".php")
 		return PHP;
-	if (ext == ".sh")
+	if (this->_extension == ".sh")
 		return SHELL;
-	if (ext == ".js")
+	if (this->_extension == ".js")
 		return JS;
-	if (ext == ".html")
+	if (this->_extension == ".html")
 		return HTML;
-	if (ext == ".css")
+	if (this->_extension == ".css")
 		return CSS;
 	return UNKNOWN;
 }
 
 // Splits a string into a list of words separated by whitespace.
-// Used mainly for parsing configuration values (e.g., multiple CGI extensions)
-std::vector<std::string> CGI::_split(const std::string &s) const
+std::vector<std::string> CGI::_split(const std::string &str) const
 {
-	std::istringstream iss(s);
+	std::istringstream iss(str);
 	std::vector<std::string> result;
 	std::string word;
 	while (iss >> word)
 		result.push_back(word);
 	return result;
+}
+
+void	CGI::_setCgiInfos(const HttpRequest &request, const Server &server)
+{
+	this->_path = request.path;
+	this->_extension = this->_getExtension();
+	this->_type = this->_getCgiType();
+
+	this->_defaults[".cgi"] = "";
+	this->_defaults[".py"] = "/usr/bin/python3";
+	this->_defaults[".pl"] = "/usr/bin/perl";
+	this->_defaults[".php"] = "/usr/bin/php-cgi";
+	this->_defaults[".sh"] = "/bin/bash";
+	this->_defaults[".js"] = "/usr/bin/node";
+	this->_defaults[".html"] = "";
+	this->_defaults[".css"] = "";
+
+	// if (this->_type == BINARY)
+	// {
+	// 	this->_interpreter = "";
+	// 	return;
+	// }
+
+	std::map<std::string, std::string> data = server.getData();
+	std::map<std::string, std::string>::const_iterator itExt = data.find("cgi_ext");
+	std::map<std::string, std::string>::const_iterator itPath = data.find("cgi_path");
+	if (itExt != data.end() && itPath != data.end())
+	{
+		std::vector<std::string> splittedExtensions = _split(itExt->second);
+		std::vector<std::string> splittedPaths = _split(itPath->second);
+		for (size_t i = 0; i < splittedExtensions.size() && i < splittedPaths.size(); i++)
+		{
+			if (splittedExtensions[i] == this->_extension)
+			{
+				this->_interpreter = splittedPaths[i];
+				return;
+			}
+		}
+	}
+	if (this->_interpreter.empty() && this->_defaults.count(this->_extension))
+		this->_interpreter = this->_defaults[this->_extension];
+	return;
+}
+
+//------------------------------------ CGI INTERPRETER ------------------------------------//
+
+//Ensures that the target CGI file exists and has proper permissions
+int CGI::_checkAccess() const
+{
+	if (access(this->_path.c_str(), F_OK) == -1)
+		return (-1);
+	if (this->_type == BINARY && access(this->_path.c_str(), X_OK) == -1)
+		return (0);
+	if (access(this->_path.c_str(), R_OK) == -1)
+		return (0);
+	return (1);
+}
+
+// Determines the interpreter to use for the given CGI extension
+// Reads configuration values, or falls back to system defaults
+
+std::string CGI::getCgiInterpreter(const std::string &ext, const Server &server) const
+{
+	std::map<std::string, std::string> data = server.getData();
+	std::map<std::string, std::string>::const_iterator itExt = data.find("cgi_ext");
+	std::map<std::string, std::string>::const_iterator itPath = data.find("cgi_path");
+	if (itExt == data.end() || itPath == data.end())
+	{
+		// fallback defaults
+		if (ext == ".php")
+			return "/usr/bin/php-cgi";
+		if (ext == ".py")
+			return "/usr/bin/python3";
+		return "";
+	}
+
+	std::vector<std::string> exts = _split(itExt->second);
+	std::vector<std::string> paths = _split(itPath->second);
+	for (size_t i = 0; i < exts.size() && i < paths.size(); ++i)
+	{
+		if (exts[i] == ext)
+			return paths[i];
+	}
+
+	// fallback if not found
+	if (ext == ".php")
+		return "/usr/bin/php-cgi";
+	if (ext == ".py") 
+		return "/usr/bin/python3";
+	return "";
 }
 
 //------------------------------------ CGI ENV BUILDING ------------------------------------//
@@ -161,54 +237,6 @@ std::string CGI::_parseCgiOutput(const std::string &raw, int &outStatusCode, std
 	return body;
 }
 
-//------------------------------------ CGI INTERPRETER ------------------------------------//
-
-//Ensures that the target CGI file exists and has proper permissions
-int CGI::_checkAccess(const std::string &path, int type)
-{
-	if (access(path.c_str(), F_OK) == -1)
-		return (-1);
-	if (type == BINARY && access(path.c_str(), X_OK) == -1)
-		return (0);
-	if (access(path.c_str(), R_OK) == -1)
-		return (0);
-	return (1);
-}
-
-// Determines the interpreter to use for the given CGI extension
-// Reads configuration values, or falls back to system defaults
-
-std::string CGI::getCgiInterpreter(const std::string &ext, const Server &server) const
-{
-	std::map<std::string, std::string> data = server.getData();
-	std::map<std::string, std::string>::const_iterator itExt = data.find("cgi_ext");
-	std::map<std::string, std::string>::const_iterator itPath = data.find("cgi_path");
-	if (itExt == data.end() || itPath == data.end())
-	{
-		// fallback defaults
-		if (ext == ".php")
-			return "/usr/bin/php-cgi";
-		if (ext == ".py")
-			return "/usr/bin/python3";
-		return "";
-	}
-
-	std::vector<std::string> exts = _split(itExt->second);
-	std::vector<std::string> paths = _split(itPath->second);
-	for (size_t i = 0; i < exts.size() && i < paths.size(); ++i)
-	{
-		if (exts[i] == ext)
-			return paths[i];
-	}
-
-	// fallback if not found
-	if (ext == ".php")
-		return "/usr/bin/php-cgi";
-	if (ext == ".py") 
-		return "/usr/bin/python3";
-	return "";
-}
-
 //------------------------------------ EXECUTE CGI ------------------------------------//
 
 // Main function that:
@@ -220,16 +248,13 @@ std::string CGI::getCgiInterpreter(const std::string &ext, const Server &server)
 // Returns: A complete HTTP/1.1 response as a string
 std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 {
-	std::string	ext = _getExtension(request.path);
-	std::string	interpreter = getCgiInterpreter(ext, server);
-	int	type = _getCgiType(ext);
+	this->_setCgiInfos(request, server);
 
-	// 1. Check access and interpreter validity
-	if (_checkAccess(request.path, type) <= 0)
-		throw std::runtime_error("CGI file not accessible: " + request.path);
+	if (this->_type == UNKNOWN)
+		throw std::runtime_error("Unsupported CGI extension: " + this->_extension);
 
-	if (interpreter.empty() || type == UNKNOWN)
-		throw std::runtime_error("Unsupported CGI extension: " + ext);
+	if (_checkAccess() <= 0)
+		throw std::runtime_error("CGI file not accessible: " + this->_path);
 
 	//2. Build environment and create pipes
 	std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
@@ -254,11 +279,11 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 		close(pipeOut[0]);
 		//Prepare args for execve()
 		char *argv[3];
-		argv[0] = const_cast<char*>(interpreter.c_str());
-		argv[1] = const_cast<char*>(request.path.c_str());
+		argv[0] = const_cast<char*>(this->_interpreter.c_str());
+		argv[1] = const_cast<char*>(this->_path.c_str());
 		argv[2] = NULL;
 		// Execute CGI interpreter
-		execve(interpreter.c_str(), argv, &envp[0]);
+		execve(this->_interpreter.c_str(), argv, &envp[0]);
 		std::cerr << "execve failed: " << strerror(errno) << std::endl;
 		// If execve fails, print error and exit
 		_exit(1);

@@ -25,13 +25,11 @@ class	 Server : public Location
 		std::vector<Cookies>		_cookies;
 		int							_modified;
 
-
 	public:
 		Server(void);
 		Server(Server const &src);
 		~Server(void);
 		Server &operator=(Server const &src);
-		
 
 	public:
 		std::vector<int>			getPorts() const;
