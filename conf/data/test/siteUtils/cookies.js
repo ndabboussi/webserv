@@ -40,6 +40,11 @@ function resetPreferences()
 	eraseCookie('fontsize');
 }
 
+function togglerightSidebar()
+{
+	document.body.classList.toggle('rightsidebar-visible');
+}
+
 function toggleSidebar()
 {
 	document.body.classList.toggle('sidebar-visible');

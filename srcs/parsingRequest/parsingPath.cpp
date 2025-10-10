@@ -1,26 +1,5 @@
 #include "parsingRequest.hpp"
 
-static int error404(HttpRequest &req, std::string &tmp)
-{
-	std::cerr << RED "Error 404: Not found: " << tmp << RESET << std::endl;
-	req.statusCode = 404;
-	return 1;
-}
-
-static int error301(HttpRequest &req)
-{
-	std::cerr << RED "Error 301: Moved permanently" << RESET << std::endl;
-	req.statusCode = 301;
-	return 1;
-}
-
-static int error403(HttpRequest &req, std::string &tmp)
-{
-	std::cerr << RED "Error 403: Forbidden: " << tmp << RESET << std::endl;
-	req.statusCode = 403;
-	return 1;
-}
-
 static int findLocations(std::string str, Location &location)
 {
 	std::vector<Location>::iterator it;
@@ -52,16 +31,18 @@ int isAFile(std::string path)
 
 static int buildPath(std::string &newPath, std::string oldPath, Location &loc, HttpRequest &req)
 {
-	size_t i = 0;
-	size_t end = 0;
-	std::map<std::string,std::string> data;
-	std::string str;
+	size_t								i = 0;
+	size_t								end = 0;
+	std::map<std::string,std::string>	data;
+	Location							prev;
+	std::string							str;
 
+	oldPath = (oldPath[0] != '/') ? '/' + oldPath : oldPath;
 	while (end != std::string::npos)
 	{
 		newPath += str;
 		data = loc.getData();
-		if (data.find("alias") != data.end())
+		if (data.find("alias") != data.end() && prev.getPath() != loc.getPath())
 			newPath = data.find("alias")->second;
 		i = oldPath.find('/', i);
 		end = oldPath.find('/', i + 1);
@@ -70,18 +51,20 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 		else
 			str = oldPath.substr(i, oldPath.size());
 		i++;
+		prev = loc;
 		findLocations(str, loc);
 	}
 	data = loc.getData();
-	if (data.find("alias") != data.end())
+	if (data.find("alias") != data.end() && prev.getPath() != loc.getPath())
 	{
-		newPath = data.find("alias")->second;
+		if (req.url[req.url.size() - 1] == '/')
+			newPath = data.find("alias")->second + '/';
+		else
+			newPath = data.find("alias")->second;
 		if (newPath[0] == '/')
 			newPath.erase(newPath.begin());
-		std::string tmp = newPath + str;
-		if (isAFile(tmp) < 0)
-			return error404(req, tmp);
-		newPath += str;
+		if (isAFile(newPath + str) >= 0)
+			newPath += str;
 	}
 	else
 		newPath += str;
@@ -97,11 +80,7 @@ static int checkAccess(HttpRequest &req)
 		return 1;
 	}
 	if (access(req.path.c_str(), R_OK) != 0)
-	{
-		std::cerr << RED "Error 403: Forbidden" << RESET << std::endl;
-		req.statusCode = 403;
-		return 1;
-	}
+		return error403(req, req.path);
 	return 0;
 }
 
@@ -109,11 +88,7 @@ static int fillIndexFile(HttpRequest &req)
 {
     DIR *dir = opendir(req.path.c_str());
     if (dir == NULL)
-	{
-		std::cerr << RED "Error 500: Internal server error: "<< RESET << std::endl;
-		req.statusCode = 500;
-        return 1;
-    }
+		return error500(req);
 	req.autoIndexFile = "<!doctype html>\n<html lang=\"en\">\n\t<head>\n\t\t<meta charset=\"utf-8\" />\n\t\t<title>Page List</title>\n";
 	req.autoIndexFile += "\t\t<link rel=\"stylesheet\"  href=\"/siteUtils/sidebar.css\">\n";
 	req.autoIndexFile += "\t\t<style>\n\t\t\tbody{font-family: \"Segoe UI\", Arial, sans-serif;\n\t\t\tdisplay: flex;\n";
@@ -123,12 +98,10 @@ static int fillIndexFile(HttpRequest &req)
 	req.autoIndexFile += "\t\t\t<ul>\n";
 
     struct dirent *entry;
+
 	if (req.header.find("Host") == req.header.end())
-	{
-		std::cerr << RED "Error 400: Bad request: "<< RESET << std::endl;
-		req.statusCode = 400;
-        return 1;
-	}
+		return error400(req);
+	
 	std::string port = req.header.find("Host")->second;
 	if (req.url[req.url.size() - 1] == '/')
 		req.url.erase(req.url.size() - 1, 1);
@@ -158,31 +131,9 @@ int parsePath(HttpRequest &req, const Server &server)
 	req.path = newPath;
 	if (req.path[0] == '/')
 		req.path.erase(req.path.begin());
-	int res = isAFile(req.path);
-	if (res == 0 && req.method == "GET")//if the path is a directory
-	{
-		if (req.path[req.path.size() - 1] != '/')
-			return error301(req);
-		data = loc.getData();
-		std::map<std::string, std::string>::const_iterator it = data.find("index");
-		if (it != data.end())
-			req.path +=  it->second;
-		else if (loc.getAutoIndex())
-		{
-			if (fillIndexFile(req))
-				return 1;
-		}
-		else if (!loc.getAutoIndex())
-			return error403(req, req.path);
-		
-	}
-	else if (res < 0) //if the path isn't found
-		return error404(req, req.path);
-	if (checkAccess(req))
-		return 1;
-	req.methodPath = loc.getMethods();
-
-	req.isCgi = false; 	// CGI config file ?
+	
+	// CGI config file ?
+  req.isCgi = false; 	// CGI config file ?
 	std::vector<std::string> cgiExt = loc.getCgiExt();
 
 	for (size_t i = 0; i < cgiExt.size(); i++)
@@ -196,6 +147,33 @@ int parsePath(HttpRequest &req, const Server &server)
 			break;
 		}
 	}
+
+	int res = isAFile(req.path);
+	if (res == 0 && req.method == "GET")//if the path is a directory
+	{
+		if (req.path[req.path.size() - 1] != '/')
+		{
+			if (req.url[req.url.size() - 1] == '/')
+				req.url.erase(req.url.end() - 1);
+			return error301(req);
+		}
+		data = loc.getData();
+		std::map<std::string, std::string>::const_iterator it = data.find("index");
+		if (it != data.end())
+			req.path +=  it->second;
+		else if (loc.getAutoIndex())
+		{
+			if (fillIndexFile(req))
+				return 1;
+		}
+		else if (!loc.getAutoIndex())
+			return error403(req, req.path);
+	}
+	else if (res < 0) //if the path isn't found
+		return error404(req, req.path);
+	if (checkAccess(req))
+		return 1;
+	req.methodPath = loc.getMethods();	
 
 	return (0);
 }

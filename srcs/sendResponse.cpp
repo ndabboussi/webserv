@@ -473,7 +473,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 	// }
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
-	if (!file.is_open())
+	if (!file.is_open() && request.method != "DELETE")
 	{
 		resp.code = 500;
 		setStatusLine(resp);
@@ -528,7 +528,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 	}
 
 	std::string	mimeType = getContentType(request.path);
-	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	if ((resp.code >= 100 && resp.code < 200) || resp.code == 204 || resp.code == 304)
 	{
@@ -538,6 +537,9 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		std::cout << GREEN "[<] Sent 204 No Content for " << request.path << RESET << std::endl;
 		return;
 	}
+
+	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
 	if (mimeType == "text/html")
 		modifyFile(fileContent, request);// cookies
 	std::string headers = buildHeaders(server, resp, request, fileContent.size(), mimeType, true);

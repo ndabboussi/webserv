@@ -20,7 +20,27 @@ body{
   transition: background 0.2s, left 0.3s ease;
 }
 
+.right-toggle-btn
+{
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: #444;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: background 0.2s, right 0.3s ease;
+}
+
 .toggle-btn:hover
+{
+  background: #666;
+}
+
+.right-toggle-btn:hover
 {
   background: #666;
 }
@@ -29,6 +49,11 @@ body{
 body.sidebar-visible .toggle-btn
 {
   left: 220px;
+}
+
+body.rightsidebar-visible .right-toggle-btn
+{
+  right: 220px;
 }
 
 /* Barre latérale */
@@ -51,13 +76,44 @@ body.sidebar-visible .toggle-btn
   z-index: 500;
 }
 
+.rightsidebar
+{
+  width: 200px;
+  background: #222;
+  color: #fff;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100vh;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  right: 0;
+  transform: translateX(220px);
+  transition: transform 0.3s ease;
+  z-index: 500;
+}
+
 /* Sidebar visible */
 body.sidebar-visible .sidebar
 {
   transform: translateX(0);
 }
 
+body.rightsidebar-visible .rightsidebar
+{
+  transform: translateX(0);
+}
+
 .sidebar h2
+{
+  margin-top: 0;
+  font-size: 24px;
+  text-align: center;
+}
+
+.rightsidebar h2
 {
   margin-top: 0;
   font-size: 24px;
@@ -75,7 +131,23 @@ body.sidebar-visible .sidebar
   transition: background 0.2s;
 }
 
+.rightsidebar button
+{
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background: #444;
+  color: white;
+  transition: background 0.2s;
+}
+
 .sidebar button:hover
+{
+  background: #666;
+}
+
+.rightsidebar button:hover
 {
   background: #666;
 }
@@ -83,12 +155,17 @@ body.sidebar-visible .sidebar
 .content
 {
   flex: 6;
-  transition: margin-left 0.7s, font-size 0.7s;
+  transition: margin-right 0.7s, margin-left 0.7s, font-size 0.7s;
 }
 
 body.sidebar-visible .content
 {
   margin-left: 240px;
+}
+
+body.rightsidebar-visible .content
+{
+  margin-right: 240px;
 }
 
 :root

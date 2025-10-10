@@ -1,3 +1,25 @@
+  <button class="right-toggle-btn" id="rightToggle" onclick="togglerightSidebar()">profile</button>
+
+  <div class="rightsidebar" id="rightSidebar">
+    <!-- Section connexion / inscription -->
+    <div id="loginSection">
+      <h2>Login</h2>
+      <button id="loginBtn">Login</button>
+	  <hr>
+      <button id="registerBtn">Register</button>
+    </div>
+
+    <!-- Section profil (affichée si connecté) -->
+    <div id="profileSection" style="display:none;">
+      <h2>Bienvenue <span id="userDisplay"></span> !</h2>
+      <button id="logoutBtn">Se déconnecter</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <h1>Contenu principal</h1>
+  </div>
+
 <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 <div class="sidebar" id="sidebar">
 	<h2>Préférences</h2>
