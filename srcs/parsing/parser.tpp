@@ -12,7 +12,6 @@ void mapElement(ServLoc &servLoc, std::vector<std::string>::iterator &it, std::v
 		throw std::runtime_error("Error: Missing information"); //missing server Name in field server_name
 	if (it + 1 != end && *(it + 1) == ";")//check if next str is a ;
 		it++;
-	std::cout << BOLD RED << *it << RESET << std::endl;
 	if ((*it)[it->size() - 1] != ';')
 		throw std::runtime_error("Error: Missing ; or too much informations in instruction"); //missing ; or too much informations in instruction
 	servLoc.addData(key, value);

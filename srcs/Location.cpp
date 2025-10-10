@@ -11,6 +11,8 @@ Location &Location::operator=(Location const &src)
 	this->_methods = src._methods;
 	this->_path = src._path;
 	this->_autoIndex = src._autoIndex;
+	this->_cgiPaths = src._cgiPaths;
+	this->_cgiExts = src._cgiExts;
 	return (*this);
 }
 

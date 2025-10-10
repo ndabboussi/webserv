@@ -4,9 +4,12 @@
 # include "Location.hpp"
 # include "parsingRequest.hpp"
 # include "HttpResponse.hpp"
+# include "debugUtils.hpp"
 # include "Cookies.hpp"
+# include <fcntl.h> // for openmain
+# include <signal.h> // for signals
+# include <csignal> //for SIGINT
 
-# include <fcntl.h> // for open
 
 struct	HttpRequest;
 struct	HttpResponse;
@@ -22,13 +25,11 @@ class	 Server : public Location
 		std::vector<Cookies>		_cookies;
 		int							_modified;
 
-
 	public:
 		Server(void);
 		Server(Server const &src);
 		~Server(void);
 		Server &operator=(Server const &src);
-		
 
 	public:
 		std::vector<int>			getPorts() const;
@@ -49,11 +50,14 @@ class	 Server : public Location
 		void						setModified(int index);
 };
 
-void	parsing(std::vector<Server> &servers, std::string configFile);
-void	printTokens(const std::vector<std::string> &tokens);
-int		launchServer(std::vector<Server> &servers);
-void	printServers(const std::vector<Server> &servers);
-void	printLocation(const std::vector<Location> &locations);
-void	sendResponse(int client_fd, const HttpRequest &request, Server &server);
+void		parsing(std::vector<Server> &servers, std::string configFile);
+void		printTokens(const std::vector<std::string> &tokens);
+int			launchServer(std::vector<Server> &servers);
+void		printServers(const std::vector<Server> &servers);
+void		printLocation(const std::vector<Location> &locations);
+bool		handleClient(int client_fd, Server &servers, int serverPort);
+void		sendResponse(int client_fd, const HttpRequest &request, Server &server);
+void		handleSignal(int signum);
+std::string	toString(size_t value);
 
 #endif

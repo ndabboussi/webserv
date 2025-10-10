@@ -1,4 +1,5 @@
-#include <Server.hpp>
+#include "Server.hpp"
+#include "CGI.hpp"
 
 enum	MimeCategory
 {
@@ -9,14 +10,14 @@ enum	MimeCategory
 	TEXT,
 	VIDEO,
 	VND,
-	UNKNOWN
+	UNKNOWN_MIME
 };
 
 MimeCategory	getMimeCategory(const std::string &path)
 {
 	size_t dotPos = path.find_last_of('.');
 	if (dotPos == std::string::npos)
-		return UNKNOWN;
+		return UNKNOWN_MIME;
 
 	std::string ext = path.substr(dotPos + 1);
 
@@ -46,7 +47,7 @@ MimeCategory	getMimeCategory(const std::string &path)
 		ext == "ppt" || ext == "pptx" || ext == "odt" || ext == "ods" || ext == "odp")
 		return VND;
 
-	return UNKNOWN;
+	return UNKNOWN_MIME;
 }
 
 std::string	getContentType(const std::string &path)
@@ -377,10 +378,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		setStatusLine(resp);
 
 		const std::map<int, std::string> errorPages = server.getErrorPages();
-		std::cout << YELLOW "[DEBUG] Error pages configured for this server:\n" RESET;
-		for (std::map<int, std::string>::const_iterator e = errorPages.begin(); e != errorPages.end(); ++e)
-			std::cout << "  " << e->first << " => " << e->second << std::endl;
-
 		std::map<int, std::string>::const_iterator it = errorPages.find(resp.code);
 		std::string body;
 
@@ -421,18 +418,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
-	
-
-	// Step 2: CGI (skip building full response here)
-	if (request.isCgi)
-	{
-		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
-		// std::string output = executeCgi(request, loc);
-		// send(client_fd, output.c_str(), output.size(), 0);
-		return;
-	}
-		// executeCgi(client_fd, request, server);
-		// return;
 
 	// Step 3: Autoindex case
 	else if (!request.autoIndexFile.empty())
@@ -457,6 +442,35 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		sendRedirectResponse(client_fd, request.statusCode, request.url, request);
 		return;
 	}
+
+	//Step 2: CGI
+	if (request.isCgi)
+	{
+		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
+	
+		CGI cgi;
+		try
+		{
+			std::string response = cgi.executeCgi(request, server);
+			send(client_fd, response.c_str(), response.size(), 0);
+			return;
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << e.what() << '\n';
+		}
+		return;
+	}
+
+	// if (request.isCgi)
+	// {
+	// 	std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
+	
+	// 	CGI cgi;
+	// 	int response = cgi.executeCgi(request, server);
+	// 	std::cout << BLUE "[CGI] finished executing CGI script!" RESET << std::endl;
+	// 	return;
+	// }
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
 	if (!file.is_open() && request.method != "DELETE")

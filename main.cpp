@@ -1,9 +1,20 @@
 #include "Server.hpp"
-#include <signal.h>
+
+volatile bool serverRunning = true;// Global flag that controls lauchServer() main loop
+
+void handleSignal(int signum)
+{
+	if (signum == SIGINT)
+	{
+		std::cout << "\n\033[1;31m[!] Caught SIGINT — shutting down cleanly...\033[0m\n";
+		serverRunning = false;
+	}
+}
 
 int	main(int ac, char **av)
 {
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGINT, handleSignal);
 	std::string	configFile = "./conf/nanana.conf";
 	if (ac > 2)
 		return (std::cout << "Error: too many arguments." << std::endl, 1);
@@ -13,6 +24,7 @@ int	main(int ac, char **av)
 	try
 	{
 		parsing(servers, configFile);
+		//debugPrintConfig(servers);
 	}
 	catch(const std::exception &e)
 	{
