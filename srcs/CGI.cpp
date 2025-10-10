@@ -75,6 +75,8 @@ void	CGI::_setCgiInfos(const HttpRequest &request, const Server &server)
 	// 	return;
 	// }
 
+	// Determines the interpreter to use for the given CGI extension
+	// Reads configuration values, or falls back to system defaults
 	std::map<std::string, std::string> data = server.getData();
 	std::map<std::string, std::string>::const_iterator itExt = data.find("cgi_ext");
 	std::map<std::string, std::string>::const_iterator itPath = data.find("cgi_path");
@@ -113,36 +115,36 @@ int CGI::_checkAccess() const
 // Determines the interpreter to use for the given CGI extension
 // Reads configuration values, or falls back to system defaults
 
-std::string CGI::getCgiInterpreter(const std::string &ext, const Server &server) const
-{
-	std::map<std::string, std::string> data = server.getData();
-	std::map<std::string, std::string>::const_iterator itExt = data.find("cgi_ext");
-	std::map<std::string, std::string>::const_iterator itPath = data.find("cgi_path");
-	if (itExt == data.end() || itPath == data.end())
-	{
-		// fallback defaults
-		if (ext == ".php")
-			return "/usr/bin/php-cgi";
-		if (ext == ".py")
-			return "/usr/bin/python3";
-		return "";
-	}
+// std::string CGI::getCgiInterpreter(const std::string &ext, const Server &server) const
+// {
+// 	std::map<std::string, std::string> data = server.getData();
+// 	std::map<std::string, std::string>::const_iterator itExt = data.find("cgi_ext");
+// 	std::map<std::string, std::string>::const_iterator itPath = data.find("cgi_path");
+// 	if (itExt == data.end() || itPath == data.end())
+// 	{
+// 		// fallback defaults
+// 		if (ext == ".php")
+// 			return "/usr/bin/php-cgi";
+// 		if (ext == ".py")
+// 			return "/usr/bin/python3";
+// 		return "";
+// 	}
 
-	std::vector<std::string> exts = _split(itExt->second);
-	std::vector<std::string> paths = _split(itPath->second);
-	for (size_t i = 0; i < exts.size() && i < paths.size(); ++i)
-	{
-		if (exts[i] == ext)
-			return paths[i];
-	}
+// 	std::vector<std::string> exts = _split(itExt->second);
+// 	std::vector<std::string> paths = _split(itPath->second);
+// 	for (size_t i = 0; i < exts.size() && i < paths.size(); ++i)
+// 	{
+// 		if (exts[i] == ext)
+// 			return paths[i];
+// 	}
 
-	// fallback if not found
-	if (ext == ".php")
-		return "/usr/bin/php-cgi";
-	if (ext == ".py") 
-		return "/usr/bin/python3";
-	return "";
-}
+// 	// fallback if not found
+// 	if (ext == ".php")
+// 		return "/usr/bin/php-cgi";
+// 	if (ext == ".py") 
+// 		return "/usr/bin/python3";
+// 	return "";
+// }
 
 //------------------------------------ CGI ENV BUILDING ------------------------------------//
 
