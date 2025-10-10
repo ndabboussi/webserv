@@ -187,14 +187,19 @@ int parsePath(HttpRequest &req, const Server &server)
 
 	for (size_t i = 0; i < cgiExt.size(); i++)
 	{
-		if (req.path.size() >= cgiExt[i].size() &&
-			req.path.compare(req.path.size() - cgiExt[i].size(),
+		if (req.path.size() >= cgiExt[i].size() && req.path.compare(req.path.size() - cgiExt[i].size(),
 							cgiExt[i].size(),
 							cgiExt[i]) == 0)
 		{
 			req.isCgi = true;
+			std::cout << "HELOOOOOOOOOOOO" << std::endl;
 			break;
 		}
+	}
+	if (!req.isCgi && req.path.find("cgi-bin") != std::string::npos)
+	{
+		std::cout << YELLOW "[CGI DETECT] Path contains 'cgi-bin', marking as CGI." << RESET << std::endl;
+		req.isCgi = true;
 	}
 
 	return (0);
