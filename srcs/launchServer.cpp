@@ -3,6 +3,8 @@
 #define SERVERPORT 8080
 #define SERVER_BACKLOG 100
 
+extern volatile bool serverRunning;
+
 //------------------------------------ SOCKETS AND BIND -------------------------------------//
 
 /* FUNCTION: bindAndListen
@@ -130,7 +132,7 @@ int launchServer(std::vector<Server> &servers)
 	std::map<int, int> client_port_map; //client_fd -> port
 
 	 // STEP 3: Main select() event loop
-	while (true)
+	while (true && serverRunning)
 	{
 		fd_set	readfds; // File descriptor set for select()
 		FD_ZERO(&readfds); // Reset all bits
@@ -238,5 +240,6 @@ int launchServer(std::vector<Server> &servers)
 	}
 	for(size_t i = 0; i < client_fds_vec.size(); i++)
 		close(client_fds_vec[i]);
+	std::cout << "\033[1;32m[✓] Server shutdown complete.\033[0m\n";
 	return 0;
 }

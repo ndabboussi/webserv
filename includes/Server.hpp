@@ -7,6 +7,9 @@
 # include "debugUtils.hpp"
 # include "Cookies.hpp"
 # include <fcntl.h> // for openmain
+# include <signal.h> // for signals
+# include <csignal> //for SIGINT
+
 
 struct	HttpRequest;
 struct	HttpResponse;
@@ -56,5 +59,6 @@ void	printServers(const std::vector<Server> &servers);
 void	printLocation(const std::vector<Location> &locations);
 bool	handleClient(int client_fd, Server &servers, int serverPort);
 void	sendResponse(int client_fd, const HttpRequest &request, Server &server);
+void	handleSignal(int signum);
 
 #endif
