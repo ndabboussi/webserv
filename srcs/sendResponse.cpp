@@ -419,7 +419,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		return;
 	}
 
-	// Step 3: Autoindex case
+	// Step 2: Autoindex case
 	else if (!request.autoIndexFile.empty())
 	{
 		resp.code = 200;
@@ -443,7 +443,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		return;
 	}
 
-	//Step 2: CGI
+	//Step 3: CGI
 	if (request.isCgi)
 	{
 		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
