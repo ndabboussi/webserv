@@ -1,5 +1,15 @@
 #include "Server.hpp"
-#include <signal.h>
+
+volatile bool serverRunning = true;// Global flag that controls lauchServer() main loop
+
+void handleSignal(int signum)
+{
+	if (signum == SIGINT)
+	{
+		std::cout << "\n\033[1;31m[!] Caught SIGINT — shutting down cleanly...\033[0m\n";
+		serverRunning = false;
+	}
+}
 
 int	main(int ac, char **av)
 {

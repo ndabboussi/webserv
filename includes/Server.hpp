@@ -1,13 +1,15 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-# include "Signals.hpp"
 # include "Location.hpp"
 # include "parsingRequest.hpp"
 # include "HttpResponse.hpp"
 # include "debugUtils.hpp"
 # include "Cookies.hpp"
 # include <fcntl.h> // for openmain
+# include <signal.h> // for signals
+# include <csignal> //for SIGINT
+
 
 struct	HttpRequest;
 struct	HttpResponse;

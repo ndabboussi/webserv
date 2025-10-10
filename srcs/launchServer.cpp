@@ -3,6 +3,8 @@
 #define SERVERPORT 8080
 #define SERVER_BACKLOG 100
 
+extern volatile bool serverRunning;
+
 //------------------------------------ SOCKETS AND BIND -------------------------------------//
 
 /* FUNCTION: bindAndListen
