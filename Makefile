@@ -6,7 +6,7 @@ CFLAGS = -Wall -Wextra -Werror -std=c++98 -Iincludes -g
 SRC_DIR = srcs
 OBJ_DIR = obj
 
-SRC_FILES = main.cpp parsing/parser.cpp Location.cpp Server.cpp debug.cpp \
+SRC_FILES = main.cpp parsing/parser.cpp Location.cpp Server.cpp debug.cpp Signals.cpp \
 				parsingRequest/parsingRequest.cpp parsingRequest/parsingPath.cpp \
 				parsingRequest/parsingBody.cpp sendResponse.cpp handleClient.cpp \
 				launchServer.cpp Cookies.cpp CGI.cpp debugUtils.cpp

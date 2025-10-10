@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
+# include "Signals.hpp"
 # include "Location.hpp"
 # include "parsingRequest.hpp"
 # include "HttpResponse.hpp"
@@ -56,5 +57,6 @@ void	printServers(const std::vector<Server> &servers);
 void	printLocation(const std::vector<Location> &locations);
 bool	handleClient(int client_fd, Server &servers, int serverPort);
 void	sendResponse(int client_fd, const HttpRequest &request, Server &server);
+void	handleSignal(int signum);
 
 #endif
