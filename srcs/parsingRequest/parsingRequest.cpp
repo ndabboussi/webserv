@@ -62,28 +62,29 @@ static int checkMethod(HttpRequest &req)
 	return 0;
 }
 
-static int restoreLocations(const Server &server)
+static int restoreLocations(const Location &location, std::string root)
 {
-	std::vector<Location>				loc = server.getLocations();
-	std::string							root;
-	std::map<std::string, std::string>	map = server.getData();
-
-	if (map.find("root") == map.end())
-		root = "";
-	else
-		std::string root = map.find("root")->second;
+	std::vector<Location>				loc = location.getLocations();
+	std::map<std::string, std::string>	map;
+	std::string							str;
+	
+	if (root.size() > 0 && root[0] == '/')
+		root.erase(root.begin());
 	for (size_t i = 0; i < loc.size(); i++)
 	{
-		std::string str = root + loc[i].getPath();
-		if (isAFile(str) < 0)
+		map = loc[i].getData();
+		if (map.find("alias") != map.end())
 		{
-			mkdir(str.c_str(), 755);
-			root = str;
-			loc = loc[i].getLocations();
-			i = 0;
+			str = map.find("alias")->second;
+			if (str.size() > 0 && str[0] == '/')
+				str.erase(str.begin());
 		}
+		else
+			str = root + loc[i].getPath();
+		if (isAFile(str) < 0)
+			mkdir(str.c_str(), 0755);
+		restoreLocations(loc[i], str);
 	}
-	
 	return 0;
 }
 
@@ -104,7 +105,7 @@ static int removeDir(const char *path)
 		{
 			if (S_ISDIR(st.st_mode) && removeDir(newPath.c_str()))
 				return closedir(dir), 1;
-			else if (std::remove(newPath.c_str()) < 0)
+			else if (!S_ISDIR(st.st_mode) && std::remove(newPath.c_str()) < 0)
 				return closedir(dir), 1;
 		}
 	}
@@ -116,14 +117,21 @@ static int removeDir(const char *path)
 
 static int deleteRessource(HttpRequest &req, const Server &server)
 {
-	int res = isAFile(req.path);
+	int			res = isAFile(req.path);
+	std::string	root;
+	std::map<std::string, std::string>	data = server.getData();
+
+	if (data.find("root") != data.end())
+		root = data.find("root")->second;
 	if (res > 0)
 	{
 		if (std::remove(req.path.c_str()) < 0)
 			return error500(req);
 	}
-	else if (res == 0 && removeDir(req.path.c_str()) && restoreLocations(server))
+	else if (res == 0 && removeDir(req.path.c_str()))
 		return error500(req);
+	if (res == 0)
+		restoreLocations(server, root);
 	return 0;
 }
 

@@ -31,23 +31,19 @@ int isAFile(std::string path)
 
 static int buildPath(std::string &newPath, std::string oldPath, Location &loc, HttpRequest &req)
 {
-	size_t i = 0;
-	size_t end = 0;
-	std::map<std::string,std::string> data;
-	std::string str;
-	bool	alias = false;
+	size_t								i = 0;
+	size_t								end = 0;
+	std::map<std::string,std::string>	data;
+	Location							prev;
+	std::string							str;
 
-	(void)req;
 	oldPath = (oldPath[0] != '/') ? '/' + oldPath : oldPath;
 	while (end != std::string::npos)
 	{
 		newPath += str;
 		data = loc.getData();
-		if (data.find("alias") != data.end())
-		{
+		if (data.find("alias") != data.end() && prev.getPath() != loc.getPath())
 			newPath = data.find("alias")->second;
-			alias = true;
-		}
 		i = oldPath.find('/', i);
 		end = oldPath.find('/', i + 1);
 		if (end != std::string::npos)
@@ -55,10 +51,11 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 		else
 			str = oldPath.substr(i, oldPath.size());
 		i++;
+		prev = loc;
 		findLocations(str, loc);
 	}
 	data = loc.getData();
-	if (data.find("alias") != data.end())
+	if (data.find("alias") != data.end() && prev.getPath() != loc.getPath())
 	{
 		if (req.url[req.url.size() - 1] == '/')
 			newPath = data.find("alias")->second + '/';
@@ -66,10 +63,10 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 			newPath = data.find("alias")->second;
 		if (newPath[0] == '/')
 			newPath.erase(newPath.begin());
-		if (isAFile(newPath + str) == 1)
+		if (isAFile(newPath + str) >= 0)
 			newPath += str;
 	}
-	else if (!alias)
+	else
 		newPath += str;
 	return 0;
 }
