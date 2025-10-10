@@ -182,14 +182,7 @@ int parsePath(HttpRequest &req, const Server &server)
 		return 1;
 	req.methodPath = loc.getMethods();
 
-	// CGI config file ?
-
-	// std::vector<std::string> cgiExt = loc.getCgiExt();
-	// if (cgiExt.empty())
-	// 	req.isCgi = false;
-	// else
-	// 	req.isCgi = true;
-	req.isCgi = false;
+	req.isCgi = false; 	// CGI config file ?
 	std::vector<std::string> cgiExt = loc.getCgiExt();
 
 	for (size_t i = 0; i < cgiExt.size(); i++)

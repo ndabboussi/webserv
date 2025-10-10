@@ -24,7 +24,7 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 		{
 			it++;
 
-			while (it != end && (*it)[it->size() - 1] != ';')
+			while (it != end /*&& (*it)[it->size() - 1] != ';'*/)
 			{
 				std::string	token = *it;
 				bool endOfLine = (token[token.size() - 1] == ';');
@@ -33,6 +33,8 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 					token = token.substr(0, token.size() - 1);
 				if (!token.empty())
 					location.addCgiPath(token);
+				if (endOfLine)
+					break;
 				it++;
 			}
 			if (it == end)
@@ -41,7 +43,7 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 
 		else if (*it == "cgi_ext" && it + 1 != end)
 		{
-			++it;
+			it++;
 			while (it != end)
 			{
 				std::string token = *it;
@@ -54,7 +56,7 @@ static void	parsingLocation(Location &location, std::vector<std::string>::iterat
 					location.addCgiExt(token); // <-- assumes addCgiExt() stores multiple extensions
 				if (endOfLine)
 					break;
-				++it;
+				it++;
 			}
 			if (it == end)
 				throw std::runtime_error("Error: Unexpected EOF in cgi_ext field");

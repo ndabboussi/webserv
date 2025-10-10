@@ -10,14 +10,14 @@ enum	MimeCategory
 	TEXT,
 	VIDEO,
 	VND,
-	UNKNOWN
+	UNKNOWN_MIME
 };
 
 MimeCategory	getMimeCategory(const std::string &path)
 {
 	size_t dotPos = path.find_last_of('.');
 	if (dotPos == std::string::npos)
-		return UNKNOWN;
+		return UNKNOWN_MIME;
 
 	std::string ext = path.substr(dotPos + 1);
 
@@ -47,7 +47,7 @@ MimeCategory	getMimeCategory(const std::string &path)
 		ext == "ppt" || ext == "pptx" || ext == "odt" || ext == "ods" || ext == "odp")
 		return VND;
 
-	return UNKNOWN;
+	return UNKNOWN_MIME;
 }
 
 std::string	getContentType(const std::string &path)
@@ -443,14 +443,22 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		return;
 	}
 
-	//Step 2: CGI (skip building full response here)
+	//Step 2: CGI
 	if (request.isCgi)
 	{
 		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
 	
 		CGI cgi;
-		std::string response = cgi.executeCgi(request, server);
-		send(client_fd, response.c_str(), response.size(), 0);
+		try
+		{
+			std::string response = cgi.executeCgi(request, server);
+			send(client_fd, response.c_str(), response.size(), 0);
+			return;
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << e.what() << '\n';
+		}
 		return;
 	}
 

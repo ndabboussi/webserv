@@ -187,8 +187,8 @@ bool	handleClient(int client_fd, Server &servers, int serverPort)
 	std::cout << PINK << data << RESET << std::endl;//logger
 
 	HttpRequest request = parseHttpRequest(data, servers);
-  //debugPrintRequest(request);
-  request.serverPort = serverPort;
+	//debugPrintRequest(request);
+	request.serverPort = serverPort;
 	manageCookies(servers, request);
 	sendResponse(client_fd, request, servers);
 	return true;
