@@ -50,13 +50,14 @@ class	 Server : public Location
 		void						setModified(int index);
 };
 
-void	parsing(std::vector<Server> &servers, std::string configFile);
-void	printTokens(const std::vector<std::string> &tokens);
-int		launchServer(std::vector<Server> &servers);
-void	printServers(const std::vector<Server> &servers);
-void	printLocation(const std::vector<Location> &locations);
-bool	handleClient(int client_fd, Server &servers, int serverPort);
-void	sendResponse(int client_fd, const HttpRequest &request, Server &server);
-void	handleSignal(int signum);
+void		parsing(std::vector<Server> &servers, std::string configFile);
+void		printTokens(const std::vector<std::string> &tokens);
+int			launchServer(std::vector<Server> &servers);
+void		printServers(const std::vector<Server> &servers);
+void		printLocation(const std::vector<Location> &locations);
+bool		handleClient(int client_fd, Server &servers, int serverPort);
+void		sendResponse(int client_fd, const HttpRequest &request, Server &server);
+void		handleSignal(int signum);
+std::string	toString(size_t value);
 
 #endif

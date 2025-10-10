@@ -449,8 +449,16 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
 	
 		CGI cgi;
-		std::string response = cgi.executeCgi(request, server);
-		send(client_fd, response.c_str(), response.size(), 0);
+		try
+		{
+			std::string response = cgi.executeCgi(request, server);
+			send(client_fd, response.c_str(), response.size(), 0);
+			return;
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << e.what() << '\n';
+		}
 		return;
 	}
 

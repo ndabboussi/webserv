@@ -69,12 +69,6 @@ void	CGI::_setCgiInfos(const HttpRequest &request, const Server &server)
 	this->_defaults[".html"] = "";
 	this->_defaults[".css"] = "";
 
-	// if (this->_type == BINARY)
-	// {
-	// 	this->_interpreter = "";
-	// 	return;
-	// }
-
 	// Determines the interpreter to use for the given CGI extension
 	// Reads configuration values, or falls back to system defaults
 	std::map<std::string, std::string> data = server.getData();
@@ -98,8 +92,6 @@ void	CGI::_setCgiInfos(const HttpRequest &request, const Server &server)
 	return;
 }
 
-//------------------------------------ CGI INTERPRETER ------------------------------------//
-
 //Ensures that the target CGI file exists and has proper permissions
 int CGI::_checkAccess() const
 {
@@ -111,40 +103,6 @@ int CGI::_checkAccess() const
 		return (0);
 	return (1);
 }
-
-// Determines the interpreter to use for the given CGI extension
-// Reads configuration values, or falls back to system defaults
-
-// std::string CGI::getCgiInterpreter(const std::string &ext, const Server &server) const
-// {
-// 	std::map<std::string, std::string> data = server.getData();
-// 	std::map<std::string, std::string>::const_iterator itExt = data.find("cgi_ext");
-// 	std::map<std::string, std::string>::const_iterator itPath = data.find("cgi_path");
-// 	if (itExt == data.end() || itPath == data.end())
-// 	{
-// 		// fallback defaults
-// 		if (ext == ".php")
-// 			return "/usr/bin/php-cgi";
-// 		if (ext == ".py")
-// 			return "/usr/bin/python3";
-// 		return "";
-// 	}
-
-// 	std::vector<std::string> exts = _split(itExt->second);
-// 	std::vector<std::string> paths = _split(itPath->second);
-// 	for (size_t i = 0; i < exts.size() && i < paths.size(); ++i)
-// 	{
-// 		if (exts[i] == ext)
-// 			return paths[i];
-// 	}
-
-// 	// fallback if not found
-// 	if (ext == ".php")
-// 		return "/usr/bin/php-cgi";
-// 	if (ext == ".py") 
-// 		return "/usr/bin/python3";
-// 	return "";
-// }
 
 //------------------------------------ CGI ENV BUILDING ------------------------------------//
 
@@ -194,6 +152,8 @@ std::vector<char*> CGI::_envVecToCharPtr(const std::vector<std::string> &env) co
 	return vec;
 }
 
+//------------------------------------ PREPARE CGI BODY ------------------------------------//
+
 // Reads all data from a file descriptor until EOF and returns it as a string
 // Used to collect CGI output from the child process
 std::string CGI::_readFromFd(int fd) const
@@ -235,7 +195,7 @@ std::string CGI::_parseCgiOutput(const std::string &raw, int &outStatusCode, std
 	}
 	//Default to 200 if CGI didn’t send a "Status" header
 	outStatusCode = (outHeaders.find("Status") != outHeaders.end())
-		? atoi(outHeaders["Status"].c_str()) : 200;
+		? std::atoi(outHeaders["Status"].c_str()) : 200;
 	return body;
 }
 
@@ -248,6 +208,7 @@ std::string CGI::_parseCgiOutput(const std::string &raw, int &outStatusCode, std
 //   4. Reads CGI output
 //   5. Builds a proper HTTP response
 // Returns: A complete HTTP/1.1 response as a string
+
 std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 {
 	this->_setCgiInfos(request, server);
@@ -265,11 +226,11 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 	int pipeIn[2];
 	int pipeOut[2];
 	if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1)
-		throw std::runtime_error("pipe() failed: " + std::string(strerror(errno)));
+		throw std::runtime_error("pipe() failed");
 
 	pid_t pid = fork();
 	if (pid < 0)
-		throw std::runtime_error("fork() failed: " + std::string(strerror(errno)));
+		throw std::runtime_error("fork() failed");
 
 	//3. Child process
 	if (pid == 0)
@@ -279,16 +240,24 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 		//Close unused ends to prevent deadlock
 		close(pipeIn[1]);
 		close(pipeOut[0]);
-		//Prepare args for execve()
-		char *argv[3];
-		argv[0] = const_cast<char*>(this->_interpreter.c_str());
-		argv[1] = const_cast<char*>(this->_path.c_str());
-		argv[2] = NULL;
-		// Execute CGI interpreter
-		execve(this->_interpreter.c_str(), argv, &envp[0]);
+
+		char *argv[3]; 	//Prepare args for execve()
+		if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
+		{
+			argv[0] = const_cast<char *>(this->_path.c_str());
+			argv[1] = NULL;
+			execve(this->_path.c_str(), argv, &envp[0]);
+		}
+		else // Interpreter execution (.py, .sh, etc.)
+		{
+			argv[0] = const_cast<char *>(this->_interpreter.c_str());
+			argv[1] = const_cast<char *>(this->_path.c_str());
+			argv[2] = NULL;
+			execve(this->_interpreter.c_str(), argv, &envp[0]);
+		}
 		std::cerr << "execve failed: " << strerror(errno) << std::endl;
 		// If execve fails, print error and exit
-		_exit(1);
+		_exit(1);// I CANT USE _exit()
 	}
 
 	//4. Parent process
@@ -300,7 +269,7 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 	{
 		std::string body;
 		for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
-			 it != request.body.end(); it++)
+			it != request.body.end(); it++)
 			body += it->first + "=" + it->second + "&";
 		if (!body.empty())
 			body.erase(body.size() - 1);
@@ -316,6 +285,11 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 	// Wait for CGI child to exit
 	int status = 0;
 	waitpid(pid, &status, 0);
+	if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+		throw std::runtime_error("CGI process exited with status " + toString(WEXITSTATUS(status)));
+	if (WIFSIGNALED(status))
+		throw std::runtime_error("CGI process killed by signal " + toString(WTERMSIG(status)));
+
 
 	//6. Parse and construct HTTP response
 	int cgiStatus = 200;
