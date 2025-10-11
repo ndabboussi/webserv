@@ -160,5 +160,5 @@ int Server::isValidUser(std::string username, std::string password) const
 		if (username == this->_accounts[i].getUsername() && password == this->_accounts[i].getPassword())
 			return i;
 	}
-	return 0;
+	return -1;
 }

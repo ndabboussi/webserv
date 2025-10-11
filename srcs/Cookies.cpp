@@ -201,8 +201,10 @@ static void registerUser(HttpRequest &req, Server &server)
 		newInfo.setName(it->second);
 	if ((it = req.body.find("second_name")) != req.body.end())
 		newInfo.setSecondName(it->second);
-	server.addAccounts(newInfo);
-	req.statusCode = 201;
+	if (server.addAccounts(newInfo))
+		req.statusCode = 201; //User created
+	else
+		req.statusCode = 409; //conflict user already exist
 }
 
 static void logInUser(HttpRequest &req, Cookies &cookie, Server &server)
@@ -222,7 +224,7 @@ static void logInUser(HttpRequest &req, Cookies &cookie, Server &server)
 		throw std::runtime_error("Error 400: Bad request");
 	}
 
-	if (!(index = server.isValidUser(username, password)))
+	if ((index = server.isValidUser(username, password)) < 0)
 	{
 		req.statusCode = 401;
 		throw std::runtime_error("Error 401: Unvalid identifiants");
