@@ -21,10 +21,9 @@ struct HttpRequest
 	std::string							autoIndexFile;
 	bool								isCgi;
 	int									serverPort;
-	//std::string							JsonBody;
 };
 
-HttpRequest	parseHttpRequest(const std::string &rawRequest, const Server &server);
+HttpRequest	parseHttpRequest(const std::string &rawRequest, Server &server);
 int			parsePath(HttpRequest &req, const Server &server);
 int			parseBody(HttpRequest &req, std::istringstream &requestStream);
 int			isAFile(std::string path);

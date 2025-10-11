@@ -31,26 +31,25 @@ Server::~Server(void)
 
 //GETTERS ---------------------------------------------------------
 
-std::vector<int> Server::getPorts() const
+const std::vector<int> &Server::getPorts() const
 {
     return (this->_port);
 }
 
-std::string Server::getName() const
+const std::string &Server::getName() const
 {
     return (this->_name);
 }
 
-std::vector<int> Server::getSocketFds() const
+const std::vector<int> &Server::getSocketFds() const
 {
     return (this->_socketFd);
 }
 
-std::map<int, std::string>	Server::getErrorPages() const
+const std::map<int, std::string>	&Server::getErrorPages() const
 {
     return (this->_errorPages);
 }
-
 
 long long Server::getMaxBodyClientSize() const
 {
@@ -65,6 +64,16 @@ std::vector<Cookies> &Server::getCookies()
 int Server::getModified() const 
 {
     return this->_modified;
+}
+
+const std::map<std::string, PersonalInfos>	&Server::getAccountIdToInfos() const
+{
+	return this->_accountIdToInfos;
+}
+
+const std::vector<PersonalInfos>	&Server::getAccounts() const
+{
+	return this->_accounts;
 }
 
 //SETTERS ---------------------------------------------------------
@@ -117,4 +126,39 @@ void Server::delCookies(std::string id)
             return ;
         }
     }
+}
+
+void Server::addAccountIdToInfos(std::string accountId, PersonalInfos info)
+{
+	if (this->_accountIdToInfos.find(accountId) == this->_accountIdToInfos.end())
+		this->_accountIdToInfos.insert(std::make_pair(accountId, info));
+	else
+		this->_accountIdToInfos[accountId] = info;
+}
+
+bool Server::addAccounts(PersonalInfos info)
+{
+	for (size_t i = 0; i < this->_accounts.size(); i++)
+	{
+		if (info.getUsername() == this->_accounts[i].getUsername())
+			return false;
+	}
+	this->_accounts.push_back(info);
+	return true;
+}
+
+void Server::delAccountIdToInfos(std::string accountId)
+{
+	if (this->_accountIdToInfos.find(accountId) != this->_accountIdToInfos.end())
+		this->_accountIdToInfos.erase(this->_accountIdToInfos.find(accountId));
+}
+
+int Server::isValidUser(std::string username, std::string password) const
+{
+	for (size_t i = 0; i < this->_accounts.size(); i++)
+	{
+		if (username == this->_accounts[i].getUsername() && password == this->_accounts[i].getPassword())
+			return i;
+	}
+	return 0;
 }

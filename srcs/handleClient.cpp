@@ -189,7 +189,8 @@ bool	handleClient(int client_fd, Server &servers, int serverPort)
 	HttpRequest request = parseHttpRequest(data, servers);
 	//debugPrintRequest(request);
 	request.serverPort = serverPort;
-	manageCookies(servers, request);
+	if (request.statusCode < 300)
+		manageCookies(servers, request);
 	sendResponse(client_fd, request, servers);
 	return true;
 }

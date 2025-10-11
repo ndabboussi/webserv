@@ -309,7 +309,13 @@ std::string buildHeaders(Server &server, HttpResponse &resp, const HttpRequest &
 			headers << "Set-Cookie: " << "id=" + cookie.getPrevId() + "; Path=/; Max-Age=0; HttpOnly" << "\r\n";
 			cookie.setPrevId("");
 		}
-		headers << "Set-Cookie: " << cookie.getOutputData()[cookie.getModified()] << "\r\n";
+		if (!cookie.getPrevAuthToken().empty())
+		{
+			headers << "Set-Cookie: " << "auth_token=" + cookie.getPrevAuthToken() + "; Path=/; Max-Age=0; HttpOnly" << "\r\n";
+			cookie.setPrevAuthToken("");
+		}
+		if (cookie.getModified() >= 0)
+			headers << "Set-Cookie: " << cookie.getOutputData()[cookie.getModified()] << "\r\n";
 		server.setModified(-1);
 		cookie.setModified(-1);
 	}

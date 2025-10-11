@@ -42,6 +42,11 @@ std::string Cookies::getAuth(void) const
 	return this->_authToken;
 }
 
+std::string Cookies::getPrevAuthToken(void) const
+{
+	return this->_prevAuthToken;
+}
+
 int Cookies::getModified(void) const
 {
 	return this->_modified;
@@ -72,6 +77,11 @@ void Cookies::setPrevId(std::string value)
 void Cookies::setAuth(std::string value)
 {
 	this->_authToken = value;
+}
+
+void Cookies::setPrevAuthToken(std::string value)
+{
+	this->_prevAuthToken = value;
 }
 
 void Cookies::addOutputData(std::string value)
@@ -178,36 +188,108 @@ void modifyFile(std::vector<char> &fileContent, const HttpRequest &req)
 	ModifyCookie(fileContent, cookieTheme, "fontsize=", "data-fontsize=\"");
 }
 
-static void	fillData(Server &server, std::vector<Cookies> &cookies, std::string &cookieLine)
+static void registerUser(HttpRequest &req, Server &server)
 {
-	std::string str = extractCookieValue(cookieLine, "id");
+	PersonalInfos newInfo;
+	std::map<std::string, std::string>::iterator it;
+
+	if ((it = req.body.find("username")) != req.body.end())
+		newInfo.setUsername(it->second);
+	if ((it = req.body.find("password")) != req.body.end())
+		newInfo.setPassword(it->second);
+	if ((it = req.body.find("name")) != req.body.end())
+		newInfo.setName(it->second);
+	if ((it = req.body.find("second_name")) != req.body.end())
+		newInfo.setSecondName(it->second);
+	server.addAccounts(newInfo);
+	req.statusCode = 201;
+}
+
+static void logInUser(HttpRequest &req, Cookies &cookie, Server &server)
+{
+	std::string										username, password;
+	int												index = 0;
+	std::map<std::string, std::string>::iterator	it;
+
+	if ((it = req.body.find("username")) != req.body.end())
+		username = it->second;
+	if ((it = req.body.find("password")) != req.body.end())
+		password = it->second;
+
+	if (username.empty() || password.empty())
+	{
+		req.statusCode = 400;
+		throw std::runtime_error("Error 400: Bad request");
+	}
+
+	if (!(index = server.isValidUser(username, password)))
+	{
+		req.statusCode = 401;
+		throw std::runtime_error("Error 401: Unvalid identifiants");
+	}
+
+	cookie.setAuth(Cookies::genCookieId(server.getCookies(), 25));
+	server.addAccountIdToInfos(cookie.getAuth(), server.getAccounts()[index]);
+	cookie.setModified(1);
+	cookie.addOutputData("auth_token=" + cookie.getAuth() + "; Path=/; Max-Age=300; HttpOnly");
+}
+
+static void logOutUser(HttpRequest &req, Cookies &cookie, Server &server)
+{
+	std::string	username, password;
+
+	if (!cookie.getAuth().empty())
+		server.delAccountIdToInfos(cookie.getAuth());
+	cookie.setModified(1);
+	cookie.addOutputData("auth_token=" + cookie.getAuth() + "; Path=/; Max-Age=0; HttpOnly");
+	cookie.setAuth("");
+	req.statusCode = 200;
+}
+
+static void	fillData(Server &server, std::vector<Cookies> &cookies, std::string &cookieLine, HttpRequest &req)
+{
+	std::string str = extractCookieValue(cookieLine, "id=");
 	for (size_t i = 0; i < cookies.size(); i++)
 	{
 		if (cookies[i].getId() == str)
 		{
-			if (!extractCookieValue(cookieLine, "auth_token").empty() && cookies[i].getAuth().empty())
+			if (extractCookieValue(cookieLine, "auth_token=") == "" && !cookies[i].getAuth().empty())
 			{
-				cookies[i].setAuth(Cookies::genCookieId(cookies, 25));
-				cookies[i].setModified(1);
+				logOutUser(req, cookies[i], server);
 				server.setModified(i);
-				std::string path = "/images"; //temporary
-				cookies[i].addOutputData("id=" + cookies[i].getId() + "; " + "auth_token=" + cookies[i].getAuth() + "; Path=" + path + "; HttpOnly");
+			}
+			else if (req.method == "POST")
+			{
+				if (req.url == "/register")
+					registerUser(req, server);
+				else if (req.url == "/login")
+				{
+					logInUser(req, cookies[i], server);
+					server.setModified(i);
+				}
+				else if (req.url == "/logout")
+				{
+					logOutUser(req, cookies[i], server);
+					server.setModified(i);
+				}
 			}
 		}
 	}
 }
 
-static void createNewSession(Server &server, std::string oldId)
+static void createNewSession(Server &server, std::string oldId, std::string oldAuthToken)
 {
 	Cookies newCookie;
+
 	if (!oldId.empty())
 		newCookie.setPrevId(oldId);
+	if (!oldAuthToken.empty())
+		newCookie.setPrevAuthToken(oldAuthToken);
 	newCookie.setId(Cookies::genCookieId(server.getCookies(), 20));
 	newCookie.setModified(0);
 	newCookie.addOutputData("id=" + newCookie.getId() + "; Path=/; HttpOnly");
 	server.addCookies(newCookie);
 	server.setModified(server.getCookies().size() - 1);
-	return ;
 }
 
 static int verifyCookieId(std::vector<Cookies> cookies, std::string &str)
@@ -224,16 +306,19 @@ void	manageCookies(Server &server, HttpRequest &request)
 {
 	try
 	{
-		std::string idVal;
+		std::string idVal, idAuthToken;
 		std::map<std::string, std::string>::iterator it = request.header.find("Cookie");
 
 		if (it != request.header.end())
+		{
 			idVal = extractCookieValue(it->second, "id=");
+			idAuthToken = extractCookieValue(it->second, "auth_token=");
+		}
 		if (it == request.header.end() || idVal.empty())
-			return createNewSession(server, "");
+			return createNewSession(server, "", "");
 		if ((!idVal.empty() && verifyCookieId(server.getCookies(), idVal)))
-			return createNewSession(server, idVal);
-		fillData(server, server.getCookies(), it->second);
+			return createNewSession(server, idVal, idAuthToken);
+		fillData(server, server.getCookies(), it->second, request);
 	}
 	catch(const std::exception& e)
 	{

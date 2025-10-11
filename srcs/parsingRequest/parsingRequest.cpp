@@ -135,7 +135,7 @@ static int deleteRessource(HttpRequest &req, const Server &server)
 	return 0;
 }
 
-HttpRequest parseHttpRequest(const std::string &rawRequest, const Server &server)
+HttpRequest parseHttpRequest(const std::string &rawRequest, Server &server)
 {
 	HttpRequest req;
 
