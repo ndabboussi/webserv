@@ -201,6 +201,8 @@ int parseBody(HttpRequest &req, std::istringstream &requestStream)
 	std::string ContentType;
 	if (req.header.find("Content-Type") != req.header.end())
 		ContentType = req.header.find("Content-Type")->second;
+	else if (req.url == "/logout")
+		return 0;
 	else
 		return error400(req);	//error in header
 	if (ContentType == "application/x-www-form-urlencoded")

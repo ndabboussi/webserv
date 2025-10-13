@@ -36,6 +36,7 @@ class Cookies
 		void						setPrevAuthToken(std::string value);
 		void						setModified(int index);
 		void						addOutputData(std::string value);
+		void						delOutputData(int index);
 
 		static std::string			genCookieId(std::vector<Cookies> const &cookies, int n);
 };

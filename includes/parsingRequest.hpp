@@ -19,6 +19,7 @@ struct HttpRequest
 	std::vector<std::string>			fileNames;
 	std::string							url;
 	std::string							autoIndexFile;
+	std::string							jsonResponse;
 	bool								isCgi;
 	int									serverPort;
 };

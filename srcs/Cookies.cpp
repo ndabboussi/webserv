@@ -89,6 +89,13 @@ void Cookies::addOutputData(std::string value)
 	this->_outputData.push_back(value);
 }
 
+void Cookies::delOutputData(int index)
+{
+	if (index < 0 || index > static_cast<int>(this->_outputData.size()))
+		return;
+	this->_outputData.erase(this->_outputData.begin() + index);
+}
+
 //Member function----------------------------------------------------------
 
 std::string Cookies::genCookieId(std::vector<Cookies> const &cookies, int nb)
@@ -202,9 +209,17 @@ static void registerUser(HttpRequest &req, Server &server)
 	if ((it = req.body.find("second_name")) != req.body.end())
 		newInfo.setSecondName(it->second);
 	if (server.addAccounts(newInfo))
+	{
 		req.statusCode = 201; //User created
+		req.jsonResponse = "{\n\"success\": true,\n\"username\": \""
+			+ newInfo.getUsername() + "\",\n\"message\": \"Account sucessfully created !\"\n}";
+	}
 	else
+	{
 		req.statusCode = 409; //conflict user already exist
+		req.jsonResponse = "{\n\"success\": false,\n\"username\": \""
+			+ newInfo.getUsername() + "\",\n\"message\": \"Account already exist !\"\n}";
+	}
 }
 
 static void logInUser(HttpRequest &req, Cookies &cookie, Server &server)
@@ -221,19 +236,23 @@ static void logInUser(HttpRequest &req, Cookies &cookie, Server &server)
 	if (username.empty() || password.empty())
 	{
 		req.statusCode = 400;
+		req.jsonResponse = "{\n\"success\": false,\n\"message\": \"Bad request !\"\n}";
 		throw std::runtime_error("Error 400: Bad request");
 	}
 
 	if ((index = server.isValidUser(username, password)) < 0)
 	{
 		req.statusCode = 401;
+		req.jsonResponse = "{\n\"success\": false,\n\"message\": \"Unvalid username or password !\"\n}";
 		throw std::runtime_error("Error 401: Unvalid identifiants");
 	}
-
+	req.statusCode = 201;
+	req.jsonResponse = "{\n\"success\": true,\n\"username\": \""
+			+ server.getAccounts()[index].getUsername() + "\",\n\"message\": \"Sucessfully logged in !\"\n}";
 	cookie.setAuth(Cookies::genCookieId(server.getCookies(), 25));
 	server.addAccountIdToInfos(cookie.getAuth(), server.getAccounts()[index]);
 	cookie.setModified(1);
-	cookie.addOutputData("auth_token=" + cookie.getAuth() + "; Path=/; Max-Age=300; HttpOnly");
+	cookie.addOutputData("auth_token=" + cookie.getAuth() + "; Path=/; Max-Age=300");
 }
 
 static void logOutUser(HttpRequest &req, Cookies &cookie, Server &server)
@@ -243,39 +262,56 @@ static void logOutUser(HttpRequest &req, Cookies &cookie, Server &server)
 	if (!cookie.getAuth().empty())
 		server.delAccountIdToInfos(cookie.getAuth());
 	cookie.setModified(1);
-	cookie.addOutputData("auth_token=" + cookie.getAuth() + "; Path=/; Max-Age=0; HttpOnly");
+	cookie.delOutputData(1);
+	cookie.addOutputData("auth_token=" + cookie.getAuth() + "; Path=/; Max-Age=0");
 	cookie.setAuth("");
+	req.jsonResponse = "{\n\"success\": true,\n\"message\": \"Sucessfully logged out !\"\n}";
 	req.statusCode = 200;
 }
 
 static void	fillData(Server &server, std::vector<Cookies> &cookies, std::string &cookieLine, HttpRequest &req)
 {
 	std::string str = extractCookieValue(cookieLine, "id=");
-	for (size_t i = 0; i < cookies.size(); i++)
+	size_t i;
+
+	for (i = 0; i < cookies.size(); i++)
 	{
 		if (cookies[i].getId() == str)
+			break ;
+	}
+	if (i == cookies.size())
+		return ;
+	if (extractCookieValue(cookieLine, "auth_token=") == "" && !cookies[i].getAuth().empty())
+	{
+		logOutUser(req, cookies[i], server);
+		server.setModified(i);
+	}
+	else if (req.method == "POST")
+	{
+		if (req.url == "/register")
+			registerUser(req, server);
+		else if (req.url == "/login")
 		{
-			if (extractCookieValue(cookieLine, "auth_token=") == "" && !cookies[i].getAuth().empty())
-			{
-				logOutUser(req, cookies[i], server);
-				server.setModified(i);
-			}
-			else if (req.method == "POST")
-			{
-				if (req.url == "/register")
-					registerUser(req, server);
-				else if (req.url == "/login")
-				{
-					logInUser(req, cookies[i], server);
-					server.setModified(i);
-				}
-				else if (req.url == "/logout")
-				{
-					logOutUser(req, cookies[i], server);
-					server.setModified(i);
-				}
-			}
+			logInUser(req, cookies[i], server);
+			server.setModified(i);
 		}
+		else if (req.url == "/logout")
+		{
+			logOutUser(req, cookies[i], server);
+			server.setModified(i);
+		}
+	}
+	else if (req.method == "GET" && req.url == "/me")
+	{
+		std::map<std::string, PersonalInfos> map = server.getAccountIdToInfos();
+		PersonalInfos info = map[cookies[i].getAuth()];
+		req.jsonResponse =
+			"{"
+			"\"success\": true, "
+			"\"username\": \"" + info.getUsername() + "\", "
+			"\"name\": \"" + info.getName() + "\", "
+			"\"second_name\": \"" + info.getSecondName() + "\""
+			"}";
 	}
 }
 
