@@ -143,7 +143,6 @@ int parsePath(HttpRequest &req, const Server &server)
 							cgiExt[i]) == 0)
 		{
 			req.isCgi = true;
-			std::cout << "HELOOOOOOOOOOOO" << std::endl;
 			break;
 		}
 	}

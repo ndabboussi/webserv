@@ -161,7 +161,8 @@ std::string CGI::_readFromFd(int fd) const
 	std::string result;
 	char buf[4096];
 	ssize_t n;
-	while ((n = read(fd, buf, sizeof(buf))) > 0)
+	//while ((n = read(fd, buf, sizeof(buf))) > 0)
+	while ((n = recv(fd, buf, sizeof(buf), 0)) > 0)
 		result.append(buf, n);
 	return result;
 }

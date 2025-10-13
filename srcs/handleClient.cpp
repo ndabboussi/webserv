@@ -128,7 +128,8 @@ bool	handleClient(int client_fd, Server &servers, int serverPort)
 
 	while (1)
 	{
-		bytes_read = read(client_fd, buffer, sizeof(buffer));
+		// bytes_read = read(client_fd, buffer, sizeof(buffer));
+		bytes_read = recv(client_fd, buffer, sizeof(buffer), 0);//use MSG_DONTWAIT ?
 		if (bytes_read < 0)
 		{
 			std::cerr << RED "Erreur de lecture depuis le client." << RESET << std::endl;// error 500 ?
