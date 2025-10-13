@@ -138,8 +138,7 @@ int parsePath(HttpRequest &req, const Server &server)
 
 	for (size_t i = 0; i < cgiExt.size(); i++)
 	{
-		if (req.path.size() >= cgiExt[i].size() &&
-			req.path.compare(req.path.size() - cgiExt[i].size(),
+		if (req.path.size() >= cgiExt[i].size() && req.path.compare(req.path.size() - cgiExt[i].size(),
 							cgiExt[i].size(),
 							cgiExt[i]) == 0)
 		{
@@ -147,8 +146,16 @@ int parsePath(HttpRequest &req, const Server &server)
 			break;
 		}
 	}
-	if (req.url == "/register" || req.url == "/login" || req.url == "/logout" || req.url == "/me")
+	
+	if (!req.isCgi && req.path.find("cgi-bin") != std::string::npos)
+	{
+		std::cout << YELLOW "[CGI DETECT] Path contains 'cgi-bin', marking as CGI." << RESET << std::endl;
+		req.isCgi = true;
+	}
+
+  if (req.url == "/register" || req.url == "/login" || req.url == "/logout" || req.url == "/me")
 		return (0);
+  
 	int res = isAFile(req.path);
 	if (res == 0 && req.method == "GET")//if the path is a directory
 	{

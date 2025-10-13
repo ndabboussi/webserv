@@ -368,6 +368,12 @@ void sendRedirectResponse(int client_fd, int code, const std::string &location, 
 	std::string fullResponse = headers.str();
 
 	send(client_fd, fullResponse.c_str(), fullResponse.size(), MSG_NOSIGNAL);
+	// ssize_t ret = send(client_fd, data.c_str(), data.size(), MSG_NOSIGNAL);
+	// if (ret <= 0)
+	// {
+	// 	close(client_fd);
+	// 	return false;
+	// }
 
 	std::cout << GREEN "[<] Sent Response:\n" << fullResponse.c_str() << RESET << std::endl;
 	std::cout << GREEN "[<] Sent Redirect " << code << " to "
@@ -428,7 +434,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		return;
 	}
 
-	// Step 3: Autoindex case
+	// Step 2: Autoindex case
 	else if (!request.autoIndexFile.empty())
 	{
 		resp.code = 200;
@@ -452,7 +458,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		return;
 	}
 
-	//Step 2: CGI
+	//Step 3: CGI
 	if (request.isCgi)
 	{
 		std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
@@ -461,7 +467,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		try
 		{
 			std::string response = cgi.executeCgi(request, server);
-			send(client_fd, response.c_str(), response.size(), 0);
+			send(client_fd, response.c_str(), response.size(), MSG_NOSIGNAL);
 			return;
 		}
 		catch (const std::exception& e)

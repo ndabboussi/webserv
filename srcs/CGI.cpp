@@ -161,7 +161,8 @@ std::string CGI::_readFromFd(int fd) const
 	std::string result;
 	char buf[4096];
 	ssize_t n;
-	while ((n = read(fd, buf, sizeof(buf))) > 0)
+	//while ((n = read(fd, buf, sizeof(buf))) > 0)
+	while ((n = recv(fd, buf, sizeof(buf), 0)) > 0)
 		result.append(buf, n);
 	return result;
 }
@@ -211,105 +212,118 @@ std::string CGI::_parseCgiOutput(const std::string &raw, int &outStatusCode, std
 
 std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 {
-	this->_setCgiInfos(request, server);
-
-	if (this->_type == UNKNOWN)
-		throw std::runtime_error("Unsupported CGI extension: " + this->_extension);
-
-	if (_checkAccess() <= 0)
-		throw std::runtime_error("CGI file not accessible: " + this->_path);
-
-	//2. Build environment and create pipes
-	std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
-	std::vector<char*> envp = _envVecToCharPtr(cgiEnv);
-
-	int pipeIn[2];
-	int pipeOut[2];
-	if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1)
-		throw std::runtime_error("pipe() failed");
-
-	pid_t pid = fork();
-	if (pid < 0)
-		throw std::runtime_error("fork() failed");
-
-	//3. Child process
-	if (pid == 0)
+	try
 	{
-		dup2(pipeIn[0], STDIN_FILENO);
-		dup2(pipeOut[1], STDOUT_FILENO);
-		//Close unused ends to prevent deadlock
-		close(pipeIn[1]);
+	
+		this->_setCgiInfos(request, server);
+
+		if (this->_type == UNKNOWN)
+			throw std::runtime_error("Unsupported CGI extension: " + this->_extension);
+
+		if (_checkAccess() <= 0)
+			throw std::runtime_error("CGI file not accessible: " + this->_path);
+
+		//2. Build environment and create pipes
+		std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
+		std::vector<char*> envp = _envVecToCharPtr(cgiEnv);
+
+		int pipeIn[2];
+		int pipeOut[2];
+		if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1)
+			throw std::runtime_error("pipe() failed");
+
+		pid_t pid = fork();
+		if (pid < 0)
+			throw std::runtime_error("fork() failed");
+
+		//3. Child process
+		if (pid == 0)
+		{
+			dup2(pipeIn[0], STDIN_FILENO);
+			dup2(pipeOut[1], STDOUT_FILENO);
+			//Close unused ends to prevent deadlock
+			close(pipeIn[1]);
+			close(pipeOut[0]);
+
+			char *argv[3]; 	//Prepare args for execve()
+			if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
+			{
+				argv[0] = const_cast<char *>(this->_path.c_str());
+				argv[1] = NULL;
+				execve(this->_path.c_str(), argv, &envp[0]);
+			}
+			else // Interpreter execution (.py, .sh, etc.)
+			{
+				argv[0] = const_cast<char *>(this->_interpreter.c_str());
+				argv[1] = const_cast<char *>(this->_path.c_str());
+				argv[2] = NULL;
+				execve(this->_interpreter.c_str(), argv, &envp[0]);
+			}
+			std::cerr << "execve failed: " << strerror(errno) << std::endl;
+		}
+
+		//4. Parent process
+		close(pipeIn[0]); // Close read end of stdin pipe
+		close(pipeOut[1]); // Close write end of stdout pipe
+
+		// If POST, send body to child's stdin
+		if (request.method == "POST")
+		{
+			std::string body;
+			for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
+				it != request.body.end(); it++)
+				body += it->first + "=" + it->second + "&";
+			if (!body.empty())
+				body.erase(body.size() - 1);
+			write(pipeIn[1], body.c_str(), body.size());
+		}
+		
+		close(pipeIn[1]); // Close write end of pipeIn so the child sees EOF and terminates
+
+		// 5. Read all CGI output until EOF
+		std::string rawOutput = _readFromFd(pipeOut[0]);
 		close(pipeOut[0]);
 
-		char *argv[3]; 	//Prepare args for execve()
-		if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
+		// Wait for CGI child to exit
+		int status = 0;
+		waitpid(pid, &status, 0);
+		if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+			throw std::runtime_error("CGI process exited with status " + toString(WEXITSTATUS(status)));
+		if (WIFSIGNALED(status))
+			throw std::runtime_error("CGI process killed by signal " + toString(WTERMSIG(status)));
+
+		//6. Parse and construct HTTP response
+		int cgiStatus = 200;
+		std::map<std::string,std::string> headers;
+		std::string body = _parseCgiOutput(rawOutput, cgiStatus, headers);
+
+		std::ostringstream response;
+		response << "HTTP/1.1 " << cgiStatus << " OK\r\n";
+
+		// Add Content-Length if CGI didn’t send one!!! Important: Without Content-Length, browser never knows response end
+		if (headers.find("Content-Length") == headers.end())
 		{
-			argv[0] = const_cast<char *>(this->_path.c_str());
-			argv[1] = NULL;
-			execve(this->_path.c_str(), argv, &envp[0]);
+			std::stringstream oss;
+			oss << body.size();
+			headers["Content-Length"] = oss.str();
 		}
-		else // Interpreter execution (.py, .sh, etc.)
-		{
-			argv[0] = const_cast<char *>(this->_interpreter.c_str());
-			argv[1] = const_cast<char *>(this->_path.c_str());
-			argv[2] = NULL;
-			execve(this->_interpreter.c_str(), argv, &envp[0]);
-		}
-		std::cerr << "execve failed: " << strerror(errno) << std::endl;
-		// If execve fails, print error and exit
-		_exit(1);// I CANT USE _exit()
+
+		for (std::map<std::string,std::string>::iterator it = headers.begin(); it != headers.end(); it++)
+			response << it->first << ": " << it->second << "\r\n";
+		response << "\r\n" << body;
+
+		return response.str();
 	}
-
-	//4. Parent process
-	close(pipeIn[0]); // Close read end of stdin pipe
-	close(pipeOut[1]); // Close write end of stdout pipe
-
-	// If POST, send body to child's stdin
-	if (request.method == "POST")
+	catch (const std::exception& e)
 	{
-		std::string body;
-		for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
-			it != request.body.end(); it++)
-			body += it->first + "=" + it->second + "&";
-		if (!body.empty())
-			body.erase(body.size() - 1);
-		write(pipeIn[1], body.c_str(), body.size());
+		std::ostringstream err;
+		err << "HTTP/1.1 500 Internal Server Error\r\n"
+			<< "Content-Type: text/html\r\n"
+			<< "Content-Length: "
+			<< strlen(e.what()) + 50
+			<< "\r\n\r\n"
+			<< "<html><body><h1>CGI Error</h1><p>"
+			<< e.what() << "</p></body></html>";
+		return err.str();
 	}
-	
-	close(pipeIn[1]); // Close write end of pipeIn so the child sees EOF and terminates
-
-	// 5. Read all CGI output until EOF
-	std::string rawOutput = _readFromFd(pipeOut[0]);
-	close(pipeOut[0]);
-
-	// Wait for CGI child to exit
-	int status = 0;
-	waitpid(pid, &status, 0);
-	if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-		throw std::runtime_error("CGI process exited with status " + toString(WEXITSTATUS(status)));
-	if (WIFSIGNALED(status))
-		throw std::runtime_error("CGI process killed by signal " + toString(WTERMSIG(status)));
-
-
-	//6. Parse and construct HTTP response
-	int cgiStatus = 200;
-	std::map<std::string,std::string> headers;
-	std::string body = _parseCgiOutput(rawOutput, cgiStatus, headers);
-
-	std::ostringstream response;
-	response << "HTTP/1.1 " << cgiStatus << " OK\r\n";
-
-	// Add Content-Length if CGI didn’t send one!!! Important: Without Content-Length, browser never knows response end
-	if (headers.find("Content-Length") == headers.end())
-	{
-		std::stringstream oss;
-		oss << body.size();
-		headers["Content-Length"] = oss.str();
-	}
-
-	for (std::map<std::string,std::string>::iterator it = headers.begin(); it != headers.end(); it++)
-		response << it->first << ": " << it->second << "\r\n";
-	response << "\r\n" << body;
-
-	return response.str();
 }
