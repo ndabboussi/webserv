@@ -131,9 +131,9 @@ int parsePath(HttpRequest &req, const Server &server)
 	req.path = newPath;
 	if (req.path[0] == '/')
 		req.path.erase(req.path.begin());
-	
+	req.methodPath = loc.getMethods();
 	// CGI config file ?
-  req.isCgi = false; 	// CGI config file ?
+  	req.isCgi = false; 	// CGI config file ?
 	std::vector<std::string> cgiExt = loc.getCgiExt();
 
 	for (size_t i = 0; i < cgiExt.size(); i++)
@@ -146,12 +146,16 @@ int parsePath(HttpRequest &req, const Server &server)
 			break;
 		}
 	}
+	
 	if (!req.isCgi && req.path.find("cgi-bin") != std::string::npos)
 	{
 		std::cout << YELLOW "[CGI DETECT] Path contains 'cgi-bin', marking as CGI." << RESET << std::endl;
 		req.isCgi = true;
 	}
 
+  if (req.url == "/register" || req.url == "/login" || req.url == "/logout" || req.url == "/me")
+		return (0);
+  
 	int res = isAFile(req.path);
 	if (res == 0 && req.method == "GET")//if the path is a directory
 	{
@@ -177,7 +181,6 @@ int parsePath(HttpRequest &req, const Server &server)
 		return error404(req, req.path);
 	if (checkAccess(req))
 		return 1;
-	req.methodPath = loc.getMethods();	
 
 	return (0);
 }

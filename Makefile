@@ -10,6 +10,7 @@ SRC_FILES = main.cpp parsing/parser.cpp Location.cpp Server.cpp debug.cpp \
 				parsingRequest/parsingRequest.cpp parsingRequest/parsingPath.cpp \
 				parsingRequest/parsingBody.cpp parsingRequest/errors.cpp sendResponse.cpp \
 				launchServer.cpp Cookies.cpp handleClient.cpp CGI.cpp debugUtils.cpp \
+				PersonalInfos.cpp \
 
 OBJ_FILES = $(addprefix $(OBJ_DIR)/,$(SRC_FILES:.cpp=.o))
 

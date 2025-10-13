@@ -309,7 +309,16 @@ std::string buildHeaders(Server &server, HttpResponse &resp, const HttpRequest &
 			headers << "Set-Cookie: " << "id=" + cookie.getPrevId() + "; Path=/; Max-Age=0; HttpOnly" << "\r\n";
 			cookie.setPrevId("");
 		}
-		headers << "Set-Cookie: " << cookie.getOutputData()[cookie.getModified()] << "\r\n";
+		if (!cookie.getPrevAuthToken().empty())
+		{
+			headers << "Set-Cookie: " << "auth_token=" + cookie.getPrevAuthToken() + "; Path=/; Max-Age=0; HttpOnly" << "\r\n";
+			cookie.setPrevAuthToken("");
+		}
+		if (cookie.getModified() >= 0)
+		{
+			std::vector<std::string> vect = cookie.getOutputData();
+			headers << "Set-Cookie: " << vect[cookie.getModified()] << "\r\n";
+		}
 		server.setModified(-1);
 		cookie.setModified(-1);
 	}
@@ -479,7 +488,9 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 	// }
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
-	if (!file.is_open() && request.method != "DELETE")
+	if (!file.is_open() && request.method != "DELETE" && 
+			!(request.method == "POST" && (request.url == "/register" || request.url == "/login"
+				|| request.url == "/logout")) && !(request.method == "GET" && request.url == "/me"))
 	{
 		resp.code = 500;
 		setStatusLine(resp);
@@ -499,10 +510,17 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 
 	if (request.method == "POST")
 	{
-		if (resp.code == 201)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
+		if (resp.code == 201 || resp.code == 200)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
 		{
-			std::string body = buildPostConfirmation(request);
-			std::string	headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
+			std::string body, contentType = "text/html";
+			if (request.jsonResponse.empty())
+				body = buildPostConfirmation(request);
+			else
+			{
+				body = request.jsonResponse;
+				contentType = "application/json";
+			}
+			std::string	headers = buildHeaders(server, resp, request, body.size(), contentType, true);
 
 			send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 			send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
@@ -544,8 +562,14 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		return;
 	}
 
-	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-
+	std::vector<char> fileContent;
+	if (request.jsonResponse.empty())
+		fileContent = std::vector<char>((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	else
+	{
+		fileContent = std::vector<char>(request.jsonResponse.begin(), request.jsonResponse.end());
+		mimeType = "application/json";
+	}
 	if (mimeType == "text/html")
 		modifyFile(fileContent, request);// cookies
 	std::string headers = buildHeaders(server, resp, request, fileContent.size(), mimeType, true);

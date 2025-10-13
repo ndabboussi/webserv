@@ -19,12 +19,12 @@ struct HttpRequest
 	std::vector<std::string>			fileNames;
 	std::string							url;
 	std::string							autoIndexFile;
+	std::string							jsonResponse;
 	bool								isCgi;
 	int									serverPort;
-	//std::string							JsonBody;
 };
 
-HttpRequest	parseHttpRequest(const std::string &rawRequest, const Server &server);
+HttpRequest	parseHttpRequest(const std::string &rawRequest, Server &server);
 int			parsePath(HttpRequest &req, const Server &server);
 int			parseBody(HttpRequest &req, std::istringstream &requestStream);
 int			isAFile(std::string path);

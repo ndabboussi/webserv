@@ -5,24 +5,27 @@
 # include "parsingRequest.hpp"
 # include "HttpResponse.hpp"
 # include "Cookies.hpp"
+# include "PersonalInfos.hpp"
 # include <fcntl.h> // for openmain
 # include <signal.h> // for signals
 # include <csignal> //for SIGINT
 
-
 struct	HttpRequest;
 struct	HttpResponse;
+class	PersonalInfos;
 
-class	 Server : public Location
+class	Server : public Location
 {
 	private:
-		std::vector<int>			_port;
-		std::string					_name;
-		std::vector<int>			_socketFd;
-		long long					_maxClientBodySize;
-		std::map<int, std::string>	_errorPages;
-		std::vector<Cookies>		_cookies;
-		int							_modified;
+		std::vector<int>						_port;
+		std::string								_name;
+		std::vector<int>						_socketFd;
+		long long								_maxClientBodySize;
+		std::map<int, std::string>				_errorPages;
+		std::vector<Cookies>					_cookies;
+		int										_modified;
+		std::map<std::string, PersonalInfos>	_accountIdToInfos;
+		std::vector<PersonalInfos>				_accounts;
 
 	public:
 		Server(void);
@@ -31,22 +34,29 @@ class	 Server : public Location
 		Server &operator=(Server const &src);
 
 	public:
-		std::vector<int>			getPorts() const;
-		std::vector<int>			getSocketFds() const;
-		std::map<int, std::string>	getErrorPages() const;
-		std::string					getName() const;
-		long long					getMaxBodyClientSize() const;
-		std::vector<Cookies>		&getCookies();
-		int							getModified() const;
+		const std::vector<int>						&getPorts() const;
+		const std::vector<int>						&getSocketFds() const;
+		const std::map<int, std::string>			&getErrorPages() const;
+		const std::string							&getName() const;
+		long long									getMaxBodyClientSize() const;
+		std::vector<Cookies>						&getCookies();
+		int											getModified() const;
+		const std::map<std::string, PersonalInfos>	&getAccountIdToInfos() const;
+		const std::vector<PersonalInfos>			&getAccounts() const;
 
-		void						addPort(int port);
-		void						addSocketFd(int fd);
-		void						addErrorPage(int key, std::string value);
-		void						setMaxBodyClientSize(long long size);
-		void						setName(std::string name);
-		void						addCookies(Cookies newCookie);
-		void						delCookies(std::string id);
-		void						setModified(int index);
+		void										addPort(int port);
+		void										addSocketFd(int fd);
+		void										addErrorPage(int key, std::string value);
+		void										setMaxBodyClientSize(long long size);
+		void										setName(std::string name);
+		void										addCookies(Cookies newCookie);
+		void										delCookies(std::string id);
+		void										setModified(int index);
+		void										addAccountIdToInfos(std::string accountId, PersonalInfos info);
+		void										delAccountIdToInfos(std::string accountId);
+		bool										addAccounts(PersonalInfos info);
+
+		int											isValidUser(std::string username, std::string password) const;
 };
 
 void		parsing(std::vector<Server> &servers, std::string configFile);
