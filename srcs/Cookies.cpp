@@ -325,9 +325,7 @@ static void createNewSession(Server &server, std::string oldId, std::string oldA
 	if (!oldId.empty())
 		newCookie.setPrevId(oldId);
 	if (!oldAuthToken.empty())
-	{
 		newCookie.setPrevAuthToken(oldAuthToken);
-	}
 	newCookie.setId(Cookies::genCookieId(server.getCookies(), 20));
 	newCookie.setModified(0);
 	newCookie.addOutputData("id=" + newCookie.getId() + "; Path=/; HttpOnly");

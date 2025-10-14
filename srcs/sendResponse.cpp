@@ -311,7 +311,7 @@ std::string buildHeaders(Server &server, HttpResponse &resp, const HttpRequest &
 		}
 		if (!cookie.getPrevAuthToken().empty())
 		{
-			headers << "Set-Cookie: " << "auth_token=" + cookie.getPrevAuthToken() + "; Path=/; Max-Age=0; HttpOnly" << "\r\n";
+			headers << "Set-Cookie: " << "auth_token=" + cookie.getPrevAuthToken() + "; Path=/; Max-Age=0" << "\r\n";
 			cookie.setPrevAuthToken("");
 		}
 		if (cookie.getModified() >= 0)

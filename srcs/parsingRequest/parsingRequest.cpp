@@ -9,7 +9,8 @@ static int parseHeader(HttpRequest &req, std::istringstream &requestStream, cons
 	{
 		if (str == "\r")
 			break;
-		str.erase(str.find_last_of('\r'));
+		if (str.find_last_of('\r') != std::string::npos)
+			str.erase(str.find_last_of('\r'));
 		std::string key, value;
 		size_t pos = str.find(':');
 		if (pos == std::string::npos)
