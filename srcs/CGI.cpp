@@ -200,6 +200,13 @@ std::string CGI::_parseCgiOutput(const std::string &raw, int &outStatusCode, std
 	return body;
 }
 
+bool	CGI::_postSupported() const
+{
+	if (this->_type == HTML || this->_type == CSS || this->_type == JS)
+		return false;
+	return true;
+}
+
 //------------------------------------ EXECUTE CGI ------------------------------------//
 
 // Main function that:
@@ -210,11 +217,10 @@ std::string CGI::_parseCgiOutput(const std::string &raw, int &outStatusCode, std
 //   5. Builds a proper HTTP response
 // Returns: A complete HTTP/1.1 response as a string
 
-std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
+std::string CGI::executeCgi(const HttpRequest &request, const Server &server, int clientFd)
 {
 	try
 	{
-	
 		this->_setCgiInfos(request, server);
 
 		if (this->_type == UNKNOWN)
@@ -234,7 +240,13 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 
 		pid_t pid = fork();
 		if (pid < 0)
+		{
+			close(pipeIn[0]);
+			close(pipeIn[1]);
+			close(pipeOut[0]);
+			close(pipeOut[1]);
 			throw std::runtime_error("fork() failed");
+		}
 
 		//3. Child process
 		if (pid == 0)
@@ -246,29 +258,37 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server)
 			close(pipeOut[0]);
 
 			char *argv[3]; 	//Prepare args for execve()
-			if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
-			{
-				argv[0] = const_cast<char *>(this->_path.c_str());
-				argv[1] = NULL;
-				execve(this->_path.c_str(), argv, &envp[0]);
-			}
-			else // Interpreter execution (.py, .sh, etc.)
-			{
+			// if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
+			// {
+			// 	argv[0] = const_cast<char *>(this->_path.c_str());
+			// 	argv[1] = NULL;
+			// 	execve(this->_path.c_str(), argv, &envp[0]);
+			// }
+			//else // Interpreter execution (.py, .sh, etc.)
+			//{
 				argv[0] = const_cast<char *>(this->_interpreter.c_str());
 				argv[1] = const_cast<char *>(this->_path.c_str());
 				argv[2] = NULL;
 				execve(this->_interpreter.c_str(), argv, &envp[0]);
-			}
+			//}
 			std::cerr << "execve failed: " << strerror(errno) << std::endl;
+			close(pipeIn[0]);
+			close(pipeOut[1]);
+			const std::vector<int> fds = server.getSocketFds();
+			for (size_t i = 0; i < fds.size(); i++)
+				close(fds[i]);
+			close(clientFd);
+			_exit(127);
 		}
 
 		//4. Parent process
 		close(pipeIn[0]); // Close read end of stdin pipe
 		close(pipeOut[1]); // Close write end of stdout pipe
 
-		// If POST, send body to child's stdin
-		if (request.method == "POST")
+		if (request.method == "POST")	// If POST, send body to child's stdin
 		{
+			if (!this->_postSupported())
+				throw std::runtime_error("Method " + request.method + " not allowed for this CGI script");
 			std::string body;
 			for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
 				it != request.body.end(); it++)

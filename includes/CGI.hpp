@@ -41,13 +41,14 @@ class	CGI
 		std::string					_readFromFd(int fd) const;
 		std::string					_parseCgiOutput(const std::string &raw, int &outStatusCode, std::map<std::string,std::string> &outHeaders) const;
 		std::vector<std::string>	_split(const std::string &s) const;
+		bool						_postSupported() const;
 
 	public:
 		CGI();
 		~CGI();
 
 	public:
-		std::string	executeCgi(const HttpRequest &request, const Server &server);
+		std::string	executeCgi(const HttpRequest &request, const Server &server, int clientFd);
 };
 
 #endif
