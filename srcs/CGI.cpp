@@ -258,19 +258,19 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server, in
 			close(pipeOut[0]);
 
 			char *argv[3]; 	//Prepare args for execve()
-			// if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
-			// {
-			// 	argv[0] = const_cast<char *>(this->_path.c_str());
-			// 	argv[1] = NULL;
-			// 	execve(this->_path.c_str(), argv, &envp[0]);
-			// }
-			//else // Interpreter execution (.py, .sh, etc.)
-			//{
+			if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
+			{
+				argv[0] = const_cast<char *>(this->_path.c_str());
+				argv[1] = NULL;
+				execve(this->_path.c_str(), argv, &envp[0]);
+			}
+			else // Interpreter execution (.py, .sh, etc.)
+			{
 				argv[0] = const_cast<char *>(this->_interpreter.c_str());
 				argv[1] = const_cast<char *>(this->_path.c_str());
 				argv[2] = NULL;
 				execve(this->_interpreter.c_str(), argv, &envp[0]);
-			//}
+			}
 			std::cerr << "execve failed: " << strerror(errno) << std::endl;
 			close(pipeIn[0]);
 			close(pipeOut[1]);
