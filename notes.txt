@@ -271,3 +271,6 @@ NINA TO DO
 https://www.garshol.priv.no/download/text/http-tut.html
 
 CGI = https://www.ibm.com/docs/en/i/7.6.0?topic=programming-setting-up-cgi-programs
+
+
+

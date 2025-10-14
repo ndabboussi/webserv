@@ -466,7 +466,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		CGI cgi;
 		try
 		{
-			std::string response = cgi.executeCgi(request, server);
+			std::string response = cgi.executeCgi(request, server, client_fd);
 			send(client_fd, response.c_str(), response.size(), MSG_NOSIGNAL);
 			return;
 		}
