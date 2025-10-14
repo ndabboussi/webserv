@@ -1,181 +1,182 @@
 #include "Server.hpp"
 #include "CGI.hpp"
+#include "Response.hpp"
 
-enum	MimeCategory
-{
-	APPLICATION,
-	AUDIO,
-	IMAGE,
-	MULTIPART,
-	TEXT,
-	VIDEO,
-	VND,
-	UNKNOWN_MIME
-};
+// enum	MimeCategory
+// {
+// 	APPLICATION,
+// 	AUDIO,
+// 	IMAGE,
+// 	MULTIPART,
+// 	TEXT,
+// 	VIDEO,
+// 	VND,
+// 	UNKNOWN_MIME
+// };
 
-MimeCategory	getMimeCategory(const std::string &path)
-{
-	size_t dotPos = path.find_last_of('.');
-	if (dotPos == std::string::npos)
-		return UNKNOWN_MIME;
+// MimeCategory	getMimeCategory(const std::string &path)
+// {
+// 	size_t dotPos = path.find_last_of('.');
+// 	if (dotPos == std::string::npos)
+// 		return UNKNOWN_MIME;
 
-	std::string ext = path.substr(dotPos + 1);
+// 	std::string ext = path.substr(dotPos + 1);
 
-	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+// 	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-	if (ext == "pdf" || ext == "json" || ext == "xml" || ext == "zip" || ext == "xhtml" ||
-		ext == "js" || ext == "ogg")
-		return APPLICATION;
+// 	if (ext == "pdf" || ext == "json" || ext == "xml" || ext == "zip" || ext == "xhtml" ||
+// 		ext == "js" || ext == "ogg")
+// 		return APPLICATION;
 
-	if (ext == "mp3" || ext == "wav" || ext == "wma" || ext == "ra")
-		return AUDIO;
+// 	if (ext == "mp3" || ext == "wav" || ext == "wma" || ext == "ra")
+// 		return AUDIO;
 
-	if (ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "gif" || ext == "tiff" ||
-		ext == "ico" || ext == "svg" || ext == "djvu")
-		return IMAGE;
+// 	if (ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "gif" || ext == "tiff" ||
+// 		ext == "ico" || ext == "svg" || ext == "djvu")
+// 		return IMAGE;
 
-	if (ext == "form" || ext == "multipart")
-		return MULTIPART;
+// 	if (ext == "form" || ext == "multipart")
+// 		return MULTIPART;
 
-	if (ext == "html" || ext == "htm" || ext == "css" || ext == "txt" || ext == "csv")
-		return TEXT;
+// 	if (ext == "html" || ext == "htm" || ext == "css" || ext == "txt" || ext == "csv")
+// 		return TEXT;
 
-	if (ext == "mp4" || ext == "mpeg" || ext == "avi" || ext == "wmv" || ext == "flv" || ext == "webm")
-		return VIDEO;
+// 	if (ext == "mp4" || ext == "mpeg" || ext == "avi" || ext == "wmv" || ext == "flv" || ext == "webm")
+// 		return VIDEO;
 
-	if (ext == "doc" || ext == "docx" || ext == "xls" || ext == "xlsx" ||
-		ext == "ppt" || ext == "pptx" || ext == "odt" || ext == "ods" || ext == "odp")
-		return VND;
+// 	if (ext == "doc" || ext == "docx" || ext == "xls" || ext == "xlsx" ||
+// 		ext == "ppt" || ext == "pptx" || ext == "odt" || ext == "ods" || ext == "odp")
+// 		return VND;
 
-	return UNKNOWN_MIME;
-}
+// 	return UNKNOWN_MIME;
+// }
 
-std::string	getContentType(const std::string &path)
-{
-	MimeCategory category = getMimeCategory(path);
+// std::string	getContentType(const std::string &path)
+// {
+// 	MimeCategory category = getMimeCategory(path);
 
-	switch (category)
-	{
-		case APPLICATION:
-			if (path.find(".pdf") != std::string::npos) return "application/pdf";
-			if (path.find(".json") != std::string::npos) return "application/json";
-			if (path.find(".xml") != std::string::npos) return "application/xml";
-			if (path.find(".zip") != std::string::npos) return "application/zip";
-			if (path.find(".js")  != std::string::npos) return "application/javascript";
-			return "application/octet-stream";
+// 	switch (category)
+// 	{
+// 		case APPLICATION:
+// 			if (path.find(".pdf") != std::string::npos) return "application/pdf";
+// 			if (path.find(".json") != std::string::npos) return "application/json";
+// 			if (path.find(".xml") != std::string::npos) return "application/xml";
+// 			if (path.find(".zip") != std::string::npos) return "application/zip";
+// 			if (path.find(".js")  != std::string::npos) return "application/javascript";
+// 			return "application/octet-stream";
 
-		case AUDIO:
-			if (path.find(".mp3") != std::string::npos) return "audio/mpeg";
-			if (path.find(".wav") != std::string::npos) return "audio/x-wav";
-			if (path.find(".wma") != std::string::npos) return "audio/x-ms-wma";
-			return "audio/*";
+// 		case AUDIO:
+// 			if (path.find(".mp3") != std::string::npos) return "audio/mpeg";
+// 			if (path.find(".wav") != std::string::npos) return "audio/x-wav";
+// 			if (path.find(".wma") != std::string::npos) return "audio/x-ms-wma";
+// 			return "audio/*";
 
-		case IMAGE:
-			if (path.find(".jpg")  != std::string::npos || path.find(".jpeg") != std::string::npos)
-				return "image/jpeg";
-			if (path.find(".png")  != std::string::npos) return "image/png";
-			if (path.find(".gif")  != std::string::npos) return "image/gif";
-			if (path.find(".svg")  != std::string::npos) return "image/svg+xml";
-			if (path.find(".ico")  != std::string::npos) return "image/x-icon";
-			return "image/*";
+// 		case IMAGE:
+// 			if (path.find(".jpg")  != std::string::npos || path.find(".jpeg") != std::string::npos)
+// 				return "image/jpeg";
+// 			if (path.find(".png")  != std::string::npos) return "image/png";
+// 			if (path.find(".gif")  != std::string::npos) return "image/gif";
+// 			if (path.find(".svg")  != std::string::npos) return "image/svg+xml";
+// 			if (path.find(".ico")  != std::string::npos) return "image/x-icon";
+// 			return "image/*";
 
-		case MULTIPART:
-			return "multipart/form-data";
+// 		case MULTIPART:
+// 			return "multipart/form-data";
 
-		case TEXT:
-			if (path.find(".html") != std::string::npos || path.find(".htm") != std::string::npos)
-				return "text/html";
-			if (path.find(".css") != std::string::npos) return "text/css";
-			if (path.find(".csv") != std::string::npos) return "text/csv";
-			return "text/plain";
+// 		case TEXT:
+// 			if (path.find(".html") != std::string::npos || path.find(".htm") != std::string::npos)
+// 				return "text/html";
+// 			if (path.find(".css") != std::string::npos) return "text/css";
+// 			if (path.find(".csv") != std::string::npos) return "text/csv";
+// 			return "text/plain";
 
-		case VIDEO:
-			if (path.find(".mp4") != std::string::npos) return "video/mp4";
-			if (path.find(".avi") != std::string::npos) return "video/x-msvideo";
-			if (path.find(".flv") != std::string::npos) return "video/x-flv";
-			if (path.find(".webm")!= std::string::npos) return "video/webm";
-			return "video/*";
+// 		case VIDEO:
+// 			if (path.find(".mp4") != std::string::npos) return "video/mp4";
+// 			if (path.find(".avi") != std::string::npos) return "video/x-msvideo";
+// 			if (path.find(".flv") != std::string::npos) return "video/x-flv";
+// 			if (path.find(".webm")!= std::string::npos) return "video/webm";
+// 			return "video/*";
 
-		case VND:
-			if (path.find(".docx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-			if (path.find(".doc")  != std::string::npos) return "application/msword";
-			if (path.find(".xls")  != std::string::npos) return "application/vnd.ms-excel";
-			if (path.find(".xlsx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-			if (path.find(".pptx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-			if (path.find(".ppt")  != std::string::npos) return "application/vnd.ms-powerpoint";
-			return "application/vnd";
+// 		case VND:
+// 			if (path.find(".docx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+// 			if (path.find(".doc")  != std::string::npos) return "application/msword";
+// 			if (path.find(".xls")  != std::string::npos) return "application/vnd.ms-excel";
+// 			if (path.find(".xlsx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+// 			if (path.find(".pptx") != std::string::npos) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+// 			if (path.find(".ppt")  != std::string::npos) return "application/vnd.ms-powerpoint";
+// 			return "application/vnd";
 
-		default:
-			return "application/octet-stream";
-	}
-}
+// 		default:
+// 			return "application/octet-stream";
+// 	}
+// }
 
-static std::string  statusCodeResponse(int code)
-{
-	switch (code)
-	{
-		//informational responses
-		case 100: return "Continue";
-		case 101: return "Switching Protocols";
+// static std::string  statusCodeResponse(int code)
+// {
+// 	switch (code)
+// 	{
+// 		//informational responses
+// 		case 100: return "Continue";
+// 		case 101: return "Switching Protocols";
 
-		//succesful responses
-		case 200: return "OK";
-		case 201: return "Created";
-		case 202: return "Accepted";//
-		case 204: return "No Content";
-		case 205: return "Reset Content";
-		case 206: return "Partial Content";//
+// 		//succesful responses
+// 		case 200: return "OK";
+// 		case 201: return "Created";
+// 		case 202: return "Accepted";//
+// 		case 204: return "No Content";
+// 		case 205: return "Reset Content";
+// 		case 206: return "Partial Content";//
 
-		//redirection messages
-		case 300: return "Multiple Choices"; //dont handle
-		case 301: return "Moved Permanently";
-		case 302: return "Found"; // handle ?
-		case 303: return "See Other";
-		case 304: return "Not Modified"; // handle ?
-		case 305: return "Use Proxy"; //dont handle
-		case 307: return "Temporary Redirect"; //handle ?
-	//301/302/307 → you must send a Location header
+// 		//redirection messages
+// 		case 300: return "Multiple Choices"; //dont handle
+// 		case 301: return "Moved Permanently";
+// 		case 302: return "Found"; // handle ?
+// 		case 303: return "See Other";
+// 		case 304: return "Not Modified"; // handle ?
+// 		case 305: return "Use Proxy"; //dont handle
+// 		case 307: return "Temporary Redirect"; //handle ?
+// 	//301/302/307 → you must send a Location header
 
-		//client error responses
-		case 400: return "Bad Request";
-		case 401: return "Unauthorized";
-		case 402: return "Payment Required";
-		case 403: return "Forbidden";
-		case 404: return "Not Found";
-		case 405: return "Method Not Allowed";
-		case 406: return "Not Acceptable"; 	
-		case 407: return "Proxy Authentication Required"; 	
-		case 408: return "Request Timeout";
-		case 409: return "Conflict";
-		case 410: return "Gone";
-		case 411: return "Length Required";
-		case 412: return "Precondition Failed";
-		case 413: return "Payload Too Large";
-		case 414: return "URI Too Long";
-		case 415: return "Unsupported Media Type";
-		case 416: return "Range Not Satisfiable";
-		case 417: return "Expectation Failed";
-		case 426: return "Upgrade Required";
+// 		//client error responses
+// 		case 400: return "Bad Request";
+// 		case 401: return "Unauthorized";
+// 		case 402: return "Payment Required";
+// 		case 403: return "Forbidden";
+// 		case 404: return "Not Found";
+// 		case 405: return "Method Not Allowed";
+// 		case 406: return "Not Acceptable"; 	
+// 		case 407: return "Proxy Authentication Required"; 	
+// 		case 408: return "Request Timeout";
+// 		case 409: return "Conflict";
+// 		case 410: return "Gone";
+// 		case 411: return "Length Required";
+// 		case 412: return "Precondition Failed";
+// 		case 413: return "Payload Too Large";
+// 		case 414: return "URI Too Long";
+// 		case 415: return "Unsupported Media Type";
+// 		case 416: return "Range Not Satisfiable";
+// 		case 417: return "Expectation Failed";
+// 		case 426: return "Upgrade Required";
 
-		//NGINX
-		case 444: return "No Response";
-		case 494: return "Request Header Too Large";
-		case 465: return "SSL Certificate Error";
-		case 496: return "SSL Certificate Required";
-		case 497: return "HTTP Request Sent To HTTPs Port";
-		case 433: return "Client Closed Request";
+// 		//NGINX
+// 		case 444: return "No Response";
+// 		case 494: return "Request Header Too Large";
+// 		case 465: return "SSL Certificate Error";
+// 		case 496: return "SSL Certificate Required";
+// 		case 497: return "HTTP Request Sent To HTTPs Port";
+// 		case 433: return "Client Closed Request";
 
-		//server error responses
-		case 500: return "Internal Server Error";
-		case 501: return "Not Implemented";
-		case 502: return "Bad Gateway";
-		case 503: return "Service Unavailable ";
-		case 504: return "Gateway Timeout";
-		case 505: return "HTTP Version Not Supported";
+// 		//server error responses
+// 		case 500: return "Internal Server Error";
+// 		case 501: return "Not Implemented";
+// 		case 502: return "Bad Gateway";
+// 		case 503: return "Service Unavailable ";
+// 		case 504: return "Gateway Timeout";
+// 		case 505: return "HTTP Version Not Supported";
 
-		default:  return "Error";
-	}
-}
+// 		default:  return "Error";
+// 	}
+// }
 
 
 //------------------------- HEADERS UTILS -------------------------//
@@ -309,16 +310,7 @@ std::string buildHeaders(Server &server, HttpResponse &resp, const HttpRequest &
 			headers << "Set-Cookie: " << "id=" + cookie.getPrevId() + "; Path=/; Max-Age=0; HttpOnly" << "\r\n";
 			cookie.setPrevId("");
 		}
-		if (!cookie.getPrevAuthToken().empty())
-		{
-			headers << "Set-Cookie: " << "auth_token=" + cookie.getPrevAuthToken() + "; Path=/; Max-Age=0; HttpOnly" << "\r\n";
-			cookie.setPrevAuthToken("");
-		}
-		if (cookie.getModified() >= 0)
-		{
-			std::vector<std::string> vect = cookie.getOutputData();
-			headers << "Set-Cookie: " << vect[cookie.getModified()] << "\r\n";
-		}
+		headers << "Set-Cookie: " << cookie.getOutputData()[cookie.getModified()] << "\r\n";
 		server.setModified(-1);
 		cookie.setModified(-1);
 	}
@@ -386,71 +378,71 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 {
 	HttpResponse	resp;
 
-	// Step 1: Check if request already has an error
-	if (request.statusCode >= 400)
-	{
-		resp.code = request.statusCode;
-		setStatusLine(resp);
+	// // Step 1: Check if request already has an error
+	// if (request.statusCode >= 400)
+	// {
+	// 	resp.code = request.statusCode;
+	// 	setStatusLine(resp);
 
-		const std::map<int, std::string> errorPages = server.getErrorPages();
-		std::map<int, std::string>::const_iterator it = errorPages.find(resp.code);
-		std::string body;
+	// 	const std::map<int, std::string> errorPages = server.getErrorPages();
+	// 	std::map<int, std::string>::const_iterator it = errorPages.find(resp.code);
+	// 	std::string body;
 
-		if (it != errorPages.end())
-		{
-			try
-			{
-				std::string errorPagePath = it->second;
-				std::string root = (server.getData().find("root") != server.getData().end())
-								? server.getData().find("root")->second : "";
-				if (!errorPagePath.empty() && errorPagePath[0] == '/')
-   					 errorPagePath = "." + root + errorPagePath;
-				body = readFileToString(errorPagePath);
-			}
-			catch (const std::exception &e)
-			{
-				std::cerr << RED "[!] Failed to read custom error page: " 
-							<< e.what() << RESET << std::endl;
-				body = generateDefaultErrorPage(resp.code);
-			}
-		}
-		else
-		{
-			body = generateDefaultErrorPage(resp.code);
-		}
+	// 	if (it != errorPages.end())
+	// 	{
+	// 		try
+	// 		{
+	// 			std::string errorPagePath = it->second;
+	// 			std::string root = (server.getData().find("root") != server.getData().end())
+	// 							? server.getData().find("root")->second : "";
+	// 			if (!errorPagePath.empty() && errorPagePath[0] == '/')
+   	// 				 errorPagePath = "." + root + errorPagePath;
+	// 			body = readFileToString(errorPagePath);
+	// 		}
+	// 		catch (const std::exception &e)
+	// 		{
+	// 			std::cerr << RED "[!] Failed to read custom error page: " 
+	// 						<< e.what() << RESET << std::endl;
+	// 			body = generateDefaultErrorPage(resp.code);
+	// 		}
+	// 	}
+	// 	else
+	// 	{
+	// 		body = generateDefaultErrorPage(resp.code);
+	// 	}
 
-		std::vector<char> tmpBody(body.begin(), body.end()); // cookies
-		modifyFile(tmpBody, request); // cookies
-		body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
+	// 	std::vector<char> tmpBody(body.begin(), body.end()); // cookies
+	// 	modifyFile(tmpBody, request); // cookies
+	// 	body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
 
-		std::string headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
-		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
-		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
+	// 	std::string headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
+	// 	send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
+	// 	send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
 
-		std::cout << GREEN "[<] Sent Error " << resp.code 
-					<< " for " << request.path << RESET << std::endl;
-		std::cout << GREEN "[<] Sent ERROR Page: " << request.path
-				<< " (" << body.size() << " bytes)" << RESET << std::endl;
-		return;
-	}
+	// 	std::cout << GREEN "[<] Sent Error " << resp.code 
+	// 				<< " for " << request.path << RESET << std::endl;
+	// 	std::cout << GREEN "[<] Sent ERROR Page: " << request.path
+	// 			<< " (" << body.size() << " bytes)" << RESET << std::endl;
+	// 	return;
+	// }
 
 	// Step 2: Autoindex case
-	else if (!request.autoIndexFile.empty())
-	{
-		resp.code = 200;
-		setStatusLine(resp);
-		std::string body = request.autoIndexFile;
-		std::vector<char> tmpBody(body.begin(), body.end()); // cookies
-		modifyFile(tmpBody, request); // cookies
-		body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
-		std::string	headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
-		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
-		send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
-		std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
-		std::cout << GREEN "[<] Sent AutoIndexFile: " << request.path
-				<< " (" << body.size() << " bytes)" << RESET << std::endl;
-		return;
-	}
+	// else if (!request.autoIndexFile.empty())
+	// {
+	// 	resp.code = 200;
+	// 	setStatusLine(resp);
+	// 	std::string body = request.autoIndexFile;
+	// 	std::vector<char> tmpBody(body.begin(), body.end()); // cookies
+	// 	modifyFile(tmpBody, request); // cookies
+	// 	body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
+	// 	std::string	headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
+	// 	send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
+	// 	send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
+	// 	std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
+	// 	std::cout << GREEN "[<] Sent AutoIndexFile: " << request.path
+	// 			<< " (" << body.size() << " bytes)" << RESET << std::endl;
+	// 	return;
+	// }
 
 	if (request.statusCode >= 300 && request.statusCode <= 399)
 	{
@@ -488,9 +480,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 	// }
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
-	if (!file.is_open() && request.method != "DELETE" && 
-			!(request.method == "POST" && (request.url == "/register" || request.url == "/login"
-				|| request.url == "/logout")) && !(request.method == "GET" && request.url == "/me"))
+	if (!file.is_open())
 	{
 		resp.code = 500;
 		setStatusLine(resp);
@@ -510,17 +500,10 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 
 	if (request.method == "POST")
 	{
-		if (resp.code == 201 || resp.code == 200)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
+		if (resp.code == 201)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
 		{
-			std::string body, contentType = "text/html";
-			if (request.jsonResponse.empty())
-				body = buildPostConfirmation(request);
-			else
-			{
-				body = request.jsonResponse;
-				contentType = "application/json";
-			}
-			std::string	headers = buildHeaders(server, resp, request, body.size(), contentType, true);
+			std::string body = buildPostConfirmation(request);
+			std::string	headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
 
 			send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 			send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
@@ -552,6 +535,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 	}
 
 	std::string	mimeType = getContentType(request.path);
+	std::vector<char> fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	if ((resp.code >= 100 && resp.code < 200) || resp.code == 204 || resp.code == 304)
 	{
@@ -560,15 +544,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		std::cout << RED "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 		std::cout << GREEN "[<] Sent 204 No Content for " << request.path << RESET << std::endl;
 		return;
-	}
-
-	std::vector<char> fileContent;
-	if (request.jsonResponse.empty())
-		fileContent = std::vector<char>((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-	else
-	{
-		fileContent = std::vector<char>(request.jsonResponse.begin(), request.jsonResponse.end());
-		mimeType = "application/json";
 	}
 	if (mimeType == "text/html")
 		modifyFile(fileContent, request);// cookies

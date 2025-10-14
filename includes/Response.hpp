@@ -1,0 +1,76 @@
+#ifndef RESPONSE_HPP
+# define RESPONSE_HPP
+
+# include <sys/stat.h>
+# include "Server.hpp"
+
+class	 Server;
+
+enum	MimeCategory
+{
+	APPLICATION,
+	AUDIO,
+	IMAGE,
+	MULTIPART,
+	TEXT,
+	VIDEO,
+	VND,
+	UNKNOWN_MIME
+};
+
+class	Response
+{
+	private:
+			Server								&_server;
+			HttpRequest	const					&_request;
+			int									_clientFd;
+
+			int									_code;
+			std::string							_statusLine;
+
+//			std::map<std::string, std::string>	_headers;
+//			std::map<std::string, std::string>	_body;
+//			std::string							_redirectTo;
+//			bool								_autoIndex;
+//			std::string							_autoIndexFile;
+
+			std::ostringstream					_headerStream;
+			std::ostringstream					_headersFinal;
+			std::string							_contentType;
+			std::string							_contentLenght;
+			std::string							_cookies;
+			std::string							_connection;
+			std::string							_body;
+			bool								_bodyNeeded;
+
+	public:
+		Response();
+		Response(int clientFd, const HttpRequest &req, Server &server);
+		Response(Response const &src);
+		Response &operator=(Response const &src);
+		~Response();
+
+	public:
+		std::string	buildResponse();
+
+		void		setStatusCode();
+		void		setStatusLine();
+
+		void		setHeader(const std::string &key, const std::string &value);
+		void		setBody(const std::string &body, const std::string &type);
+		void		sendTo();
+		std::string	build();
+		void		buildHeaders();
+
+		bool		errorResponse();
+		bool		autoIndexResponse();
+		bool		redirectResponse();
+		bool		cgiResponse();
+		bool		postMethodResponse();
+};
+
+std::string 	statusCodeResponse(int code);
+std::string		getContentType(const std::string &path);
+MimeCategory	getMimeCategory(const std::string &path);
+
+# endif

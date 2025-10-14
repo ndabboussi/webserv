@@ -197,14 +197,11 @@ int launchServer(std::vector<Server> &servers)
 					if (setsockopt(client_fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0)
 						perror("setsockopt SO_SNDTIMEO");
 
-					// if (client_fd >= 0)
-					// {
 					std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
 									<< serverPorts[j] << RESET << std::endl;
 					client_fds_vec.push_back(client_fd);// Track the new client
 					client_server_map[client_fd] = i;// Associate with server index
 					client_port_map[client_fd] = serverPorts[j]; //STore the correct port associated to the client
-					//}
 				}
 			}
 		}
@@ -223,8 +220,8 @@ int launchServer(std::vector<Server> &servers)
 					close(fd);
 					client_server_map.erase(fd);
 					client_fds_vec.erase(client_fds_vec.begin() + i);
-					// std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
-					// 		<< servers[server_index].getPorts() << RESET << std::endl;
+					std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
+							 << RESET << std::endl;
 					i--;
 					continue;
 				}
