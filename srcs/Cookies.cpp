@@ -11,6 +11,7 @@ Cookies &Cookies::operator=(Cookies const &src)
 		this->_authToken = src._authToken;
 		this->_modified = src._modified;
 		this->_outputData = src._outputData;
+		this->_prevAuthToken = src._prevAuthToken;
     }
     return *this;
 }
@@ -19,7 +20,7 @@ Cookies &Cookies::operator=(Cookies const &src)
 
 Cookies::Cookies(void): _modified(-1){}
 
-Cookies::Cookies(Cookies const &src): _id(src._id), _prevId(src._prevId), _authToken(src._authToken), _modified(src._modified), _outputData(src._outputData)
+Cookies::Cookies(Cookies const &src): _id(src._id), _prevId(src._prevId), _prevAuthToken(src._prevAuthToken), _authToken(src._authToken), _modified(src._modified), _outputData(src._outputData)
 {}
 
 Cookies::~Cookies(void)
@@ -252,6 +253,8 @@ static void logInUser(HttpRequest &req, Cookies &cookie, Server &server)
 	cookie.setAuth(Cookies::genCookieId(server.getCookies(), 25));
 	server.addAccountIdToInfos(cookie.getAuth(), server.getAccounts()[index]);
 	cookie.setModified(1);
+	if (cookie.getOutputData().size() > 1)
+		cookie.delOutputData(1);
 	cookie.addOutputData("auth_token=" + cookie.getAuth() + "; Path=/; Max-Age=300");
 }
 
@@ -322,7 +325,9 @@ static void createNewSession(Server &server, std::string oldId, std::string oldA
 	if (!oldId.empty())
 		newCookie.setPrevId(oldId);
 	if (!oldAuthToken.empty())
+	{
 		newCookie.setPrevAuthToken(oldAuthToken);
+	}
 	newCookie.setId(Cookies::genCookieId(server.getCookies(), 20));
 	newCookie.setModified(0);
 	newCookie.addOutputData("id=" + newCookie.getId() + "; Path=/; HttpOnly");
