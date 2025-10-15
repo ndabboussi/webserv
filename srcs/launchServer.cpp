@@ -127,9 +127,7 @@ int launchServer(std::vector<Server> &servers)
 	}
 
 	// STEP 2: Prepare structures to track clients
-	std::vector<int>	client_fds_vec; // List of all connected clients
-	std::map<int, size_t> client_server_map; // Maps client_fd → index of associated Server
-	std::map<int, int> client_port_map; //client_fd -> port
+	std::vector<Client> clients;
 
 	 // STEP 3: Main select() event loop
 	while (true && serverRunning)
@@ -152,11 +150,12 @@ int launchServer(std::vector<Server> &servers)
 		}
 
 		// Register all client sockets
-		for (size_t i = 0 ; i < client_fds_vec.size(); i++)
+		for (size_t i = 0 ; i < clients.size(); i++)
 		{
-			FD_SET(client_fds_vec[i], &readfds);
-			if (client_fds_vec[i] > maxFd)
-				maxFd = client_fds_vec[i];
+			int clientFd = clients[i].getClientFd();
+			FD_SET(clientFd, &readfds);
+			if (clientFd > maxFd)
+				maxFd = clientFd;
 		}
 	
 		struct timeval tv;
@@ -174,7 +173,7 @@ int launchServer(std::vector<Server> &servers)
 		{
 			const std::vector<int> socketsFds = servers[i].getSocketFds();
 			const std::vector<int> serverPorts = servers[i].getPorts();
-
+			
 			for (size_t j = 0; j < socketsFds.size(); j++)
 			{
 				int	server_fd = socketsFds[j];
@@ -199,22 +198,21 @@ int launchServer(std::vector<Server> &servers)
 
 					std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
 									<< serverPorts[j] << RESET << std::endl;
-					client_fds_vec.push_back(client_fd);// Track the new client
-					client_server_map[client_fd] = i;// Associate with server index
-					client_port_map[client_fd] = serverPorts[j]; //STore the correct port associated to the client
+					clients.push_back(Client(client_fd, i, serverPorts[j]));
 				}
 			}
 		}
 
 		// STEP 5: Handle activity from connected clients
-		for (size_t i = 0; i < client_fds_vec.size(); i++)
+		for (size_t i = 0; i < clients.size(); i++)
 		{
-			int fd = client_fds_vec[i];
+			int fd = clients[i].getClientFd();
 			if (FD_ISSET(fd, &readfds))
 			{
-				size_t	server_index = client_server_map[fd];
+				size_t	server_index = clients[i].getIndexServer();
 				// Delegate to the HTTP handling logic
-				bool keep = handleClient(fd, servers[server_index], client_port_map[fd]);
+				//bool keep = handleClient(fd, servers[server_index], clients[i].getPort());
+				bool keep = clients[i].handleClient(servers[server_index]);
 				if (!keep) // If client disconnected or done → cleanup
 				{
 					close(fd);
@@ -235,8 +233,8 @@ int launchServer(std::vector<Server> &servers)
 		for (size_t j = 0; j < fds.size(); j++)
 			close(fds[j]);
 	}
-	for(size_t i = 0; i < client_fds_vec.size(); i++)
-		close(client_fds_vec[i]);
+	for(size_t i = 0; i < clients.size(); i++)
+		close(clients[i].getClientFd());
 	std::cout << "\033[1;32m[✓] Server shutdown complete.\033[0m\n";
 	return 0;
 }

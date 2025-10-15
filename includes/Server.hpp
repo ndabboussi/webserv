@@ -6,6 +6,7 @@
 # include "Response.hpp"
 # include "Cookies.hpp"
 # include "PersonalInfos.hpp"
+# include "Client.hpp"
 # include <fcntl.h> // for openmain
 # include <signal.h> // for signals
 # include <csignal> //for SIGINT
@@ -13,6 +14,7 @@
 struct	HttpRequest;
 class	Response;
 class	PersonalInfos;
+class	Client;
 
 class	Server : public Location
 {
