@@ -433,7 +433,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
-
 	// Step 2: Autoindex case
 	else if (!request.autoIndexFile.empty())
 	{
@@ -451,13 +450,11 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
-
 	if (request.statusCode >= 300 && request.statusCode <= 399)
 	{
 		sendRedirectResponse(client_fd, request.statusCode, request.url, request);
 		return;
 	}
-
 	//Step 3: CGI
 	if (request.isCgi)
 	{
@@ -476,7 +473,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		}
 		return;
 	}
-
 	// if (request.isCgi)
 	// {
 	// 	std::cout << BLUE "[CGI] Executing script: " << request.path << RESET << std::endl;
@@ -488,7 +484,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 	// }
 
 	std::ifstream file(request.path.c_str(), std::ios::binary);
-	if (!file.is_open() && request.method != "DELETE" && 
+	if (!file.is_open() && request.method != "DELETE" && request.statusCode != 100 &&
 			!(request.method == "POST" && (request.url == "/register" || request.url == "/login"
 				|| request.url == "/logout")) && !(request.method == "GET" && request.url == "/me"))
 	{
@@ -504,7 +500,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 				<< " (" << body.size() << " bytes)" << RESET << std::endl;
 		return;
 	}
-
 	setStatusCode(request, resp);
 	setStatusLine(resp);
 
@@ -550,7 +545,6 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 			return;
 		}
 	}
-
 	std::string	mimeType = getContentType(request.path);
 
 	if ((resp.code >= 100 && resp.code < 200) || resp.code == 204 || resp.code == 304)
@@ -558,10 +552,9 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 		std::string headers = buildHeaders(server, resp, request, 0, mimeType, false);
 		send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
 		std::cout << RED "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
-		std::cout << GREEN "[<] Sent 204 No Content for " << request.path << RESET << std::endl;
+		//std::cout << GREEN "[<] Sent 204 No Content for " << request.path << RESET << std::endl;
 		return;
 	}
-
 	std::vector<char> fileContent;
 	if (request.jsonResponse.empty())
 		fileContent = std::vector<char>((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
