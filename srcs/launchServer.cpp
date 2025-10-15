@@ -216,8 +216,7 @@ int launchServer(std::vector<Server> &servers)
 				if (!keep) // If client disconnected or done → cleanup
 				{
 					close(fd);
-					client_server_map.erase(fd);
-					client_fds_vec.erase(client_fds_vec.begin() + i);
+					clients.erase(clients.begin() + i);
 					std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
 							 << RESET << std::endl;
 					i--;
