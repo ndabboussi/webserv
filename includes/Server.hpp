@@ -3,7 +3,7 @@
 
 # include "Location.hpp"
 # include "parsingRequest.hpp"
-# include "HttpResponse.hpp"
+# include "Response.hpp"
 # include "Cookies.hpp"
 # include "PersonalInfos.hpp"
 # include "Client.hpp"
@@ -12,7 +12,7 @@
 # include <csignal> //for SIGINT
 
 struct	HttpRequest;
-struct	HttpResponse;
+class	Response;
 class	PersonalInfos;
 class	Client;
 
@@ -73,6 +73,5 @@ void		printLocation(const std::vector<Location> &locations);
 void		printTokens(const std::vector<std::string> &tokens);
 void		debugPrintConfig(const std::vector<Server>& servers);
 void		debugPrintRequest(const HttpRequest& req);
-
 
 #endif

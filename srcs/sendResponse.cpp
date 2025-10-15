@@ -512,7 +512,8 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 	{
 		if (resp.code == 201 || resp.code == 200)// File created, showing confirmation page (must be 201 normally, change when implemented in parsing)
 		{
-			std::string body, contentType = "text/html";
+			std::string body,
+			std::string contentType = "text/html";
 			if (request.jsonResponse.empty())
 				body = buildPostConfirmation(request);
 			else
@@ -527,6 +528,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 			std::cout << GREEN "[<] Sent Response:\n" << headers.c_str() << RESET << std::endl;
 			std::cout << GREEN "[<] Sent POST confirmation page: " << request.path
 					<< " (" << body.size() << " bytes)" << RESET << std::endl;
+			std::cout << BOLD UNDERLINE "[DEBUG] here 1" RESET << std::endl;
 			return;
 		}
 		else // File already existed, redirect to where to find it
@@ -547,6 +549,7 @@ void	sendResponse(int client_fd, const HttpRequest &request, Server &server)
 			std::cout << GREEN "[<] Sent Response:\n" << headers.str().c_str() << RESET << std::endl;
 			std::cout << GREEN "[<] Sent 303 See Other to "
 						<< location << RESET << std::endl;
+			std::cout << BOLD UNDERLINE "[DEBUG] here 2" RESET << std::endl;
 			return;
 		}
 	}
