@@ -4,6 +4,8 @@
 # include <sys/stat.h>
 # include "Server.hpp"
 
+struct	HttpRequest;
+
 class	 Server;
 
 enum	MimeCategory
@@ -59,6 +61,7 @@ class	Response
 		void		setHeader(const std::string &key, const std::string &value);
 		void		setBody(const std::string &body, const std::string &type);
 		void		sendTo();
+		void		appendCookies(std::ostringstream &res);
 		std::string	build();
 		void		buildHeaders();
 
@@ -67,6 +70,8 @@ class	Response
 		bool		redirectResponse();
 		bool		cgiResponse();
 		bool		postMethodResponse();
+		std::string	buildPostConfirmation();
+		bool		fileResponse();
 };
 
 std::string 	statusCodeResponse(int code);

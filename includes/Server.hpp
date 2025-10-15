@@ -11,7 +11,7 @@
 # include <csignal> //for SIGINT
 
 struct	HttpRequest;
-struct	Response;
+class	Response;
 class	PersonalInfos;
 
 class	Server : public Location

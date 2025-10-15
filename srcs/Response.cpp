@@ -13,10 +13,10 @@ Response &Response::operator=(Response const &src)
 
 //Constructor/Destructors--------------------------------------------------
 
-Response::Response(int clientFd, HttpRequest const &request, Server &server): _clientFd(clientFd), _request(request), _server(server)
+Response::Response(int clientFd, HttpRequest const &request, Server &server): _server(server), _request(request), _clientFd(clientFd)
 {}
 
-Response::Response(Response const &src) : _clientFd(src._clientFd), _server(src._server), _request(src._request)
+Response::Response(Response const &src) : _server(src._server), _request(src._request), _clientFd(src._clientFd)
 {
 	*this = src;
 	return ;
@@ -24,8 +24,6 @@ Response::Response(Response const &src) : _clientFd(src._clientFd), _server(src.
 
 Response::~Response(void)
 {}
-
-//Member functions------------------------------------------------------
 
 //------------------------- HEADERS UTILS -------------------------//
 
@@ -39,7 +37,10 @@ std::string	toString(size_t value)
 void	Response::setStatusCode()
 {
 	if (this->_request.statusCode >= 400)
+	{
+		this->_code = this->_request.statusCode;
 		return;
+	}
 	if (this->_request.method == "DELETE")
 	{
 		this->_code = 204; //specifying that we won't send body
@@ -101,6 +102,39 @@ void Response::setBody(const std::string &body, const std::string &type)
 	setHeader("Content-Length", toString(body.size()));
 }
 
+void Response::appendCookies(std::ostringstream &res)
+{
+	if (this->_server.getModified() < 0)
+		return;
+
+	Cookies &cookie = this->_server.getCookies()[this->_server.getModified()];
+
+	if (!cookie.getPrevId().empty())
+	{
+		res << "Set-Cookie: id=" << cookie.getPrevId()
+			<< "; Path=/; Max-Age=0; HttpOnly\r\n";
+		cookie.setPrevId("");
+	}
+
+	if (!cookie.getPrevAuthToken().empty())
+	{
+		res << "Set-Cookie: auth_token=" << cookie.getPrevAuthToken()
+			<< "; Path=/; Max-Age=0\r\n";
+		cookie.setPrevAuthToken("");
+	}
+
+	if (cookie.getModified() >= 0)
+	{
+		std::vector<std::string> vect = cookie.getOutputData();
+		if (cookie.getModified() < static_cast<int>(vect.size()))
+			res << "Set-Cookie: " << vect[cookie.getModified()] << "\r\n";
+	}
+
+	this->_server.setModified(-1);
+	cookie.setModified(-1);
+}
+
+
 std::string Response::build()
 {
 	std::ostringstream res;
@@ -109,26 +143,22 @@ std::string Response::build()
 	res << "Server: MyWebServ/1.0\r\n";
 	res << "Connection: " << setConnection(this->_request);
 	res << _headerStream.str();
+	appendCookies(res);
 	res << "\r\n";
 	res << this->_body;
 	return res.str();
 }
 
-// std::string Response::buildHeaders()
-// {
-// 	this->_headersFinal << this->_statusLine;
-// 	this->_headersFinal << "Date: " << setDate();
-// 	this->_headersFinal << "Server: MyWebServ/1.0\r\n";
-// 	this->_headersFinal << "Connection: " << setConnection(this->_request);
-// 	this->_headersFinal << this->_headerStream.str();
-// 	this->_headersFinal << "\r\n";
-// }
-
 void Response::sendTo()
 {
-	//this->buildHeaders();
 	std::string full = this->build();
 	send(this->_clientFd, full.c_str(), full.size(), MSG_NOSIGNAL);
+	// ssize_t ret = send(client_fd, data.c_str(), data.size(), MSG_NOSIGNAL);
+	// if (ret <= 0)
+	// {
+	// 	close(client_fd);
+	// 	return false;
+	// }
 	std::cout << GREEN "[<] Sent Response:\n" << full.c_str() << RESET << std::endl;
 }
 //------------------------- ERRORS DURING PARSING -------------------------//
@@ -168,15 +198,14 @@ std::string readFileToString(const std::string &path)
 	return ss.str();
 }
 
-// ─── ERROR RESPONSE ────────────────────────────────────────────────
+// ----- ERROR RESPONSE ----------------------------------------------------
 bool	Response::errorResponse()
 {
 	if (this->_request.statusCode < 400)
 		return false;
-	
+
 	this->setStatusCode();
 	this->setStatusLine();
-
 	const std::map<int, std::string> errorPages = this->_server.getErrorPages();
 	std::map<int, std::string>::const_iterator it = errorPages.find(this->_code);
 	std::string body;
@@ -208,22 +237,13 @@ bool	Response::errorResponse()
 	modifyFile(tmpBody, this->_request); // cookies
 	body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
 
-	//this->build();
 	this->setBody(body, "text/html");
 	this->sendTo();
 
-	// std::string headers = buildHeaders(server, resp, request, body.size(), "text/html", true);
-	// send(client_fd, headers.c_str(), headers.size(), MSG_NOSIGNAL);
-	// send(client_fd, body.c_str(), body.size(), MSG_NOSIGNAL);
-
-	// std::cout << GREEN "[<] Sent Error " << this->_code 
-	// 			<< " for " << this->_request.path << RESET << std::endl;
-	// std::cout << GREEN "[<] Sent ERROR Page: " << this->_request.path
-	// 		<< " (" << body.size() << " bytes)" << RESET << std::endl;
 	return true;
 }
 
-// ─── AUTOINDEX RESPONSE ───────────────────────────────────────────
+// ----- AUTOINDEX RESPONSE ----------------------------------------------------------------------─
 bool	Response::autoIndexResponse()
 {
 	if (this->_request.autoIndexFile.empty())
@@ -240,15 +260,10 @@ bool	Response::autoIndexResponse()
 	this->setBody(body, "text/html");
 	this->sendTo();
 
-	// std::cout << GREEN "[<] Sent Error " << this->_code 
-	// 			<< " for " << this->_request.path << RESET << std::endl;
-	// std::cout << GREEN "[<] Sent AutoIndexFile: " << this->_request.path
-	// 		<< " (" << body.size() << " bytes)" << RESET << std::endl;
-
 	return true;
 }
 
-// ─── REDIRECT RESPONSE (3XX) ──────────────────────────────────────
+// ----- REDIRECT RESPONSE (3XX) ------------------------------------------------------------──
 bool	Response::redirectResponse()
 {
 	if (this->_request.statusCode < 300 || this->_request.statusCode > 399)
@@ -269,14 +284,14 @@ bool	Response::redirectResponse()
 
 	if (this->_code != 304)
 		this->setBody(body.str(), "text/html");
-	else // will create a problem here because Content-Lenght already in setBody()
+	else
 		setHeader("Content-Length", "0\r\n\r\n");
 	this->sendTo();
 
 	return true;
 }
 
-// ─── CGI EXECUTION ────────────────────────────────────────────────
+// ----- CGI EXECUTION ----------------------------------------------------
 bool	Response::cgiResponse()
 {
 	if (!this->_request.isCgi)
@@ -289,7 +304,12 @@ bool	Response::cgiResponse()
 
 		std::string result = cgi.executeCgi(this->_request, this->_server, this->_clientFd);
 		send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
-		//need to protect send
+		// ssize_t ret = send(client_fd, data.c_str(), data.size(), MSG_NOSIGNAL);
+		// if (ret <= 0)
+		// {
+		// 	close(client_fd);
+		// 	return false;
+		// }
 	}
 	catch (const std::exception &e)
 	{
@@ -298,12 +318,99 @@ bool	Response::cgiResponse()
 	return true;
 }
 
-// ─── POST HANDLER ────────────────────────────────────────────────
+// ----- POST HANDLER ----------------------------------------------------
+
+std::string Response::buildPostConfirmation()
+{
+	std::ostringstream body;
+	body << "<!DOCTYPE html>\n<html><head><title>POST Result</title></head><body>";
+	body << "<h1 style='color:green;'>POST request successful!</h1>";
+	body << "<p>Method: " << this->_request.method << "</p>";
+	body << "<p>Path: " << this->_request.path << "</p>";
+	body << "</body></html>";
+	return body.str();
+}
+
 bool		Response::postMethodResponse()
 {
 	if (this->_request.method != "POST")
 		return false;
+
+	if (this->_request.statusCode == 201 || this->_request.statusCode == 0)
+	{
+		this->setStatusCode();
+		this->setStatusLine();
+		std::string	body;
+		std::string	type = "text/html";
+		if (this->_request.jsonResponse.empty()) // File created, showing confirmation page
+			body = buildPostConfirmation();
+		else //no page change, only confirmation
+		{
+			body = this->_request.jsonResponse;
+			type = "application/json";
+		}
+		this->setBody(body, type);
+		this->sendTo();
+		return true;
+	}
+
+	if (this->_request.statusCode == 205)
+	{
+		this->_code = 303;
+		this->setHeader("Location", this->_request.url + "/");
+		this->setHeader("Content-Length", "0");
+		this->sendTo();
+		return true;
+	}
+
+	return false;
 }
+
+// ----- STATIC FILE HANDLER ------------------------------------------------------
+bool	Response::fileResponse()
+{
+	std::ifstream file(this->_request.path.c_str(), std::ios::binary);
+	if (!file.is_open() && this->_request.method != "DELETE" && 
+				!(this->_request.method == "POST" && (this->_request.url == "/register" || this->_request.url == "/login"
+				|| this->_request.url == "/logout")) && !(this->_request.method == "GET" && this->_request.url == "/me"))
+	{
+		this->_code = 500;
+		this->setStatusLine();
+		std::string body = generateDefaultErrorPage(this->_code);
+		this->setBody(body, "text/html");
+		this->sendTo();
+		return true;
+	}
+
+	this->setStatusCode();
+	this->setStatusLine();
+	std::string	mimeType = getContentType(this->_request.path);
+	std::string	body;
+
+	if (!this->_request.jsonResponse.empty())
+	{
+		body = this->_request.jsonResponse;
+		mimeType = "application/json";
+	}
+	else
+	{
+		std::ostringstream ss;
+		ss << file.rdbuf();
+		body = ss.str();
+	}
+
+	if (mimeType == "text/html")
+	{
+		std::vector<char> tmp(body.begin(), body.end());
+		modifyFile(tmp, this->_request);
+		body.assign(tmp.begin(), tmp.end());
+	}
+
+	this->setBody(body, mimeType);
+	this->sendTo();
+	return true;
+}
+
 
 void sendResponse(int client_fd, const HttpRequest &req, Server &server)
 {
@@ -319,5 +426,5 @@ void sendResponse(int client_fd, const HttpRequest &req, Server &server)
 		return;
 	if (resp.postMethodResponse())
 		return;
-	// handleFileResponse(client_fd, req, server);
+	resp.fileResponse();
 }
