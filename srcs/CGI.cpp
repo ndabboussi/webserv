@@ -28,7 +28,7 @@ int CGI::_getCgiType() const
 		return BINARY;
 	if (this->_extension == ".py") 
 		return PYTHON;
-	if (this->_extension == "pl")
+	if (this->_extension == ".pl")
 		return PERL;
 	if (this->_extension == ".php")
 		return PHP;
@@ -89,6 +89,7 @@ void	CGI::_setCgiInfos(const HttpRequest &request, const Server &server)
 	}
 	if (this->_interpreter.empty() && this->_defaults.count(this->_extension))
 		this->_interpreter = this->_defaults[this->_extension];
+	//std::cout << "[CGI DEBUG] Interpreter: '" << this->_interpreter << "'" << std::endl;
 	return;
 }
 
@@ -162,7 +163,7 @@ std::string CGI::_readFromFd(int fd) const
 	char buf[4096];
 	ssize_t n;
 	//while ((n = read(fd, buf, sizeof(buf))) > 0)
-	while ((n = recv(fd, buf, sizeof(buf), 0)) > 0)
+	while ((n = read(fd, buf, sizeof(buf))) > 0)
 		result.append(buf, n);
 	return result;
 }
@@ -224,10 +225,10 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server, in
 		this->_setCgiInfos(request, server);
 
 		if (this->_type == UNKNOWN)
-			throw std::runtime_error("Unsupported CGI extension: " + this->_extension);
+			throw std::runtime_error("[CGI ERROR] Unsupported CGI extension: " + this->_extension);
 
 		if (_checkAccess() <= 0)
-			throw std::runtime_error("CGI file not accessible: " + this->_path);
+			throw std::runtime_error("[CGI ERROR] CGI file not accessible: " + this->_path);
 
 		//2. Build environment and create pipes
 		std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
@@ -236,7 +237,7 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server, in
 		int pipeIn[2];
 		int pipeOut[2];
 		if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1)
-			throw std::runtime_error("pipe() failed");
+			throw std::runtime_error("[CGI ERROR] pipe() failed");
 
 		pid_t pid = fork();
 		if (pid < 0)
@@ -245,7 +246,7 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server, in
 			close(pipeIn[1]);
 			close(pipeOut[0]);
 			close(pipeOut[1]);
-			throw std::runtime_error("fork() failed");
+			throw std::runtime_error("[CGI ERROR] fork() failed");
 		}
 
 		//3. Child process
@@ -288,7 +289,7 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server, in
 		if (request.method == "POST")	// If POST, send body to child's stdin
 		{
 			if (!this->_postSupported())
-				throw std::runtime_error("Method " + request.method + " not allowed for this CGI script");
+				throw std::runtime_error("[CGI ERROR] Method " + request.method + " not allowed for this CGI script");
 			std::string body;
 			for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
 				it != request.body.end(); it++)
@@ -308,9 +309,9 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server, in
 		int status = 0;
 		waitpid(pid, &status, 0);
 		if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-			throw std::runtime_error("CGI process exited with status " + toString(WEXITSTATUS(status)));
+			throw std::runtime_error("[CGI ERROR] process exited with status " + toString(WEXITSTATUS(status)));
 		if (WIFSIGNALED(status))
-			throw std::runtime_error("CGI process killed by signal " + toString(WTERMSIG(status)));
+			throw std::runtime_error("[CGI ERROR] process killed by signal " + toString(WTERMSIG(status)));
 
 		//6. Parse and construct HTTP response
 		int cgiStatus = 200;

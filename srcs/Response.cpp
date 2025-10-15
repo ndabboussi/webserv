@@ -152,13 +152,15 @@ std::string Response::build()
 void Response::sendTo()
 {
 	std::string full = this->build();
-	send(this->_clientFd, full.c_str(), full.size(), MSG_NOSIGNAL);
-	// ssize_t ret = send(client_fd, data.c_str(), data.size(), MSG_NOSIGNAL);
-	// if (ret <= 0)
-	// {
-	// 	close(client_fd);
-	// 	return false;
-	// }
+	//send(this->_clientFd, full.c_str(), full.size(), MSG_NOSIGNAL);
+	ssize_t ret = send(this->_clientFd, full.c_str(), full.size(), MSG_NOSIGNAL);
+	if (ret <= 0)
+	{
+		std::cerr << RED "[sendTo] send() failed (client may have disconnected)" << RESET << std::endl;
+		close(this->_clientFd);
+		return; // Don’t throw
+	}
+		//throw std::runtime_error("send() failed to send HTTP response");
 	std::cout << GREEN "[<] Sent Response:\n" << full.c_str() << RESET << std::endl;
 }
 //------------------------- ERRORS DURING PARSING -------------------------//
@@ -303,13 +305,12 @@ bool	Response::cgiResponse()
 		CGI cgi;
 
 		std::string result = cgi.executeCgi(this->_request, this->_server, this->_clientFd);
-		send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
-		// ssize_t ret = send(client_fd, data.c_str(), data.size(), MSG_NOSIGNAL);
-		// if (ret <= 0)
-		// {
-		// 	close(client_fd);
-		// 	return false;
-		// }
+		size_t ret = send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
+		if (ret <= 0)
+		{
+			std::cerr << RED "[sendTo] send() failed (client may have disconnected)" << RESET << std::endl;
+			close(this->_clientFd);
+		}
 	}
 	catch (const std::exception &e)
 	{
