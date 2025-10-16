@@ -18,6 +18,7 @@ Client &Client::operator=(Client const &src)
 		this->_bodySize = src._bodySize;
 		this->_left = src._left;
 		this->_continue = src._continue;
+		this->_before = src._before;
     }
     return *this;
 }
@@ -33,7 +34,7 @@ Client::Client(int clientFd, size_t indexServer, int port): _clientFd(clientFd),
 
 Client::Client(Client const &src) : _clientFd(src._clientFd), _indexServer(src._indexServer), _port(src._port),
 		_data(src._data), _content_length(src._content_length), _endHeader(src._endHeader), _firstRead(src._firstRead), _chunked(src._chunked),
-		_firstChunk(src._firstChunk), _continue(src._continue), _bodySize(src._bodySize), _left(src._left)
+		_firstChunk(src._firstChunk), _continue(src._continue), _before(src._before), _bodySize(src._bodySize), _left(src._left)
 {}
 
 Client::~Client(void)
@@ -135,13 +136,11 @@ static long long analyseLine(std::string line)
 
 int	Client::loadByChunk(const Server &server)
 {
-	std::string			buffer;
+	//std::string			buffer;
 	std::vector<char>	buff(5, '\0');
 	long long			byteRead;
 	long long			size = 0;
 	
-	//std::cout << "left = " << this->_left << std::endl;
-	// std::cout << this->_data << std::endl << std::endl;
 	if (!this->_left)
 	{
 		byteRead = recv(this->_clientFd, buff.data(), 4, 0);
@@ -149,43 +148,27 @@ int	Client::loadByChunk(const Server &server)
 			return 500;
 		if (byteRead == 0)
 			return 400;
-		std::cout << "----------------------------------" << std::endl;
-		std::cout << "str = " << buff.data() << std::endl;
-		std::cout << "----------------------------------" << std::endl;
-		for (size_t i = 0; buff.data()[i]; i++)
-			std::cout << (int)buff.data()[i] << ", ";
-		std::cout << std::endl;		
 		if (byteRead == 2 && buff.data()[0] == '\r' && buff.data()[1] == '\n')
 			return 400;
+		this->_before += buff.data();
 		this->_data.append(buff.data());
-		size = analyseLine(buff.data());
-		// std::cout << "----------------------------------" << std::endl;
-		// std::cout << "str = " << buff.data() << std::endl;
-		// std::cout << "----------------------------------" << std::endl;
-		// std::cout << "str = ";
-		// for (size_t i = 0; buff.data()[i]; i++)
-		// 	std::cout << (int)buff.data()[i] << ", ";
-		// std::cout << std::endl;		
-		// std::cout << "----------------------------------" << std::endl;
-		 std::cout << "size = " << size << ", str size = " << std::string(buff.data()).size() << std::endl;
-		// std::cout << "----------------------------------" << std::endl;
+		size = analyseLine(this->_before);
 		if (size < 0)
 			return -1;
-		//std::cout << "here0\n";
-		std::string tmp(buff.data());
-		size_t pos = tmp.find('\n');
-		//std::cout << "pos = " << pos << std::endl;
-		if (size == 0 || pos == std::string::npos)
+		size_t pos = std::string(buff.data()).find('\n');
+		if (pos == std::string::npos)
+			return -1;
+		if (size == 0)
 		{
 			size_t pos = this->_data.find("\r\n\r\n") + 4;
 			deleteChunkSize(this->_data.substr(pos, this->_data.size() - pos), this->_data);
 			return 0;
 		}
-		this->_bodySize += byteRead - (pos + 1);
-		this->_left = size - (byteRead - (pos + 1));
+		this->_bodySize += byteRead - static_cast<int>(pos + 1);
+		this->_left = size - (byteRead - static_cast<int>(pos + 1));
 		if (this->_bodySize > server.getMaxBodyClientSize())
 			return 413;
-		//std::cout << "here2\n";
+		this->_before.clear();
 		return -1;
 	}
 	else
@@ -197,8 +180,6 @@ int	Client::loadByChunk(const Server &server)
 		if (byteRead == 0)
 			return 400;
 		this->_data.append(buff.data());
-		std::cout << buff.data() << std::endl;
-		std::cout << (int)this->_data[this->_data.size() - 2] << ", " << this->_data[this->_data.size() - 1] << std::endl;
 		if (this->_data[this->_data.size() - 2] != '\r' || this->_data[this->_data.size() - 1] != '\n')
 			return 400;
 		this->_bodySize += byteRead - 2;

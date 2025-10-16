@@ -19,6 +19,7 @@ class Client
 		//if request is chunked
 		int			_firstChunk;
 		int			_continue;
+		std::string	_before;
 		long long	_bodySize;
 		long long	_left;
 
