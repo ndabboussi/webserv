@@ -358,6 +358,7 @@ bool		Response::postMethodResponse()
 	if (this->_request.statusCode == 205)
 	{
 		this->_code = 303;
+		this->setStatusLine();
 		this->setHeader("Location", this->_request.url + "/");
 		this->setHeader("Content-Length", "0");
 		this->sendTo();

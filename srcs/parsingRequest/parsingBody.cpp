@@ -72,6 +72,7 @@ static void parseType1(HttpRequest &req, std::istringstream &requestStream)
 static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::string &name, HttpRequest &req)
 {
 	int depth = 0, i = 0;
+	std::string tmp = path + "/" + name;
 	for (size_t j = 0; j < path.size(); j++)
 	{
 		if (path[j] && path[j] != '/' && i == 0)
@@ -82,7 +83,7 @@ static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::s
 		else if (path[j] == '/')
 			i = 0;
 	}
-	if (isAFile(path))
+	if (isAFile(tmp) > 0)
 		req.statusCode = 205;
 	else
 		req.statusCode = 201;
