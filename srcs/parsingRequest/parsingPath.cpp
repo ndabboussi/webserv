@@ -33,8 +33,10 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 {
 	size_t								i = 0;
 	size_t								end = 0;
-	std::map<std::string,std::string>	data;
+	std::map<std::string,std::string>	data = loc.getData();
 	Location							prev;
+	std::string							serverRoot = (data.find("root") != data.end())
+											? data.find("root")->second : "";
 	std::string							str;
 
 	oldPath = (oldPath[0] != '/') ? '/' + oldPath : oldPath;
@@ -44,7 +46,8 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 		data = loc.getData();
 		if (data.find("alias") != data.end() && prev.getPath() != loc.getPath())
 			newPath = data.find("alias")->second;
-		else if (data.find("root") != data.end() && prev.getPath() != loc.getPath())
+		else if (data.find("root") != data.end() && data.find("root")->second != serverRoot
+				&& prev.getPath() != loc.getPath())
 			newPath = data.find("root")->second;
 		i = oldPath.find('/', i);
 		end = oldPath.find('/', i + 1);
@@ -68,7 +71,8 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 		if (isAFile(newPath + str) >= 0)
 			newPath += str;
 	}
-	else if (data.find("root") != data.end() && prev.getPath() != loc.getPath())
+	else if (data.find("root") != data.end() && data.find("root")->second != serverRoot
+			&& prev.getPath() != loc.getPath())
 	{
 		if (req.url[req.url.size() - 1] == '/')
 			newPath = data.find("root")->second + '/';
