@@ -44,6 +44,8 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 		data = loc.getData();
 		if (data.find("alias") != data.end() && prev.getPath() != loc.getPath())
 			newPath = data.find("alias")->second;
+		else if (data.find("root") != data.end() && prev.getPath() != loc.getPath())
+			newPath = data.find("root")->second;
 		i = oldPath.find('/', i);
 		end = oldPath.find('/', i + 1);
 		if (end != std::string::npos)
@@ -61,6 +63,17 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 			newPath = data.find("alias")->second + '/';
 		else
 			newPath = data.find("alias")->second;
+		if (newPath[0] == '/')
+			newPath.erase(newPath.begin());
+		if (isAFile(newPath + str) >= 0)
+			newPath += str;
+	}
+	else if (data.find("root") != data.end() && prev.getPath() != loc.getPath())
+	{
+		if (req.url[req.url.size() - 1] == '/')
+			newPath = data.find("root")->second + '/';
+		else
+			newPath = data.find("root")->second;
 		if (newPath[0] == '/')
 			newPath.erase(newPath.begin());
 		if (isAFile(newPath + str) >= 0)
@@ -153,8 +166,8 @@ int parsePath(HttpRequest &req, const Server &server)
 		req.isCgi = true;
 	}
 
-  if (req.url == "/register" || req.url == "/login" || req.url == "/logout" || req.url == "/me")
-		return (0);
+	if (req.url == "/register" || req.url == "/login" || req.url == "/logout" || req.url == "/me")
+			return (0);
   
 	int res = isAFile(req.path);
 	if (res == 0 && req.method == "GET")//if the path is a directory
