@@ -194,7 +194,18 @@ static void parseType2(HttpRequest &req, std::istringstream &requestStream, std:
 
 static void parseType3(HttpRequest &req, std::istringstream &requestStream)
 {
-	(void)req, (void)requestStream;
+	std::string			text;
+	std::vector<char>	buffer(8192);
+
+	while (1)
+	{
+		requestStream.read(buffer.data(), buffer.size());
+		text.append(buffer.data());
+		if (requestStream.eof())
+			break ;	
+	}
+	std::cout << BOLD YELLOW << text << RESET << std::endl;
+	req.body.insert(std::make_pair("text", text));
 }
 
 int parseBody(HttpRequest &req, std::istringstream &requestStream)
@@ -210,7 +221,7 @@ int parseBody(HttpRequest &req, std::istringstream &requestStream)
 		parseType1(req, requestStream);
 	else if (ContentType.find("multipart/form-data") != std::string::npos)
 		parseType2(req, requestStream, ContentType);
-	else if (ContentType == "plain/text")//todo
+	else if (ContentType == "text/plain")
 		parseType3(req, requestStream);
 	else
 		return error501(req);	//Content-Type body not supported
