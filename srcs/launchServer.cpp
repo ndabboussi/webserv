@@ -110,7 +110,7 @@ int launchServer(std::vector<Server> &servers)
 		return 1;
 	}
 
-	 // STEP 1: Create a listening socket for each port of each server
+	// STEP 1: Create a listening socket for each port of each server
 	for(size_t i = 0; i < servers.size(); i++)
 	{
 		std::vector<int> ports = servers[i].getPorts();

@@ -274,3 +274,16 @@ CGI = https://www.ibm.com/docs/en/i/7.6.0?topic=programming-setting-up-cgi-progr
 
 
 
+
+
+
+- check all errno --> rm errno 98 return after lauching server crash + handle leaks
+- check if all code is protected + leak management function
+- protect select
+
+- hostname 
+
+- if server 1 and server 2 listen on same port, 
+by default request for server 2 should be intercepted by server 1
+
+- CGI config file
