@@ -371,7 +371,7 @@ bool		Response::postMethodResponse()
 bool	Response::fileResponse()
 {
 	std::ifstream file(this->_request.path.c_str(), std::ios::binary);
-	if (!file.is_open() && this->_request.method != "DELETE" && 
+	if (!file.is_open() && this->_request.method != "DELETE" && this->_request.statusCode != 100 &&
 				!(this->_request.method == "POST" && (this->_request.url == "/register" || this->_request.url == "/login"
 				|| this->_request.url == "/logout")) && !(this->_request.method == "GET" && this->_request.url == "/me"))
 	{
