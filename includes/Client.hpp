@@ -16,6 +16,13 @@ class Client
 		int			_firstRead;
 		int			_chunked;
 
+		//if request is chunked
+		int			_firstChunk;
+		int			_continue;
+		std::string	_before;
+		long long	_bodySize;
+		long long	_left;
+
 
 	public:
 		Client(void);
@@ -33,7 +40,8 @@ class Client
 		void	setIndexServer(size_t index);
 		void	setPort(int port);
 
-		bool handleClient(Server &server);
+		bool	handleClient(Server &server);
+		int		loadByChunk(const Server &server);
 
 };
 

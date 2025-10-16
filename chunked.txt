@@ -1,0 +1,19 @@
+POST / HTTP/1.1
+Host: localhost:8080
+User-Agent: curl/7.81.0
+Accept: */*
+Transfer-Encoding: chunked
+Expect: 100-continue
+
+14
+Bonjour maxime wouuu
+0A
+Claude oui
+0
+
+
+100
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec condimentum tortor nec eleifend ullamcorper. Donec massa dolor, dapibus in sem in, aliquam ornare purus. Nunc egestas id lacus in mattis. Lorem ipsum dolor sit amet, consectetur adipiscing nec.
+0A
+Claude oui
+0
