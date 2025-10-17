@@ -305,6 +305,8 @@ bool	Response::cgiResponse()
 		CGI cgi;
 
 		std::string result = cgi.executeCgi(this->_request, this->_server, this->_clientFd);
+		if (this->_server.getFork())
+			throw std::runtime_error("fail");
 		size_t ret = send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
 		if (ret <= 0)
 		{

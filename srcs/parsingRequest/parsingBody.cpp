@@ -100,8 +100,8 @@ static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::st
 	std::ofstream Fout;
 	if (createFileAtRightPlace(Fout, req.path, *req.fileNames.rbegin(), req) || !Fout.is_open())
 		return error500(req);
-	std::string pat1 = "--" + boundary + "--";
-	std::string pat2 = "--" + boundary;
+	std::string pat1 = "\r\n--" + boundary + "--";
+	std::string pat2 = "\r\n--" + boundary;
 	std::vector<char> buffer(8192);
 	std::vector<char> bodyContent;
 	while (1)
@@ -114,7 +114,7 @@ static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::st
 		if (it1 != bodyContent.end())
 		{
 			int pos = std::distance(bodyContent.begin(), it1);
-			Fout.write(bodyContent.data(), pos - 2);
+			Fout.write(bodyContent.data(), pos);
 			size_t dist = bodyContent.size() - pos;
 			requestStream.clear();
 			requestStream.seekg(-static_cast<std::streamoff>(dist), std::ios::cur);
@@ -124,7 +124,7 @@ static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::st
 			break ;
 	}
 	if (requestStream.eof())
-		return error400(req), 1;
+		return error400(req);
 	Fout.close();
 	return 0;
 }
