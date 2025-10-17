@@ -41,7 +41,7 @@ static void fillPort(Server &server, std::vector<std::string>::iterator &it, std
 static void fillServerName(Server &server, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
 {
 	if (*it != ";")
-		server.setName(((*it)[it->size() - 1] == ';') ? it->substr(0, it->size() - 2): *it);
+		server.setName(((*it)[it->size() - 1] == ';') ? it->substr(0, it->size() - 1): *it);
 	else
 		throw std::runtime_error("Error: Missing server Name in field server_name in server scope"); //missing server Name in field server_name
 	if (it + 1 != end && *(it + 1) == ";")//check if next str is a ;

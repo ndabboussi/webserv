@@ -13,23 +13,29 @@ Server &Server::operator=(Server const &src)
         this->_errorPages = src._errorPages;
         this->_cookies = src._cookies;
         this->_modified = src._modified;
+        this->_fork = src._fork;
     }
     return *this;
 }
 
 //Constructor/Destructors--------------------------------------------------
 
-Server::Server(void) : Location(), _name(""), _maxClientBodySize(2000000), _modified(-1)
+Server::Server(void) : Location(), _name(""), _maxClientBodySize(2000000), _modified(-1), _fork(0)
 {}
 
 Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd),
-    _maxClientBodySize(src._maxClientBodySize), _errorPages(src._errorPages), _cookies(src._cookies), _modified(src._modified)
+    _maxClientBodySize(src._maxClientBodySize), _errorPages(src._errorPages), _cookies(src._cookies), _modified(src._modified), _fork(src._fork)
 {}
 
 Server::~Server(void)
 {}
 
 //GETTERS ---------------------------------------------------------
+
+int Server::getFork() const
+{
+    return this->_fork;
+}
 
 const std::vector<int> &Server::getPorts() const
 {
@@ -77,6 +83,11 @@ const std::vector<PersonalInfos>	&Server::getAccounts() const
 }
 
 //SETTERS ---------------------------------------------------------
+
+void Server::setFork(int flag)
+{
+    this->_fork = flag;
+}
 
 void Server::addErrorPage(int key, std::string value)
 {
