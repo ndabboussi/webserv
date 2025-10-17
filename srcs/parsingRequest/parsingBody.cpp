@@ -71,23 +71,38 @@ static void parseType1(HttpRequest &req, std::istringstream &requestStream)
 
 static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::string &name, HttpRequest &req)
 {
+	std::string tmp;
+	std::string nPath = path;
 	int depth = 0, i = 0;
-	std::string tmp = path + "/" + name;
-	for (size_t j = 0; j < path.size(); j++)
+	size_t pos = 0;
+	if (req.isCgi)
 	{
-		if (path[j] && path[j] != '/' && i == 0)
+		if ((pos = path.find_last_of('/')) != std::string::npos)
+		{
+			pos++;
+			nPath = path.substr(0, pos);
+			tmp = path.substr(0, pos) + name;
+		}
+		else
+			tmp = '/' + name;
+	}
+	else
+		tmp = nPath + "/" + name;
+	for (size_t j = 0; j < nPath.size(); j++)
+	{
+		if (nPath[j] && nPath[j] != '/' && i == 0)
 		{
 			i = 1;
 			depth++;
 		}
-		else if (path[j] == '/')
+		else if (nPath[j] == '/')
 			i = 0;
 	}
 	if (isAFile(tmp) > 0)
 		req.statusCode = 205;
 	else
 		req.statusCode = 201;
-	if (chdir(path.c_str()))
+	if (chdir(nPath.c_str()))
 		return 1;
 	Fout.open(name.c_str(), std::ios::binary);
 	while (depth--)
