@@ -198,7 +198,7 @@ int	Client::loadByChunk(const Server &server)
 }
 
 
-int Client::checkName(Server &server)
+int Client::checkName(Server &server, Context &context)
 {
 	if (!this->_checkName && !this->_data.empty() && this->_data.find("Host: ") != std::string::npos)
 	{
@@ -211,7 +211,7 @@ int Client::checkName(Server &server)
 			str = str.substr(0, pos);
 			if (!name.empty() && str != name)
 			{
-				sendErrorAndReturn("Error 400: Bad request.", 400, this->_clientFd, server);
+				sendErrorAndReturn("Error 400: Bad request.", 400, this->_clientFd, server, context);
 				return (false);
 			}
 		}
@@ -227,10 +227,10 @@ bool	Client::handleClient(Server &server, Context &context)
 
 	if (this->_content_length > server.getMaxBodyClientSize())
 	{
-		sendErrorAndReturn("Error 413: Entity Too Large", 413, this->_clientFd, server);
+		sendErrorAndReturn("Error 413: Entity Too Large", 413, this->_clientFd, server, context);
 		return false;
 	}
-	if (this->checkName(server) == false)
+	if (this->checkName(server, context) == false)
 		return (false);
 	if (this->_firstRead == 0)
 	{
@@ -246,7 +246,7 @@ bool	Client::handleClient(Server &server, Context &context)
 			return (false);
 		}
 		this->_data.append(buffer, bytes_read);
-		if (this->checkName(server) == false)
+		if (this->checkName(server, context) == false)
 			return (false);
 		this->_endHeader = this->_data.find("\r\n\r\n");
 		if (this->_endHeader == std::string::npos)
