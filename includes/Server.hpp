@@ -34,6 +34,7 @@ class	Server : public Location
 		int										_modified;
 		std::map<std::string, PersonalInfos>	_accountIdToInfos;
 		std::vector<PersonalInfos>				_accounts;
+		bool									_fork;
 
 	public:
 		Server(void);
@@ -51,6 +52,7 @@ class	Server : public Location
 		int											getModified() const;
 		const std::map<std::string, PersonalInfos>	&getAccountIdToInfos() const;
 		const std::vector<PersonalInfos>			&getAccounts() const;
+		int											getFork() const;
 
 		void										addPort(int port);
 		void										addSocketFd(int fd);
@@ -63,6 +65,7 @@ class	Server : public Location
 		void										addAccountIdToInfos(std::string accountId, PersonalInfos info);
 		void										delAccountIdToInfos(std::string accountId);
 		bool										addAccounts(PersonalInfos info);
+		void										setFork(int flag);
 
 		int											isValidUser(std::string username, std::string password) const;
 };

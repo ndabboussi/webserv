@@ -12,8 +12,9 @@ class Client
 		int			_clientFd;
 		size_t		_indexServer;
 		int			_port;
+		int			_checkName;
 		std::string	_data;
-		size_t		_content_length;
+		long long	_content_length;
 		size_t		_endHeader;
 		int			_firstRead;
 		int			_chunked;
@@ -25,6 +26,9 @@ class Client
 		long long	_bodySize;
 		long long	_left;
 
+	private:
+		int checkName(Server &server);
+		int	loadByChunk(const Server &server);
 
 	public:
 		Client(void);
@@ -43,7 +47,6 @@ class Client
 		void	setPort(int port);
 
 		bool	handleClient(Server &server, Context &context);
-		int		loadByChunk(const Server &server);
 
 };
 

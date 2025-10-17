@@ -19,7 +19,7 @@ extern volatile bool serverRunning;
  *  2. Bind the socket to the specified port
  *  3. Start listening for incoming connections
  *  4. If any step fails, print an error and exit */
-void	bindAndListen(int server_fd, int port)
+int	bindAndListen(int server_fd, int port)
 {
 	struct sockaddr_in sockAddress; // Structure describing the socket’s address (IPv4)
 	sockAddress.sin_family = AF_INET; // IPv4 address family
@@ -28,12 +28,20 @@ void	bindAndListen(int server_fd, int port)
 
 	// Try binding the socket to the specified port
 	if (bind(server_fd, (struct sockaddr *)&sockAddress, sizeof(sockAddress)) < 0)
+  {
 		std::cerr << RED "Failed to bind to port " << port << ". errno: " << errno << RESET << std::endl;
+		close(server_fd);
+		return -1;
+	}
 
 	if (listen(server_fd, SERVER_BACKLOG) < 0)	// Start listening for incoming connections
+  {
 		std::cerr << RED "Failed to listen on socket. errno: " << errno << RESET << std::endl;
+		close(server_fd);
+		return -1;
+	}
 
-	std::cout << GREEN "Server running on http://localhost:" << port << RESET << std::endl;
+	return 0;
 }
 
 
@@ -69,7 +77,9 @@ int createServerSocket(int port)
 		return -1;
 	}
 
-	bindAndListen(server_fd, port);	// Bind the socket and start listening
+	// Bind the socket and start listening
+	if (bindAndListen(server_fd, port))
+		return -1;
 	return server_fd;
 }
 
@@ -111,12 +121,27 @@ int launchServer(std::vector<Server> &servers)
 			if (ports[j] > 0)
 				port = ports[j];
 			int server_fd = createServerSocket(port);
-			if (server_fd < 0)
-				return 1;
-			servers[i].addSocketFd(server_fd);
-			context.allServerFds.push_back(server_fd);
+			if (server_fd >= 0)
+			{
+				servers[i].addSocketFd(server_fd);
+        context.allServerFds.push_back(server_fd);
+				std::string name = (servers[i].getName().empty()) ? "localhost" : servers[i].getName();
+				std::cout << GREEN "Server " << i << " running on http://" << name << ':' << port << RESET << std::endl;
+			}
 		}
 	}
+
+	for(size_t i = 0; i < servers.size(); i++)
+	{
+		if (servers[i].getSocketFds().empty())
+		{
+			servers.erase(servers.begin() + i);
+			i--;
+		}
+	}
+
+	if (servers.empty())
+		return 1;
 
 	// STEP 2: Prepare structures to track clients
 	std::vector<Client> clients;
@@ -198,6 +223,7 @@ int launchServer(std::vector<Server> &servers)
 		for (size_t i = 0; i < clients.size(); i++)
 			context.allClientFds.push_back(clients[i].getClientFd());
 
+		int breake = 0;
 		// STEP 5: Handle activity from connected clients
 		for (size_t i = 0; i < clients.size(); i++)
 		{
@@ -208,17 +234,24 @@ int launchServer(std::vector<Server> &servers)
 				// Delegate to the HTTP handling logic
 				//bool keep = handleClient(fd, servers[server_index], clients[i].getPort());
 				bool keep = clients[i].handleClient(servers[server_index], context);
-				if (!keep) // If client disconnected or done → cleanup
+				if (keep == false) // If client disconnected or done → cleanup
 				{
 					close(fd);
 					clients.erase(clients.begin() + i);
 					std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
 							 << RESET << std::endl;
 					i--;
+					if (servers[server_index].getFork())
+					{
+						breake = 1;
+						break;
+					}
 					continue;
 				}
 			}
 		}
+		if (breake)
+			break ;
 	}
 	// STEP 6: Cleanup on shutdown (not usually reached)
 	for(size_t i = 0; i < servers.size(); i++)

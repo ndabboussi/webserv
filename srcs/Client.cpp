@@ -8,6 +8,7 @@ Client &Client::operator=(Client const &src)
     {
 		this->_clientFd = src._clientFd;
 		this->_port = src._port;
+		this->_checkName = src._checkName;
 		this->_indexServer = src._indexServer;
 		this->_data = src._data;
 		this->_content_length = src._content_length;
@@ -29,10 +30,10 @@ Client::Client(void)
 {}
 
 Client::Client(int clientFd, size_t indexServer, int port): _clientFd(clientFd), _indexServer(indexServer), _port(port),
-		_content_length(0), _endHeader(0), _firstRead(0), _chunked(0), _firstChunk(0), _continue(0), _bodySize(0), _left(0)
+		_checkName(0), _content_length(0), _endHeader(0), _firstRead(0), _chunked(0), _firstChunk(0), _continue(0), _bodySize(0), _left(0)
 {}
 
-Client::Client(Client const &src) : _clientFd(src._clientFd), _indexServer(src._indexServer), _port(src._port),
+Client::Client(Client const &src) : _clientFd(src._clientFd), _indexServer(src._indexServer), _port(src._port), _checkName(src._checkName),
 		_data(src._data), _content_length(src._content_length), _endHeader(src._endHeader), _firstRead(src._firstRead), _chunked(src._chunked),
 		_firstChunk(src._firstChunk), _continue(src._continue), _before(src._before), _bodySize(src._bodySize), _left(src._left)
 {}
@@ -82,6 +83,11 @@ static void	sendErrorAndReturn(std::string errMsg, int error, int client_fd, Ser
 	HttpRequest req;
 	req.isCgi = false;
 	req.statusCode = error;
+	if (error == 413)
+	{
+		usleep(300000);
+		req.header.insert(std::make_pair("Connection", "close"));
+	}
 	sendResponse(client_fd, req, servers, context);
 }
 
@@ -191,11 +197,41 @@ int	Client::loadByChunk(const Server &server)
 	return 0;
 }
 
+
+int Client::checkName(Server &server)
+{
+	if (!this->_checkName && !this->_data.empty() && this->_data.find("Host: ") != std::string::npos)
+	{
+		std::string str;
+		std::istringstream requestStream(this->_data.substr(this->_data.find("Host: ") + 6));
+		if (std::getline(requestStream, str))
+		{
+			size_t pos = (str.find(':') != std::string::npos) ? str.find(':') : str.size();
+			std::string name = server.getName();
+			str = str.substr(0, pos);
+			if (!name.empty() && str != name)
+			{
+				sendErrorAndReturn("Error 400: Bad request.", 400, this->_clientFd, server);
+				return (false);
+			}
+		}
+		this->_checkName = 1;
+	}
+	return true;
+}
+
 bool	Client::handleClient(Server &server, Context &context)
 {
 	char				buffer[4096] = {0};
 	int					bytes_read;
 
+	if (this->_content_length > server.getMaxBodyClientSize())
+	{
+		sendErrorAndReturn("Error 413: Entity Too Large", 413, this->_clientFd, server);
+		return false;
+	}
+	if (this->checkName(server) == false)
+		return (false);
 	if (this->_firstRead == 0)
 	{
 		bytes_read = recv(this->_clientFd, buffer, sizeof(buffer), 0);//use MSG_DONTWAIT ?
@@ -210,6 +246,8 @@ bool	Client::handleClient(Server &server, Context &context)
 			return (false);
 		}
 		this->_data.append(buffer, bytes_read);
+		if (this->checkName(server) == false)
+			return (false);
 		this->_endHeader = this->_data.find("\r\n\r\n");
 		if (this->_endHeader == std::string::npos)
 			return true;
@@ -226,7 +264,7 @@ bool	Client::handleClient(Server &server, Context &context)
 			this->_chunked = 1;
 			return true;
 		}
-		if (this->_data.size() - this->_endHeader < this->_content_length)
+		if (static_cast<long long>(this->_data.size() - this->_endHeader) < this->_content_length)
 			return true;
 		this->_firstRead = 0;
 	}
@@ -254,7 +292,6 @@ bool	Client::handleClient(Server &server, Context &context)
 		}
 		else
 		{
-			this->_firstRead = 0;
 			int size = this->_content_length - (this->_data.size() - this->_endHeader);
 			std::vector<char> buf(size);
 			bytes_read = recv(this->_clientFd, buf.data(), size, 0);//use MSG_DONTWAIT ?
@@ -269,6 +306,9 @@ bool	Client::handleClient(Server &server, Context &context)
 				return (false);
 			}
 			this->_data.append(buf.data(), bytes_read);
+			if (bytes_read < size)
+				return true;
+			this->_firstRead = 0;
 		}
 	}
 	
@@ -276,7 +316,6 @@ bool	Client::handleClient(Server &server, Context &context)
 		return false;
 
 	std::cout << PINK << this->_data << RESET << std::endl;//logger
-
 	HttpRequest request = parseHttpRequest(this->_data, server);
 	request.serverPort = this->_port;
 	if (request.statusCode < 300)
