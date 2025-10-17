@@ -77,7 +77,7 @@ void	Client::setPort(int port)
 
 //Member functions
 
-static void	sendErrorAndReturn(std::string errMsg, int error, int client_fd, Server &servers)
+static void	sendErrorAndReturn(std::string errMsg, int error, int client_fd, Server &servers, Context &context)
 {
 	std::cerr << RED << errMsg << RESET << std::endl;// error 500 ?
 	HttpRequest req;
@@ -88,7 +88,7 @@ static void	sendErrorAndReturn(std::string errMsg, int error, int client_fd, Ser
 		usleep(300000);
 		req.header.insert(std::make_pair("Connection", "close"));
 	}
-	sendResponse(client_fd, req, servers);
+	sendResponse(client_fd, req, servers, context);
 }
 
 static int	deleteChunkSize(std::string data, std::string &src)
@@ -197,6 +197,7 @@ int	Client::loadByChunk(const Server &server)
 	return 0;
 }
 
+
 int Client::checkName(Server &server)
 {
 	if (!this->_checkName && !this->_data.empty() && this->_data.find("Host: ") != std::string::npos)
@@ -219,7 +220,7 @@ int Client::checkName(Server &server)
 	return true;
 }
 
-bool	Client::handleClient(Server &server)
+bool	Client::handleClient(Server &server, Context &context)
 {
 	char				buffer[4096] = {0};
 	int					bytes_read;
@@ -236,12 +237,12 @@ bool	Client::handleClient(Server &server)
 		bytes_read = recv(this->_clientFd, buffer, sizeof(buffer), 0);//use MSG_DONTWAIT ?
 		if (bytes_read < 0)
 		{
-			sendErrorAndReturn("Erreur de lecture depuis le client.", 500, this->_clientFd, server);
+			sendErrorAndReturn("Erreur de lecture depuis le client.", 500, this->_clientFd, server, context);
 			return (false);
 		}
 		if (bytes_read == 0)
 		{
-			sendErrorAndReturn("Error 400: Bad request.", 400, this->_clientFd, server);
+			sendErrorAndReturn("Error 400: Bad request.", 400, this->_clientFd, server, context);
 			return (false);
 		}
 		this->_data.append(buffer, bytes_read);
@@ -274,7 +275,7 @@ bool	Client::handleClient(Server &server)
 			if (this->_data.find("Expect: 100-continue") != std::string::npos && !this->_continue)
 			{
 				this->_continue = 1;
-				sendErrorAndReturn("", 100, this->_clientFd, server);
+				sendErrorAndReturn("", 100, this->_clientFd, server, context);
 				return true;
 			}
 			int res = this->loadByChunk(server);
@@ -282,7 +283,7 @@ bool	Client::handleClient(Server &server)
 			{
 				std::string msg = (res == 500) ? "Erreur de lecture depuis le client." :
 					(res == 400) ? "Error 400: Bad request." : "Error 413: Entity Too Large";
-				sendErrorAndReturn(msg, res, this->_clientFd, server);
+				sendErrorAndReturn(msg, res, this->_clientFd, server, context);
 				return false;
 			}
 			if (res < 0)
@@ -296,12 +297,12 @@ bool	Client::handleClient(Server &server)
 			bytes_read = recv(this->_clientFd, buf.data(), size, 0);//use MSG_DONTWAIT ?
 			if (bytes_read < 0)
 			{
-				sendErrorAndReturn("Erreur de lecture depuis le client.", 500, this->_clientFd, server);
+				sendErrorAndReturn("Erreur de lecture depuis le client.", 500, this->_clientFd, server, context);
 				return (false);
 			}
 			if (bytes_read == 0)
 			{
-				sendErrorAndReturn("Error 400: Bad request.", 400, this->_clientFd, server);
+				sendErrorAndReturn("Error 400: Bad request.", 400, this->_clientFd, server, context);
 				return (false);
 			}
 			this->_data.append(buf.data(), bytes_read);
@@ -319,6 +320,6 @@ bool	Client::handleClient(Server &server)
 	request.serverPort = this->_port;
 	if (request.statusCode < 300)
 		manageCookies(server, request);
-	sendResponse(this->_clientFd, request, server);
+	sendResponse(this->_clientFd, request, server, context);
 	return false;
 }

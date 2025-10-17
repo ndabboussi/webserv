@@ -28,15 +28,14 @@ int	bindAndListen(int server_fd, int port)
 
 	// Try binding the socket to the specified port
 	if (bind(server_fd, (struct sockaddr *)&sockAddress, sizeof(sockAddress)) < 0)
-	{
+  {
 		std::cerr << RED "Failed to bind to port " << port << ". errno: " << errno << RESET << std::endl;
 		close(server_fd);
 		return -1;
 	}
 
-	// Start listening for incoming connections
-	if (listen(server_fd, SERVER_BACKLOG) < 0)
-	{
+	if (listen(server_fd, SERVER_BACKLOG) < 0)	// Start listening for incoming connections
+  {
 		std::cerr << RED "Failed to listen on socket. errno: " << errno << RESET << std::endl;
 		close(server_fd);
 		return -1;
@@ -111,6 +110,7 @@ int launchServer(std::vector<Server> &servers)
 		return 1;
 	}
 
+	Context	context;
 	// STEP 1: Create a listening socket for each port of each server
 	for(size_t i = 0; i < servers.size(); i++)
 	{
@@ -124,6 +124,7 @@ int launchServer(std::vector<Server> &servers)
 			if (server_fd >= 0)
 			{
 				servers[i].addSocketFd(server_fd);
+        context.allServerFds.push_back(server_fd);
 				std::string name = (servers[i].getName().empty()) ? "localhost" : servers[i].getName();
 				std::cout << GREEN "Server " << i << " running on http://" << name << ':' << port << RESET << std::endl;
 			}
@@ -218,6 +219,9 @@ int launchServer(std::vector<Server> &servers)
 				}
 			}
 		}
+		context.allClientFds.clear();
+		for (size_t i = 0; i < clients.size(); i++)
+			context.allClientFds.push_back(clients[i].getClientFd());
 
 		int breake = 0;
 		// STEP 5: Handle activity from connected clients
@@ -229,7 +233,7 @@ int launchServer(std::vector<Server> &servers)
 				size_t	server_index = clients[i].getIndexServer();
 				// Delegate to the HTTP handling logic
 				//bool keep = handleClient(fd, servers[server_index], clients[i].getPort());
-				bool keep = clients[i].handleClient(servers[server_index]);
+				bool keep = clients[i].handleClient(servers[server_index], context);
 				if (keep == false) // If client disconnected or done → cleanup
 				{
 					close(fd);
