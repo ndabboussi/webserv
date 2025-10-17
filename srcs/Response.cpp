@@ -13,7 +13,7 @@ Response &Response::operator=(Response const &src)
 
 //Constructor/Destructors--------------------------------------------------
 
-Response::Response(int clientFd, HttpRequest const &request, Server &server): _server(server), _request(request), _clientFd(clientFd)
+Response::Response(int clientFd, HttpRequest &request, Server &server): _server(server), _request(request), _clientFd(clientFd)
 {}
 
 Response::Response(Response const &src) : _server(src._server), _request(src._request), _clientFd(src._clientFd)
@@ -145,6 +145,7 @@ std::string Response::build()
 	res << _headerStream.str();
 	appendCookies(res);
 	res << "\r\n";
+	std::cout << GREEN "[<] Sent Response:\n" << res.str() << RESET << std::endl;
 	res << this->_body;
 	return res.str();
 }
@@ -161,7 +162,7 @@ void Response::sendTo()
 		return; // Don’t throw
 	}
 		//throw std::runtime_error("send() failed to send HTTP response");
-	std::cout << GREEN "[<] Sent Response:\n" << full.c_str() << RESET << std::endl;
+	//std::cout << GREEN "[<] Sent Response:\n" << full.c_str() << RESET << std::endl;
 }
 //------------------------- ERRORS DURING PARSING -------------------------//
 
@@ -302,7 +303,18 @@ bool	Response::cgiResponse()
 	std::cout << BLUE "[CGI] Executing script: " << this->_request.path << RESET << std::endl;
 	try
 	{
-		CGI cgi;
+		CGI cgi(this->_request);
+
+		cgi.setCgiInfos(this->_request, this->_server);
+
+		if (cgi.getCgiType() == UNKNOWN)
+		{
+			this->_request.statusCode = 401;
+			throw std::runtime_error("[CGI ERROR] Unsupported CGI extension: " + cgi.getExtension());
+		}
+
+		if (cgi.checkAccess() <= 0)
+			throw std::runtime_error("[CGI ERROR] CGI file not accessible: " + cgi.getPath());
 
 		std::string result = cgi.executeCgi(this->_request, this->_server, this->_clientFd);
 		if (this->_server.getFork())
@@ -316,7 +328,9 @@ bool	Response::cgiResponse()
 	}
 	catch (const std::exception &e)
 	{
-		std::cerr << RED "[CGI ERROR] " << e.what() << RESET << std::endl;
+		std::string msg = e.what();
+		std::cerr << RED << msg << RESET << std::endl;
+		this->errorResponse();
 	}
 	return true;
 }
@@ -416,7 +430,7 @@ bool	Response::fileResponse()
 }
 
 
-void sendResponse(int client_fd, const HttpRequest &req, Server &server)
+void sendResponse(int client_fd, HttpRequest &req, Server &server)
 {
 	Response	resp(client_fd, req, server);
 

@@ -24,7 +24,7 @@ class	Response
 {
 	private:
 			Server								&_server;
-			HttpRequest	const					&_request;
+			HttpRequest							&_request;
 			int									_clientFd;
 
 			int									_code;
@@ -47,7 +47,7 @@ class	Response
 
 	public:
 		Response();
-		Response(int clientFd, const HttpRequest &req, Server &server);
+		Response(int clientFd, HttpRequest &req, Server &server);
 		Response(Response const &src);
 		Response &operator=(Response const &src);
 		~Response();
@@ -63,7 +63,6 @@ class	Response
 		void		sendTo();
 		void		appendCookies(std::ostringstream &res);
 		std::string	build();
-		void		buildHeaders();
 
 		bool		errorResponse();
 		bool		autoIndexResponse();
@@ -77,5 +76,7 @@ class	Response
 std::string 	statusCodeResponse(int code);
 std::string		getContentType(const std::string &path);
 MimeCategory	getMimeCategory(const std::string &path);
+std::string		setConnection(HttpRequest const &request);
+std::string		setDate();
 
 # endif
