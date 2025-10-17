@@ -1,19 +1,35 @@
 #include "CGI.hpp"
-#include <unistd.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <sstream>
-#include <cstdlib>
-#include <cstring>
-#include <cerrno>
-#include <iostream>
 
-CGI::CGI() {}
-CGI::~CGI() {}
+//Constructor/Destructors--------------------------------------------------
+
+CGI::CGI(HttpRequest &request) : _request(request)
+{}
+
+CGI::CGI(CGI const &src) : _request(src._request)
+{
+	*this = src;
+	return ;
+}
+
+CGI &CGI::operator=(CGI const &src)
+{
+	if (this != &src)
+	{
+		_request = src._request;
+		_extension = src._extension;
+		_path = src._path;
+		_interpreter = src._interpreter;
+		_type = src._type;
+	}
+	return (*this);
+}
+
+CGI::~CGI(void)
+{}
 
 // Extracts the file extension (including the dot) from a given path
 // Ex: "/cgi-bin/hello.py" → ".py"
-std::string CGI::_getExtension() const
+std::string CGI::setExtension() const
 {
 	size_t pos = this->_path.find_last_of('.');
 	if (pos == std::string::npos)
@@ -22,7 +38,7 @@ std::string CGI::_getExtension() const
 }
 
 //Returns an enum representing the CGI type based on the file extension
-int CGI::_getCgiType() const
+int CGI::getCgiType() const
 {
 	if (this->_extension == ".cgi")//meaning its already executable
 		return BINARY;
@@ -54,11 +70,11 @@ std::vector<std::string> CGI::_split(const std::string &str) const
 	return result;
 }
 
-void	CGI::_setCgiInfos(const HttpRequest &request, const Server &server)
+void	CGI::setCgiInfos(const HttpRequest &request, const Server &server)
 {
 	this->_path = request.path;
-	this->_extension = this->_getExtension();
-	this->_type = this->_getCgiType();
+	this->_extension = this->setExtension();
+	this->_type = this->getCgiType();
 
 	this->_defaults[".cgi"] = "";
 	this->_defaults[".py"] = "/usr/bin/python3";
@@ -89,22 +105,28 @@ void	CGI::_setCgiInfos(const HttpRequest &request, const Server &server)
 	}
 	if (this->_interpreter.empty() && this->_defaults.count(this->_extension))
 		this->_interpreter = this->_defaults[this->_extension];
-	//std::cout << "[CGI DEBUG] Interpreter: '" << this->_interpreter << "'" << std::endl;
 	return;
 }
 
-//Ensures that the target CGI file exists and has proper permissions
-int CGI::_checkAccess() const
+int CGI::checkAccess() const
 {
-	if (access(this->_path.c_str(), F_OK) == -1)
-		return (-1);
-	if (this->_type == BINARY && access(this->_path.c_str(), X_OK) == -1)
-		return (0);
-	if (access(this->_path.c_str(), X_OK) == -1)
-		return (-1);
-	if (access(this->_path.c_str(), R_OK) == -1)
-		return (0);
-	return (1);
+	if (access(this->_path.c_str(), F_OK) == -1) // Check if the file exists
+	{
+		this->_request.statusCode = 404;
+		throw std::runtime_error("[CGI ERROR] File not found: " + this->_path);
+	}
+
+	if (access(this->_path.c_str(), X_OK) == -1) // Check execute permission
+	{
+		this->_request.statusCode = 403;
+		throw std::runtime_error("[CGI ERROR] File is not executable: " + this->_path);
+	}
+	if (access(this->_path.c_str(), R_OK) == -1) // Check read permission
+	{
+		this->_request.statusCode = 403;
+		throw std::runtime_error("[CGI ERROR] File is not readable: " + this->_path);
+	}
+	return 1;
 }
 
 //------------------------------------ CGI ENV BUILDING ------------------------------------//
@@ -224,13 +246,13 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server, in
 {
 	try
 	{
-		this->_setCgiInfos(request, server);
+		// this->_setCgiInfos(request, server);
 
-		if (this->_type == UNKNOWN)
-			throw std::runtime_error("[CGI ERROR] Unsupported CGI extension: " + this->_extension);
+		// if (this->_type == UNKNOWN)
+		// 	throw std::runtime_error("[CGI ERROR] Unsupported CGI extension: " + this->_extension);
 
-		if (_checkAccess() <= 0)
-			throw std::runtime_error("[CGI ERROR] CGI file not accessible: " + this->_path);
+		// if (_checkAccess() <= 0)
+		// 	throw std::runtime_error("[CGI ERROR] CGI file not accessible: " + this->_path);
 
 		//2. Build environment and create pipes
 		std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
@@ -350,4 +372,14 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server, in
 		std::cout << GREEN << err.str() << RESET << std::endl; 
 		return err.str();
 	}
+}
+
+std::string CGI::getExtension() const
+{
+	return this->_extension;
+}
+
+std::string  CGI::getPath() const
+{
+	return this->_path;
 }
