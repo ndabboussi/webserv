@@ -48,7 +48,7 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 			newPath = data.find("alias")->second;
 		else if (data.find("root") != data.end() && data.find("root")->second != serverRoot
 				&& prev.getPath() != loc.getPath())
-			newPath = data.find("root")->second;
+			newPath = data.find("root")->second + loc.getPath();
 		i = oldPath.find('/', i);
 		end = oldPath.find('/', i + 1);
 		if (end != std::string::npos)
@@ -75,9 +75,9 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 			&& prev.getPath() != loc.getPath())
 	{
 		if (req.url[req.url.size() - 1] == '/')
-			newPath = data.find("root")->second + '/';
+			newPath = data.find("root")->second + loc.getPath() + '/';
 		else
-			newPath = data.find("root")->second;
+			newPath = data.find("root")->second + loc.getPath();
 		if (newPath[0] == '/')
 			newPath.erase(newPath.begin());
 		if (isAFile(newPath + str) >= 0)
