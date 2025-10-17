@@ -30,16 +30,16 @@ void	bindAndListen(int server_fd, int port)
 	if (bind(server_fd, (struct sockaddr *)&sockAddress, sizeof(sockAddress)) < 0)
 	{
 		std::cerr << RED "Failed to bind to port " << port << ". errno: " << errno << RESET << std::endl;
-		close(server_fd);
-		exit(EXIT_FAILURE);
+		//close(server_fd);
+		//exit(EXIT_FAILURE);
 	}
 
 	// Start listening for incoming connections
 	if (listen(server_fd, SERVER_BACKLOG) < 0)
 	{
 		std::cerr << RED "Failed to listen on socket. errno: " << errno << RESET << std::endl;
-		close(server_fd);
-		exit(EXIT_FAILURE);
+		//close(server_fd);
+		//exit(EXIT_FAILURE);
 	}
 
 	std::cout << GREEN "Server running on http://localhost:" << port << RESET << std::endl;

@@ -100,6 +100,8 @@ int CGI::_checkAccess() const
 		return (-1);
 	if (this->_type == BINARY && access(this->_path.c_str(), X_OK) == -1)
 		return (0);
+	if (access(this->_path.c_str(), X_OK) == -1)
+		return (-1);
 	if (access(this->_path.c_str(), R_OK) == -1)
 		return (0);
 	return (1);
@@ -345,6 +347,7 @@ std::string CGI::executeCgi(const HttpRequest &request, const Server &server, in
 			<< "\r\n\r\n"
 			<< "<html><body><h1>CGI Error</h1><p>"
 			<< e.what() << "</p></body></html>";
+		std::cout << GREEN << err.str() << RESET << std::endl; 
 		return err.str();
 	}
 }
