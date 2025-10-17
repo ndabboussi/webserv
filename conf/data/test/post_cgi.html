@@ -1,0 +1,54 @@
+<!-- conf/data/test/blog/post_cgi.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CGI File Upload Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    label, input, button { display: block; margin: 0.5em 0; }
+    button {
+      background-color: #007acc;
+      color: white;
+      border: none;
+      padding: 0.6em 1em;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { background-color: #005fa3; }
+  </style>
+</head>
+<body>
+  <h1>Upload File via CGI POST</h1>
+  <form id="uploadForm" action="/cgi-bin/post.cgi" method="POST" enctype="multipart/form-data">
+    <label>Choose file: <input type="file" name="upload_file" required></label>
+    <button type="submit">Upload</button>
+  </form>
+
+  <h2>Server Response:</h2>
+  <pre id="response">(waiting...)</pre>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const responseEl = document.getElementById('response');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const data = new FormData(form);
+      responseEl.textContent = 'Uploading...';
+
+      try {
+        const res = await fetch('/cgi-bin/post.cgi', {
+          method: 'POST',
+          body: data
+        });
+        const text = await res.text();
+        responseEl.textContent = text;
+      } catch (err) {
+        responseEl.textContent = 'Error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

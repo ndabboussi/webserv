@@ -48,3 +48,62 @@
     </script>
   </body>
 </html>
+
+
+<!-- <!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test POST Upload</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 2em; }
+      label, input, button { display: block; margin: 0.5em 0; }
+      pre { background: #f5f5f5; padding: 1em; border-radius: 6px; }
+      button {
+        background-color: #007acc;
+        color: white;
+        border: none;
+        padding: 0.7em 1.2em;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      button:hover { background-color: #005fa3; }
+    </style>
+  </head>
+  <body>
+    <h1>Test de requête POST vers /upload</h1>
+
+    <form id="myForm" action="/upload" method="POST" enctype="multipart/form-data">
+      <label>Nom : <input name="name" required></label>
+      <label for="file">Choisir un fichier :</label>
+      <input type="file" name="myfile" id="file" multiple>
+      <label>Email : <input name="email" type="email" required></label>
+      <button type="submit">Envoyer</button>
+    </form>
+
+    <h2>Réponse serveur :</h2>
+    <pre id="response">(aucune réponse pour l'instant)</pre>
+
+    <script>
+      const form = document.getElementById('myForm');
+      const responseEl = document.getElementById('response');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+
+        try {
+          const res = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+          });
+          const text = await res.text();
+          responseEl.textContent = text;
+        } catch (err) {
+          responseEl.textContent = 'Erreur: ' + err.message;
+        }
+      });
+    </script>
+  </body>
+</html> -->
