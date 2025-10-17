@@ -40,11 +40,6 @@ class	CGI
 		std::vector<char*>					_envp;
 
 	private:
-		// void						_setCgiInfos(const HttpRequest &request, const Server &server);
-		// int 						_getCgiType() const;
-		// std::string					_getExtension() const;
-		// int							_checkAccess() const;
-
 		std::vector<std::string>	_buildCgiEnv(const HttpRequest &req, const Server &server, const std::string &scriptPath) const;
 		std::vector<char*>			_envVecToCharPtr(const std::vector<std::string> &env) const;
 

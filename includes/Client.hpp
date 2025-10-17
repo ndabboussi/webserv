@@ -4,6 +4,8 @@
 
 # include "Server.hpp"
 
+struct Context;
+
 class Client
 {
 	private:
@@ -40,7 +42,7 @@ class Client
 		void	setIndexServer(size_t index);
 		void	setPort(int port);
 
-		bool	handleClient(Server &server);
+		bool	handleClient(Server &server, Context &context);
 		int		loadByChunk(const Server &server);
 
 };

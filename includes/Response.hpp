@@ -30,12 +30,6 @@ class	Response
 			int									_code;
 			std::string							_statusLine;
 
-//			std::map<std::string, std::string>	_headers;
-//			std::map<std::string, std::string>	_body;
-//			std::string							_redirectTo;
-//			bool								_autoIndex;
-//			std::string							_autoIndexFile;
-
 			std::ostringstream					_headerStream;
 			std::ostringstream					_headersFinal;
 			std::string							_contentType;

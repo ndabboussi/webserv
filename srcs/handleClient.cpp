@@ -118,7 +118,7 @@ static int	loadByChunk(std::string &data, std::string afterHeader, const Server 
 
 //------------------------------------ HANDLE CLIENTS -------------------------------------//
 
-bool	handleClient(int client_fd, Server &servers, int serverPort)
+bool	handleClient(int client_fd, Server &servers, int serverPort, Context &context)
 {
 	std::string	data;
 	char		buffer[BUFSIZE] = {0};
@@ -159,7 +159,7 @@ bool	handleClient(int client_fd, Server &servers, int serverPort)
 					{
 						HttpRequest req;
 						req.statusCode = res;
-						sendResponse(client_fd, req, servers);
+						sendResponse(client_fd, req, servers, context);
 						return true;
 					}
 				}
@@ -192,6 +192,6 @@ bool	handleClient(int client_fd, Server &servers, int serverPort)
 	request.serverPort = serverPort;
 	if (request.statusCode < 300)
 		manageCookies(servers, request);
-	sendResponse(client_fd, request, servers);
+	sendResponse(client_fd, request, servers, context);
 	return true;
 }

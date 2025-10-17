@@ -6,8 +6,14 @@
 
 Response &Response::operator=(Response const &src)
 {
-	if (this == &src)
-		return (*this);
+	if (this != &src)
+	{
+		_request = src._request;
+		_server = src._server;
+		_clientFd = src._clientFd;
+		_code = src._code;
+		_statusLine = src._statusLine;
+	}
 	return (*this);
 }
 
@@ -428,10 +434,11 @@ bool	Response::fileResponse()
 }
 
 
-void sendResponse(int client_fd, HttpRequest &req, Server &server)
+void sendResponse(int client_fd, HttpRequest &req, Server &server, Context &context)
 {
 	Response	resp(client_fd, req, server);
 
+	(void)context;
 	if (resp.errorResponse())
 		return;
 	if (resp.autoIndexResponse())
