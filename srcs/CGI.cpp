@@ -285,6 +285,8 @@ std::string CGI::executeCgi(const HttpRequest &request, Server &server, int clie
 			//Close unused ends to prevent deadlock
 			close(pipeIn[1]);
 			close(pipeOut[0]);
+			close(pipeIn[0]);
+			close(pipeOut[1]);
 
 			char *argv[3]; 	//Prepare args for execve()
 			if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)

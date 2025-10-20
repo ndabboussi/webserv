@@ -343,6 +343,7 @@ static int verifyCookieId(std::vector<Cookies> cookies, std::string &str)
 	return 1;
 }
 
+//after parsing, checks if Cookies header inside request
 void	manageCookies(Server &server, HttpRequest &request)
 {
 	try
