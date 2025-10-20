@@ -150,6 +150,7 @@ std::vector<std::string> CGI::_buildCgiEnv(const HttpRequest &req, const Server 
 	env.push_back("REQUEST_METHOD=" + req.method);
 	env.push_back("SCRIPT_FILENAME=" + scriptPath);
 	env.push_back("QUERY_STRING=" + (req.header.count("Query") ? req.header.find("Query")->second : ""));
+	std::string content = req.header.count("Content-Type") ? req.header.find("Content-Type")->second : "";
 	env.push_back("CONTENT_TYPE=" + (req.header.count("Content-Type") ? req.header.find("Content-Type")->second : ""));
 	env.push_back("CONTENT_LENGTH=" + (req.header.count("Content-Length") ? req.header.find("Content-Length")->second : ""));
 	env.push_back("REDIRECT_STATUS=200"); // required for php-cgi
@@ -316,13 +317,14 @@ std::string CGI::executeCgi(const HttpRequest &request, Server &server, int clie
 		{
 			if (!this->_postSupported())
 				throw std::runtime_error("[CGI ERROR] Method " + request.method + " not allowed for this CGI script");
-			std::string body;
-			for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
-				it != request.body.end(); it++)
-				body += it->first + "=" + it->second + "&";
-			if (!body.empty())
-				body.erase(body.size() - 1);
-			write(pipeIn[1], body.c_str(), body.size());
+			// std::string body;
+			// for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
+			// 	it != request.body.end(); it++)
+			// 	body += it->first + "=" + it->second + "&";
+			// if (!body.empty())
+			// 	body.erase(body.size() - 1);
+			// write(pipeIn[1], body.c_str(), body.size());
+			write(pipeIn[1], request.rawBody.data(), request.rawBody.size());
 		}
 		
 		close(pipeIn[1]); // Close write end of pipeIn so the child sees EOF and terminates

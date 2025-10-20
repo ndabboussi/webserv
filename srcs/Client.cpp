@@ -315,11 +315,16 @@ bool	Client::handleClient(Server &server, Context &context)
 	if (this->_data.empty())
 		return false;
 
-	std::cout << PINK << this->_data << RESET << std::endl;//logger
+	std::cout << PINK << this->_data << RESET << std::endl;
 	HttpRequest request = parseHttpRequest(this->_data, server);
+   
 	request.serverPort = this->_port;
 	if (request.statusCode < 300)
+	{
+		if (this->_data.find("\r\n\r\n") != std::string::npos)
+			request.rawBody = std::vector<char>(this->_data.begin() + this->_data.find("\r\n\r\n") + 4, this->_data.end());
 		manageCookies(server, request);
+	}
 	sendResponse(this->_clientFd, request, server, context);
 	return false;
 }

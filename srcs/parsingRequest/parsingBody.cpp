@@ -74,20 +74,8 @@ static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::s
 	std::string tmp;
 	std::string nPath = path;
 	int depth = 0, i = 0;
-	size_t pos = 0;
-	if (req.isCgi)
-	{
-		if ((pos = path.find_last_of('/')) != std::string::npos)
-		{
-			pos++;
-			nPath = path.substr(0, pos);
-			tmp = path.substr(0, pos) + name;
-		}
-		else
-			tmp = '/' + name;
-	}
-	else
-		tmp = nPath + "/" + name;
+	
+	tmp = nPath + "/" + name;
 	for (size_t j = 0; j < nPath.size(); j++)
 	{
 		if (nPath[j] && nPath[j] != '/' && i == 0)
@@ -113,7 +101,8 @@ static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::s
 static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::string &boundary)
 {
 	std::ofstream Fout;
-	if (createFileAtRightPlace(Fout, req.path, *req.fileNames.rbegin(), req) || !Fout.is_open())
+
+	if ((createFileAtRightPlace(Fout, req.path, *req.fileNames.rbegin(), req) || !Fout.is_open()))
 		return error500(req);
 	std::string pat1 = "\r\n--" + boundary + "--";
 	std::string pat2 = "\r\n--" + boundary;
