@@ -27,7 +27,7 @@ class Client
 		long long	_left;
 
 	private:
-		int checkName(Server &server);
+		int checkName(Server &server, Context &context);
 		int	loadByChunk(const Server &server);
 
 	public:

@@ -301,7 +301,7 @@ bool	Response::redirectResponse()
 }
 
 // ----- CGI EXECUTION ----------------------------------------------------
-bool	Response::cgiResponse()
+bool	Response::cgiResponse(Context &context)
 {
 	if (!this->_request.isCgi)
 		return false;
@@ -322,7 +322,7 @@ bool	Response::cgiResponse()
 		if (cgi.checkAccess() <= 0)
 			throw std::runtime_error("[CGI ERROR] CGI file not accessible: " + cgi.getPath());
 
-		std::string result = cgi.executeCgi(this->_request, this->_server, this->_clientFd);
+		std::string result = cgi.executeCgi(this->_request, this->_server, this->_clientFd, context);
 		if (this->_server.getFork())
 			throw std::runtime_error("fail");
 		size_t ret = send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
@@ -447,7 +447,7 @@ void sendResponse(int client_fd, HttpRequest &req, Server &server, Context &cont
 		return;
 	if (resp.redirectResponse())
 		return;
-	if (resp.cgiResponse())
+	if (resp.cgiResponse(context))
 		return;
 	if (resp.postMethodResponse())
 		return;

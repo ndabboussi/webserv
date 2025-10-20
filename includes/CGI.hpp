@@ -13,6 +13,7 @@
 # include <stdexcept>
 
 struct HttpRequest;
+struct Context;
 
 enum	CgiType
 {
@@ -56,7 +57,7 @@ class	CGI
 		~CGI();
 
 	public:
-		std::string					executeCgi(const HttpRequest &request, Server &server, int clientFd);
+		std::string					executeCgi(const HttpRequest &request, Server &server, int clientFd, Context &context);
 
 		void						setCgiInfos(const HttpRequest &request, const Server &server);
 		int 						getCgiType() const;
