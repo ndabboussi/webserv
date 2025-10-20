@@ -181,6 +181,12 @@ body.rightsidebar-visible .content
   --text: #e0e0e0;
 }
 
+[data-theme="pink"]
+{
+  --bg: #fba6af;
+  --text: #e0e0e0;
+}
+
 /* Tailles de texte dynamiques */
 html[data-fontsize="small"]
   { font-size: 14px; }
