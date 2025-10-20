@@ -20,6 +20,7 @@ struct HttpRequest
 	std::string							url;
 	std::string							autoIndexFile;
 	std::string							jsonResponse;
+	std::vector<char>					rawBody;
 	bool								isCgi;
 	int									serverPort;
 };

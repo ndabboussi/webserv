@@ -154,7 +154,7 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, Server &server)
 	{
 		if (checkMethod(req)) //If the method can't be used in the directory
 			return req;
-		if (req.method == "POST" && parseBody(req, requestStream))//If request is Post -> parse the body of the request and
+		if (!req.isCgi && req.method == "POST" && parseBody(req, requestStream))//If request is Post -> parse the body of the request and
 			return req;											  //if there is an error, return the error
 		if (req.method == "DELETE" && deleteRessource(req, server))//If one of the ressourses couldn't be removed raise error
 			return req;
