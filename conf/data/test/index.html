@@ -1,4 +1,4 @@
-<!doctype html>
+<!-- <!doctype html>
 <html data-theme="light">
   <head>
     <meta charset="utf-8" />
@@ -13,6 +13,87 @@
       <img src="/pictures/logo.jpg" alt="Site Logo" width="150">
       <p><a href="/about/">About us</a> | <a href="/contact/">Contact</a></p>
     </div>
+    <div id="sidebar-container"></div>
+    <script src="/siteUtils/cookies.js"></script>
+  </body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <title>Welcome - HTTP Server Test Site</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/siteUtils/sidebar.css">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2em;
+        background-color: white;
+      }
+      h1, h2 {
+        color: #333;
+      }
+      ul {
+        list-style-type: none;
+        padding: 0;
+      }
+      li {
+        margin: 0.3em 0;
+      }
+      .button-container {
+        margin: 12em;
+        margin-top: 3em;
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+        max-width: 300px;
+      }
+      a.button {
+        display: block;
+        text-align: center;
+        padding: 0.7em;
+        background-color: #fba6af;
+        color: #007acc;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: background-color 0.2s;
+      }
+      a.button:hover {
+        background-color: #005fa3;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content">
+      <h1>Welcome to our HTTP werbserv 💓</h1>
+      <p>This page is here to help you test our web server, Cookies and CGI features included.</p>
+      <img src="/pictures/kitty.jpg" alt="Site Logo" width="250" />
+
+      <h2>🌐 Website Directories</h2>
+      <ul>
+        <li><a href="/about/">About us</a></li>
+        <li><a href="/blog/">Our blog</a></li>
+        <li><a href="/contact/">Contacts</a></li>
+        <li><a href="/images/">My images</a></li>
+        <li><a href="/pictures/">My pictures</a></li>
+        <li><a href="/cgi-bin/">My CGI</a></li>
+        <li><a href="/upload/">Uploaded files</a></li>
+      </ul>
+
+      <h2>⚙️ Test Pages</h2>
+      <div class="button-container">
+        <a class="button" href="/post_cgi.html">📤 CGI POST File Upload</a>
+        <a class="button" href="/cgi-bin/time.py">⏰ CGI GET - Current Time</a>
+        <a class="button" href="/cgi-bin/hello.py">🧪 CGI GET - Environment Dump</a>
+        <a class="button" href="/testpost.html">📨 Manual POST Test Page</a>
+      </div>
+
+      <p style="margin-top: 2em;">
+        <small>Server Test Page generated for C++98 HTTP/1.1 Project</small>
+      </p>
+    </div>
+
     <div id="sidebar-container"></div>
     <script src="/siteUtils/cookies.js"></script>
   </body>

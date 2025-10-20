@@ -125,15 +125,10 @@ int launchServer(std::vector<Server> &servers)
 			{
 				servers[i].addSocketFd(server_fd);
 				context.allServerFds.push_back(server_fd);
-				std::cout << UNDERLINE "[fd to store] " << server_fd <<  RESET << std::endl;
 				std::string name = (servers[i].getName().empty()) ? "localhost" : servers[i].getName();
 				std::cout << GREEN "Server " << i << " running on http://" << name << ':' << port << RESET << std::endl;
 			}
 		}
-
-		for (size_t i = 0; i < context.allServerFds.size(); i++)
-			std::cout << BOLD << "[" << context.allServerFds[i] << "]";
-		std::cout << std::endl;
 	}
 
 	for(size_t i = 0; i < servers.size(); i++)
@@ -226,15 +221,8 @@ int launchServer(std::vector<Server> &servers)
 		}
 		context.allClientFds.clear();
 		for (size_t i = 0; i < clients.size(); i++)
-		{
 			context.allClientFds.push_back(clients[i].getClientFd());
-			std::cout << BOLD << 
-					"[ " << context.allClientFds[i] << " ]" RESET << std::endl;
-		}
 
-		for (size_t i = 0; i < context.allClientFds.size(); i++)
-			std::cout << BOLD "[clients]" << 
-					"[ " << context.allClientFds[i] << " ]" RESET << std::endl;
 		int breake = 0;
 		// STEP 5: Handle activity from connected clients
 		for (size_t i = 0; i < clients.size(); i++)
