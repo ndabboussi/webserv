@@ -165,10 +165,7 @@ int parsePath(HttpRequest &req, const Server &server)
 	}
 	
 	if (!req.isCgi && req.path.find("cgi-bin") != std::string::npos)
-	{
-		std::cout << YELLOW "[CGI DETECT] Path contains 'cgi-bin', marking as CGI." << RESET << std::endl;
 		req.isCgi = true;
-	}
 
 	if (req.url == "/register" || req.url == "/login" || req.url == "/logout" || req.url == "/me")
 			return (0);
