@@ -151,7 +151,7 @@ std::string Response::build()
 	res << _headerStream.str();
 	appendCookies(res);
 	res << "\r\n";
-	std::cout << GREEN "[<] Sent Response:\n" << res.str() << RESET << std::endl;
+	//std::cout << GREEN "[<] Sent Response:\n" << res.str() << RESET << std::endl;
 	res << this->_body;
 	return res.str();
 }
@@ -159,20 +159,17 @@ std::string Response::build()
 void Response::sendTo()
 {
 	std::string full = this->build();
-	//send(this->_clientFd, full.c_str(), full.size(), MSG_NOSIGNAL);
 	ssize_t ret = send(this->_clientFd, full.c_str(), full.size(), MSG_NOSIGNAL);
 	if (ret <= 0)
 	{
 		std::cerr << RED "[sendTo] send() failed (client may have disconnected)" << RESET << std::endl;
 		close(this->_clientFd);
-		return; // Don’t throw
+		return;
 	}
-		//throw std::runtime_error("send() failed to send HTTP response");
-	//std::cout << GREEN "[<] Sent Response:\n" << full.c_str() << RESET << std::endl;
+	std::cout << GREEN "[<] Sent Response:\n" << full.c_str() << RESET << std::endl;
 }
 //------------------------- ERRORS DURING PARSING -------------------------//
 
-//need to make it dynamic with an explanation sentance
 std::string	generateDefaultErrorPage(int code)
 {
 	std::ostringstream body;
@@ -379,8 +376,56 @@ bool		Response::postMethodResponse()
 
 	if (this->_request.statusCode == 205)
 	{
+		if (this->_request.autoIndexFile.empty())
+		{
+			this->_code = 200;
+			this->setStatusLine();
+
+			std::ostringstream page;
+			page << "<!DOCTYPE html>\n"
+				<< "<html lang=\"en\" data-theme=\"light\">\n"
+				<< "<head>\n"
+				<< "<meta charset=\"UTF-8\">\n"
+				<< "<title>File Updated</title>\n"
+				<< "<link rel=\"stylesheet\" href=\"/styles.css\">\n"
+				<< "<link rel=\"stylesheet\" href=\"/siteUtils/sidebar.css\">\n"
+				<< "<style>\n"
+				<< "body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }\n"
+				<< ".message { color: green; font-size: 1.5em; font-weight: bold; }\n"
+				<< ".button { display: inline-block; margin-top: 2em; padding: 0.7em 1.2em; "
+				<< "background-color: #007BFF; color: white; text-decoration: none; border-radius: 8px; }\n"
+				<< ".button:hover { background-color: #0056b3; }\n"
+				<< "</style>\n"
+				<< "</head>\n"
+				<< "<body>\n"
+				<< "<h1 class=\"message\">✅ Your file already exists and has been updated.</h1>\n"
+				<< "<p>You can go back to the uploads directory to verify it.</p>\n"
+				<< "<div class=\"button-container\">\n"
+				<< "<a class=\"button\" href=\"/\">🏠 Back to Home Page</a>\n"
+				<< "</div>\n"
+				<< "<div id=\"sidebar-container\"></div>\n"
+				<< "<script src=\"/siteUtils/cookies.js\"></script>\n"
+				<< "</body>\n"
+				<< "</html>\n";
+
+			std::string body = page.str();
+			std::vector<char> tmpBody(body.begin(), body.end()); // cookies
+			modifyFile(tmpBody, this->_request); // cookies
+			body = std::string(tmpBody.begin(), tmpBody.end()); //cookies
+
+			this->setBody(body, "text/html");
+			this->sendTo();
+
+			return true;
+		}
+
 		this->_code = 303;
 		this->setStatusLine();
+
+		std::cout << BOLD "[DEBUG] " << this->_request.url << RESET << std::endl;
+		if (!this->_request.autoIndexFile.empty())
+			std::cout << BOLD "[DEBUG] " << this->_request.url << RESET << std::endl;
+
 		this->setHeader("Location", this->_request.url + "/");
 		this->setHeader("Content-Length", "0");
 		this->sendTo();
