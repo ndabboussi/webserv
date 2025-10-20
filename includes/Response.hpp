@@ -40,7 +40,6 @@ class	Response
 			bool								_bodyNeeded;
 
 	public:
-		Response();
 		Response(int clientFd, HttpRequest &req, Server &server);
 		Response(Response const &src);
 		Response &operator=(Response const &src);
