@@ -278,6 +278,11 @@ bool	Client::handleClient(Server &server, Context &context)
 				sendErrorAndReturn("", 100, this->_clientFd, server, context);
 				return true;
 			}
+			else if (!this->_continue)
+			{
+				sendErrorAndReturn("Error 400: Bad request.", 400, this->_clientFd, server, context);
+				return false;
+			}
 			int res = this->loadByChunk(server);
 			if (res > 0)
 			{
