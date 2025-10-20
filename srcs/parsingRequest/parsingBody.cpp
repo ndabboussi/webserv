@@ -219,7 +219,6 @@ static void parseType3(HttpRequest &req, std::istringstream &requestStream)
 		if (requestStream.eof())
 			break ;	
 	}
-	std::cout << BOLD YELLOW << text << RESET << std::endl;
 	req.body.insert(std::make_pair("text", text));
 }
 

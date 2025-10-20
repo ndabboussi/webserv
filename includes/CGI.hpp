@@ -50,7 +50,6 @@ class	CGI
 		bool						_postSupported() const;
 
 	public:
-		CGI();
 		CGI(HttpRequest &request);
 		CGI &operator=(CGI const &src);
 		CGI(CGI const &src);
