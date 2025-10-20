@@ -111,7 +111,7 @@ std::string  statusCodeResponse(int code)
 		case 201: return "Created";
 		case 202: return "Accepted";//
 		case 204: return "No Content";
-		case 205: return "Reset Content";
+		case 205: return "Reset Content";//no body
 		case 206: return "Partial Content";//
 
 		//redirection messages
