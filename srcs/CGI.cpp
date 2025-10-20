@@ -246,7 +246,7 @@ bool	CGI::_postSupported() const
 //   5. Builds a proper HTTP response
 // Returns: A complete HTTP/1.1 response as a string
 
-std::string CGI::executeCgi(const HttpRequest &request, Server &server, int clientFd, Context &context)
+std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context &context)
 {
 	try
 	{
@@ -317,14 +317,17 @@ std::string CGI::executeCgi(const HttpRequest &request, Server &server, int clie
 		{
 			if (!this->_postSupported())
 				throw std::runtime_error("[CGI ERROR] Method " + request.method + " not allowed for this CGI script");
-			// std::string body;
-			// for (std::map<std::string, std::string>::const_iterator it = request.body.begin();
-			// 	it != request.body.end(); it++)
-			// 	body += it->first + "=" + it->second + "&";
-			// if (!body.empty())
-			// 	body.erase(body.size() - 1);
-			// write(pipeIn[1], body.c_str(), body.size());
-			write(pipeIn[1], request.rawBody.data(), request.rawBody.size());
+			int res = write(pipeIn[1], request.rawBody.data(), request.rawBody.size());
+			if (res < 0)
+			{
+				request.statusCode = 500;
+				throw std::runtime_error("Error 500: [CGI ERROR] write function failed");
+			}
+			if (res == 0 && request.rawBody.size() != 0)
+			{
+				request.statusCode = 500;
+				throw std::runtime_error("Error 500: [CGI ERROR] write() wrote 0 bytes unexpectedly");
+			}
 		}
 		
 		close(pipeIn[1]); // Close write end of pipeIn so the child sees EOF and terminates

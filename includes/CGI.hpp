@@ -56,7 +56,7 @@ class	CGI
 		~CGI();
 
 	public:
-		std::string					executeCgi(const HttpRequest &request, Server &server, int clientFd, Context &context);
+		std::string					executeCgi(HttpRequest &request, Server &server, int clientFd, Context &context);
 
 		void						setCgiInfos(const HttpRequest &request, const Server &server);
 		int 						getCgiType() const;
