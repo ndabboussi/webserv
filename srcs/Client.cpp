@@ -322,7 +322,6 @@ bool	Client::handleClient(Server &server, Context &context)
 
 	std::cout << PINK << this->_data << RESET << std::endl;
 	HttpRequest request = parseHttpRequest(this->_data, server);
-   
 	request.serverPort = this->_port;
 	if (request.statusCode < 300)
 	{

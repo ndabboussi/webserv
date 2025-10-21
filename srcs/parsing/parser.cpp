@@ -52,10 +52,12 @@ void parsing(std::vector<Server> &servers, std::string configFile)
 		if (*it == "server" && it + 1 != end && *(it + 1) == "{")
 		{
 			Server server;
-			
 			it += 2;
 			parsingServer(server, it, end);
 			servers.push_back(server);
+			std::map<std::string, std::string> map = servers[servers.size() - 1].getData();
+			if (map.count("root") == 0)
+				servers[servers.size() - 1].addData("root", "/conf/data/test");
 		}
 	}
 	if (flagBrackets != 0)

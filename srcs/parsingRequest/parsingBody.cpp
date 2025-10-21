@@ -73,11 +73,11 @@ static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::s
 {
 	std::string tmp;
 	std::string nPath = (path.size() > 0 && path[0] == '/') ? path : '/' + path;
-	std::vector<char> tmp2(50);
+	std::vector<char> tmp2(500);
 	
 	if (checkDot(nPath, req))
 		return 1;
-	if (!getcwd(tmp2.data(), 50))
+	if (!getcwd(tmp2.data(), 500))
 		return error500(req);
 	tmp = std::string(tmp2.data()) + nPath + "/" + name;
 	if (isAFile(tmp) > 0)
