@@ -1,5 +1,8 @@
 #include "parsingRequest.hpp"
 
+#define MAX_URI_LENGTH 8192
+
+
 static int parseHeader(HttpRequest &req, std::istringstream &requestStream, const Server &server)
 {
 	std::string str;
@@ -181,6 +184,8 @@ HttpRequest parseHttpRequest(const std::string &rawRequest, Server &server)
 	req.statusCode = 0;
 	if (checkErrors(req))// check if the request is supported or this is the right http version
 		return req;
+	if (req.path.size() > MAX_URI_LENGTH)
+	return  error414(req), req;
 	req.url = req.path;
 	if (parseHeader(req, requestStream, server))//parsing header
 		return req;

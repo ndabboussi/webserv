@@ -36,6 +36,7 @@ int			error403(HttpRequest &req, std::string &tmp);
 int			error404(HttpRequest &req, std::string &tmp);
 int			error405(HttpRequest &req);
 int			error413(HttpRequest &req);
+int			error414(HttpRequest &req);
 int			error500(HttpRequest &req);
 int			error501(HttpRequest &req);
 int			error505(HttpRequest &req);
