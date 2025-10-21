@@ -24,7 +24,8 @@ Server::Server(void) : Location(), _name(""), _maxClientBodySize(2000000), _modi
 {}
 
 Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd),
-    _maxClientBodySize(src._maxClientBodySize), _errorPages(src._errorPages), _cookies(src._cookies), _modified(src._modified), _fork(src._fork)
+    _maxClientBodySize(src._maxClientBodySize), _errorPages(src._errorPages), _cookies(src._cookies), _modified(src._modified),
+    _fork(src._fork)
 {}
 
 Server::~Server(void)

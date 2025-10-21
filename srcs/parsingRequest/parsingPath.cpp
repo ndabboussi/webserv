@@ -39,6 +39,8 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 											? data.find("root")->second : "";
 	std::string							str;
 
+	if (newPath == "/")
+		newPath.clear();
 	oldPath = (oldPath[0] != '/') ? '/' + oldPath : oldPath;
 	while (end != std::string::npos)
 	{

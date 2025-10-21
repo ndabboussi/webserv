@@ -223,8 +223,10 @@ bool	Response::errorResponse()
 			std::string errorPagePath = it->second;
 			std::string root = (this->_server.getData().find("root") != this->_server.getData().end())
 							? this->_server.getData().find("root")->second : "";
-			if (!errorPagePath.empty() && errorPagePath[0] == '/')
-					errorPagePath = "." + root + errorPagePath;
+			if (!errorPagePath.empty() && root != "/" && errorPagePath[0] == '/')
+				errorPagePath = "." + root + errorPagePath;
+			else if (!errorPagePath.empty() && errorPagePath[0] == '/')
+				errorPagePath = "." + errorPagePath;
 			body = readFileToString(errorPagePath);
 		}
 		catch (const std::exception &e)

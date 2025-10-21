@@ -147,7 +147,7 @@ static int deleteRessource(HttpRequest &req, const Server &server)
 {
 	int			res = isAFile(req.path);
 	std::string	root;
-	std::vector<char> tmp(50);
+	std::vector<char> tmp(500);
 	std::map<std::string, std::string>	data = server.getData();
 
 	if (checkDot(req.path, req))
@@ -156,7 +156,7 @@ static int deleteRessource(HttpRequest &req, const Server &server)
 		root = data.find("root")->second;
 	else
 	{
-		if (!getcwd(tmp.data(), 50))
+		if (!getcwd(tmp.data(), 500))
 			return error500(req);
 		root = tmp.data();
 	}
