@@ -72,7 +72,6 @@ class	Server : public Location
 
 void		parsing(std::vector<Server> &servers, std::string configFile);
 int			launchServer(std::vector<Server> &servers);
-// bool		handleClient(int client_fd, Server &servers, int serverPort);
 void		sendResponse(int client_fd, HttpRequest &request, Server &server, Context &context);
 void		handleSignal(int signum);
 std::string	toString(size_t value);

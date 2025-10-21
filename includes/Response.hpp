@@ -5,7 +5,7 @@
 # include "Server.hpp"
 
 struct	HttpRequest;
-struct Context;
+struct	Context;
 
 class	 Server;
 
@@ -38,7 +38,6 @@ class	Response
 			std::string							_cookies;
 			std::string							_connection;
 			std::string							_body;
-			bool								_bodyNeeded;
 
 	public:
 		Response(int clientFd, HttpRequest &req, Server &server);
@@ -47,8 +46,6 @@ class	Response
 		~Response();
 
 	public:
-		std::string	buildResponse();
-
 		void		setStatusCode();
 		void		setStatusLine();
 

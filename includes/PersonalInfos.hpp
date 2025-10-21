@@ -17,7 +17,7 @@ class	PersonalInfos
 		PersonalInfos(void);
 		PersonalInfos(PersonalInfos const &src);
 		PersonalInfos &operator=(PersonalInfos const &src);
-		~PersonalInfos(void);
+		~PersonalInfos();
 
 	public:
 		void		setUsername(std::string value);

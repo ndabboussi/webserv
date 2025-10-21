@@ -2,9 +2,6 @@
 
 //Constructor/Destructors--------------------------------------------------
 
-// CGI::CGI()
-// {}
-
 CGI::CGI(HttpRequest &request) : _request(request)
 {}
 

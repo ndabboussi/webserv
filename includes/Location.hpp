@@ -60,7 +60,7 @@ class Location
 		Location(void);
 		Location(Location const &src);
 		Location &operator=(Location const &src);
-		~Location(void);
+		~Location();
 
 	public:
 		std::vector<Location> const					getLocations() const;

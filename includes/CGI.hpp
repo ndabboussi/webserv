@@ -3,12 +3,6 @@
 
 # include "Server.hpp"
 # include <sys/wait.h>
-// #include <fcntl.h>
-// #include <sstream>
-// #include <cstdlib>
-// #include <cstring>
-// #include <cerrno>
-// #include <iostream>
 
 # include <stdexcept>
 
@@ -64,23 +58,6 @@ class	CGI
 		std::string  				getExtension() const;
 		std::string  				getPath() const;
 		int							checkAccess() const;
-
-	// class CGIException : public std::exception
-	// {
-	// 	private:
-	// 		std::string	_message;
-	// 		int			_status;
-
-	// 	public:
-	// 		void CGIexception(std::string error)
-	// 		{
-	// 			this->_message = "[CGI ERROR] " + error; 
-	// 		}
-	// 		virtual const char *what() const throw()
-	// 		{
-	// 			return (_message.c_str());
-	// 		}
-	// };
 };
 
 #endif

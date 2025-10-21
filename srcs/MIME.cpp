@@ -117,12 +117,12 @@ std::string  statusCodeResponse(int code)
 		//redirection messages
 		case 300: return "Multiple Choices"; //dont handle
 		case 301: return "Moved Permanently";
-		case 302: return "Found"; // handle ?
+		case 302: return "Found";
 		case 303: return "See Other";
-		case 304: return "Not Modified"; // handle ?
-		case 305: return "Use Proxy"; //dont handle
-		case 307: return "Temporary Redirect"; //handle ?
-	//301/302/307 → you must send a Location header
+		case 304: return "Not Modified";
+		case 305: return "Use Proxy";
+		case 307: return "Temporary Redirect";
+	//301/302/307 → must send a Location header
 
 		//client error responses
 		case 400: return "Bad Request";
