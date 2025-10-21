@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+	<meta charset="utf-8">
+	<title>Delete File</title>
+	<link rel="stylesheet" href="/styles.css">
+	<link rel="stylesheet" href="/siteUtils/sidebar.css">
+</head>
+
+<body>
+	<div class="content" id="content"></div>
+		<h1 class="delete-title">🗑️ Delete a File</h1>
+		<p>Enter the file path you want to delete (relative to server root):</p>
+
+	 <div class="delete-form">
+		<input type="text" id="filepath" placeholder="/upload/myfile.txt">
+		<button id="deleteButton" onclick="sendDelete()">Delete</button>
+	 </div>
+
+	 <div class="result" id="result"></div>
+
+	 <div class="button-container">
+		<a class="button" href="/">🏠 Back to Home Page</a>
+	 </div>
+	</div> 
+
+	<script>
+		async function sendDelete()
+		{
+			const filePath = document.getElementById('filePath').value.trim();
+			const resultDiv = document.getElementById('result');
+
+			if(!filePath)
+			{
+				resultDiv.textContent = "⚠️ Please enter a valid file path.";
+				resultDiv.style.color = "orange";
+				return;
+			}
+
+			try 
+			{
+				const response = await fetch(filePath, {method: 'DELETE'});
+				if (response.ok)
+				{
+					resultDiv.textContent = `✅ Successfully deleted: ${filePath}`;
+					resultDiv.style.color = "green";
+				}
+				else
+				{
+					resultDiv.textContent = `❌ Failed to delete: ${filePath} (${response.status} ${response.statusText})`;
+					resultDiv.style.color = "red";
+				}
+			}
+			catch (error)
+			{
+				resultDiv.textContent = "⚠️ Error: " + error.message;
+				resultDiv.style.color = "red";
+			}
+		}
+	</script>
+
+	<div id="sidebar-container"></div>
+	<script src="/siteUtils/cookies.js"></script>
+</body>
+</html>
