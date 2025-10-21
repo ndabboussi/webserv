@@ -215,10 +215,12 @@ int launchServer(std::vector<Server> &servers)
 
 					std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
 									<< serverPorts[j] << RESET << std::endl;
+
 					clients.push_back(Client(client_fd, i, serverPorts[j]));
 				}
 			}
 		}
+
 		context.allClientFds.clear();
 		for (size_t i = 0; i < clients.size(); i++)
 			context.allClientFds.push_back(clients[i].getClientFd());
@@ -232,7 +234,6 @@ int launchServer(std::vector<Server> &servers)
 			{
 				size_t	server_index = clients[i].getIndexServer();
 				// Delegate to the HTTP handling logic
-				//bool keep = handleClient(fd, servers[server_index], clients[i].getPort());
 				bool keep = clients[i].handleClient(servers[server_index], context);
 				if (keep == false) // If client disconnected or done → cleanup
 				{
@@ -253,7 +254,7 @@ int launchServer(std::vector<Server> &servers)
 		if (breake)
 			break ;
 	}
-	// STEP 6: Cleanup on shutdown (not usually reached)
+	// STEP 6: Cleanup on shutdown (reached in case of CTRL+C or CGI children)
 	for(size_t i = 0; i < servers.size(); i++)
 	{
 		const std::vector<int> fds = servers[i].getSocketFds();

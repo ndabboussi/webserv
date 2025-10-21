@@ -300,7 +300,7 @@ bool	Response::redirectResponse()
 }
 
 // ----- CGI EXECUTION ----------------------------------------------------
-bool	Response::cgiResponse(Context &context)
+bool	Response::cgiResponse(Client &client, Context &context)
 {
 	if (!this->_request.isCgi)
 		return false;
@@ -308,7 +308,7 @@ bool	Response::cgiResponse(Context &context)
 	std::cout << BLUE "[CGI] Executing script: " << this->_request.path << RESET << std::endl;
 	try
 	{
-		CGI cgi(this->_request);
+		CGI cgi(this->_request, client);
 
 		cgi.setCgiInfos(this->_request, this->_server);
 
@@ -483,7 +483,7 @@ bool	Response::fileResponse()
 }
 
 
-void sendResponse(int client_fd, HttpRequest &req, Server &server, Context &context)
+void sendResponse(Client &client, int client_fd, HttpRequest &req, Server &server, Context &context)
 {
 	Response	resp(client_fd, req, server);
 
@@ -494,7 +494,7 @@ void sendResponse(int client_fd, HttpRequest &req, Server &server, Context &cont
 		return;
 	if (resp.redirectResponse())
 		return;
-	if (resp.cgiResponse(context))
+	if (resp.cgiResponse(client, context))
 		return;
 	if (resp.postMethodResponse())
 		return;
