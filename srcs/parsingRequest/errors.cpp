@@ -44,7 +44,7 @@ int error413(HttpRequest &req)
 
 int error500(HttpRequest &req)
 {
-	std::cerr << RED "Error 500: Internal server error: "<< RESET << std::endl;
+	std::cerr << RED "Error 500: Internal server error"<< RESET << std::endl;
 	req.statusCode = 500;
 	return 1;
 }

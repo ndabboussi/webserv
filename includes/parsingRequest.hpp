@@ -26,6 +26,7 @@ struct HttpRequest
 };
 
 HttpRequest	parseHttpRequest(const std::string &rawRequest, Server &server);
+int			checkDot(std::string &path, HttpRequest &req);
 int			parsePath(HttpRequest &req, const Server &server);
 int			parseBody(HttpRequest &req, std::istringstream &requestStream);
 int			isAFile(std::string path);

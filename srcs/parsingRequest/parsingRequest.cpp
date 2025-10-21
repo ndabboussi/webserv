@@ -100,9 +100,9 @@ static int removeDir(const char *path)
 	{
 		if (!strcmp(entry->d_name , ".") || !strcmp(entry->d_name, ".."))
 			continue ;
-		std::string newPath = std::string(path) + '/' + std::string(static_cast<char *>(entry->d_name));
+		std::string newPath = std::string(path) + '/' + entry->d_name;
 		struct stat st;
-		if (stat(newPath.c_str(), &st) == 0)
+		if (lstat(newPath.c_str(), &st) == 0)
 		{
 			if (S_ISDIR(st.st_mode) && removeDir(newPath.c_str()))
 				return closedir(dir), 1;
@@ -116,14 +116,50 @@ static int removeDir(const char *path)
 	return 0;
 }
 
+int checkDot(std::string &path, HttpRequest &req)
+{
+	std::string dir;
+	int i = 0;
+
+	for (size_t j = 0; j < path.size(); j++)
+	{
+		if (path[j] && path[j] != '/' && i == 0)
+		{
+			i = 1;
+			dir += path[j];
+		}
+		else if (path[j] == '/')
+		{
+			if (dir == "..")
+				return error400(req);
+			dir.clear();
+			i = 0;
+		}
+		else
+			dir += path[j];
+	}
+	if (dir == "..")
+        return error400(req);
+	return 0;
+}
+
 static int deleteRessource(HttpRequest &req, const Server &server)
 {
 	int			res = isAFile(req.path);
 	std::string	root;
+	std::vector<char> tmp(50);
 	std::map<std::string, std::string>	data = server.getData();
 
+	if (checkDot(req.path, req))
+		return 1;
 	if (data.find("root") != data.end())
 		root = data.find("root")->second;
+	else
+	{
+		if (!getcwd(tmp.data(), 50))
+			return error500(req);
+		root = tmp.data();
+	}
 	if (res > 0)
 	{
 		if (std::remove(req.path.c_str()) < 0)

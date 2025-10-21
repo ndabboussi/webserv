@@ -72,29 +72,21 @@ static void parseType1(HttpRequest &req, std::istringstream &requestStream)
 static int createFileAtRightPlace(std::ofstream &Fout, std::string &path, std::string &name, HttpRequest &req)
 {
 	std::string tmp;
-	std::string nPath = path;
-	int depth = 0, i = 0;
+	std::string nPath = (path.size() > 0 && path[0] == '/') ? path : '/' + path;
+	std::vector<char> tmp2(50);
 	
-	tmp = nPath + "/" + name;
-	for (size_t j = 0; j < nPath.size(); j++)
-	{
-		if (nPath[j] && nPath[j] != '/' && i == 0)
-		{
-			i = 1;
-			depth++;
-		}
-		else if (nPath[j] == '/')
-			i = 0;
-	}
+	if (checkDot(nPath, req))
+		return 1;
+	if (!getcwd(tmp2.data(), 50))
+		return error500(req);
+	tmp = std::string(tmp2.data()) + nPath + "/" + name;
 	if (isAFile(tmp) > 0)
 		req.statusCode = 205;
 	else
 		req.statusCode = 201;
-	if (chdir(nPath.c_str()))
-		return 1;
-	Fout.open(name.c_str(), std::ios::binary);
-	while (depth--)
-		chdir("..");
+	Fout.open(tmp.c_str(), std::ios::binary);
+	if (!Fout.is_open())
+		return error500(req);
 	return 0;
 }
 
@@ -103,7 +95,7 @@ static int fillFile(HttpRequest &req, std::istringstream &requestStream, std::st
 	std::ofstream Fout;
 
 	if ((createFileAtRightPlace(Fout, req.path, *req.fileNames.rbegin(), req) || !Fout.is_open()))
-		return error500(req);
+		return 1;
 	std::string pat1 = "\r\n--" + boundary + "--";
 	std::string pat2 = "\r\n--" + boundary;
 	std::vector<char> buffer(8192);
