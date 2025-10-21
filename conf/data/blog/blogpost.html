@@ -5,13 +5,17 @@
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet"  href="/siteUtils/sidebar.css">
 
-    <title>Blog</title>
+
+    <title>POST Test</title>
   </head>
   <body>
-    <h1>Welcome to our Blog</h1>
-    <ul>
-      <li><a href="post1.html">First Post</a></li>
-    </ul>
+    <h1>Test POST upload</h1>
+    <form action="/upload" method="POST" enctype="application/x-www-form-urlencoded">
+      <label for="content">Enter content:</label><br>
+      <textarea id="content" name="content" rows="5" cols="40"></textarea><br><br>
+      <button type="submit">Send POST</button>
+    </form>
+
 
     <div class="button-container" style="margin-top: 2em;">
         <a class="button" href="/">🏠 Go back to Home Page</a>
