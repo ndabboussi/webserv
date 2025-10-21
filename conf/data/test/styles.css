@@ -13,7 +13,7 @@ html, body {
 }
 
 h1, h2 {
-  color: #333;
+  color: var(--title);
 }
 
 ul {
@@ -25,19 +25,30 @@ li {
   margin: 0.3em 0;
 }
 
+a {
+  color: var(--link);
+  text-decoration: none;
+  transition: color 0.2s, text-decoration 0.2s;
+}
+
+a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
 a.button {
   display: block;
   text-align: center;
   padding: 0.7em;
-  background-color: #fba6af;
-  color: #007acc;
+  background-color: var(--button-bg);
+  color: var(--button-text);
   text-decoration: none;
   border-radius: 8px;
   transition: background-color 0.2s;
 }
 
 a.button:hover {
-  background-color: #005fa3;
+  background-color: var(--button-hover);
   color: white;
 }
 
@@ -52,5 +63,98 @@ img {
   border-radius: 10px;
 }
 small {
-  color: #666;
+    color: var(--small-text);
 }
+
+
+/* ---------- DELETE PAGE STYLES ---------- */
+.delete-title {
+  color: #c0392b;
+}
+
+.delete-form {
+  margin-top: 1em;
+}
+
+.delete-form input[type="text"] {
+  padding: 8px;
+  width: 300px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.delete-form button {
+  margin-left: 10px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #e74c3c;
+  color: white;
+  cursor: pointer;
+}
+
+.delete-form button:hover {
+  background-color: #c0392b;
+}
+
+.result {
+  margin-top: 2em;
+  font-size: 1.2em;
+}
+
+/************ THEME VARIABLES ************/
+
+:root
+{
+  --bg: #ffffff;
+  --text: #000000;
+  --title: #333333;
+  --small-text: #666666;
+  --button-bg: #fba6af;
+  --button-text: #007acc;
+  --button-hover: #005fa3;
+  --link: #007acc;
+  --link-hover: #005fa3;
+}
+
+/* Si data-theme="dark" sur html */
+[data-theme="dark"]
+{
+  --bg: #333333;
+  --text: #ffffff;
+  --title: #fba6af;
+  --small-text: #cccccc;
+  --button-bg: #fba6af;
+  --button-text: #007acc;
+  --button-hover: #005fa3;
+
+  --link: #66b3ff;
+  --link-hover: #3399ff;
+}
+
+[data-theme="pink"]
+{
+  /* --bg: #fba6af;
+  --text: #e0e0e0; */
+
+  --bg: #ffe6f0;
+  --text: #333333;
+  --title: #333333;
+  --small-text: #555555;
+  --button-bg: #fba6af;
+  --button-text: #007acc;
+  --button-hover: #dddddd;
+
+  --link: #333333;
+  --link-hover: #007acc;
+}
+
+/* Tailles de texte dynamiques */
+html[data-fontsize="small"]
+  { font-size: 14px; }
+html[data-fontsize="normal"]
+  { font-size: 18px; }
+html[data-fontsize="large"]
+  { font-size: 22px; }
+html[data-fontsize="giant"]
+  { font-size: 28px; }

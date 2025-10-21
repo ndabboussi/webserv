@@ -287,3 +287,6 @@ CGI = https://www.ibm.com/docs/en/i/7.6.0?topic=programming-setting-up-cgi-progr
 by default request for server 2 should be intercepted by server 1
 
 - CGI config file
+
+
+try if root is only /
