@@ -44,9 +44,9 @@ class Client
 		~Client(void);
 
 	public:
-		int			getClientFd(void) const;
-		size_t		getIndexServer(void) const;
-		int			getPort(void) const;
+		int				getClientFd(void) const;
+		size_t			getIndexServer(void) const;
+		int				getPort(void) const;
 
 		pid_t		getCgiPid() const;
 		int			getCgiOutputFd() const;

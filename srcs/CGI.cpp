@@ -372,7 +372,7 @@ std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, 
 		response << "\r\n" << body;
 		return response.str();
 	
-		return "";
+		//return "";
 	}
 	catch (const std::exception& e)
 	{
