@@ -2,6 +2,7 @@
 
 //Operators----------------------------------------------------------------
 
+
 Client &Client::operator=(Client const &src)
 {
     if (this != &src)
