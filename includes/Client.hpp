@@ -50,7 +50,7 @@ class Client
 
 		pid_t		getCgiPid() const;
 		int			getCgiOutputFd() const;
-		bool		getCgiRunning() const;
+		bool		isCgiRunning() const;
 		std::string	getCgiBuffer() const;
 
 

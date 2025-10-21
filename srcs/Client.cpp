@@ -68,7 +68,7 @@ int	Client::getCgiOutputFd() const
 	return this->_cgiOutputFd;
 }
 
-bool	Client::getCgiRunning() const
+bool	Client::isCgiRunning() const
 {
 	return this->_cgiRunning;
 }

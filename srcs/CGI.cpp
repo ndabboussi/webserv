@@ -328,7 +328,7 @@ std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, 
 				throw std::runtime_error("Error 500: [CGI ERROR] write() wrote 0 bytes unexpectedly");
 			}
 		}
-		
+
 		close(pipeIn[1]); // Close write end of pipeIn so the child sees EOF and terminates
 
 		this->_client.setCgiPid(pid);
@@ -336,8 +336,8 @@ std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, 
 		this->_client.setCgiRunning(true);
 
 		// 4. Read all CGI output until EOF
-		std::string rawOutput = _readFromFd(pipeOut[0]);
-		close(pipeOut[0]);
+		// std::string rawOutput = _readFromFd(pipeOut[0]);
+		// close(pipeOut[0]);
 
 		// Wait for CGI child to exit
 		int status = 0;
@@ -346,6 +346,10 @@ std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, 
 			throw std::runtime_error("[CGI ERROR] process exited with status " + toString(WEXITSTATUS(status)));
 		if (WIFSIGNALED(status))
 			throw std::runtime_error("[CGI ERROR] process killed by signal " + toString(WTERMSIG(status)));
+
+		// 4. Read all CGI output until EOF
+		std::string rawOutput = _readFromFd(pipeOut[0]);
+		close(pipeOut[0]);
 
 		//5. Parse and construct HTTP response
 		int cgiStatus = 200;
@@ -366,8 +370,9 @@ std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, 
 		for (std::map<std::string,std::string>::iterator it = headers.begin(); it != headers.end(); it++)
 			response << it->first << ": " << it->second << "\r\n";
 		response << "\r\n" << body;
-
 		return response.str();
+	
+		return "";
 	}
 	catch (const std::exception& e)
 	{

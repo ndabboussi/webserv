@@ -166,13 +166,24 @@ int launchServer(std::vector<Server> &servers)
 			}
 		}
 
+		for (size_t i = 0; i < clients.size(); ++i)
+		{
+			if (clients[i].isCgiRunning())
+			{
+				int cgiFd = clients[i].getCgiOutputFd();
+				FD_SET(cgiFd, &readfds);
+				if (cgiFd > maxFd)
+					maxFd = cgiFd;
+			}
+		}
+
 		// Register all client sockets
 		for (size_t i = 0 ; i < clients.size(); i++)
 		{
 			int clientFd = clients[i].getClientFd();
 			FD_SET(clientFd, &readfds);
 			if (clientFd > maxFd)
-				maxFd = clientFd;
+				maxFd = clientFd;//should I do maxFd++ ? Or value of fd really needed ?
 		}
 	
 		struct timeval tv;
@@ -229,6 +240,35 @@ int launchServer(std::vector<Server> &servers)
 		// STEP 5: Handle activity from connected clients
 		for (size_t i = 0; i < clients.size(); i++)
 		{
+			if (clients[i].isCgiRunning())
+			{
+				int cgiFd = clients[i].getCgiOutputFd();
+				if (FD_ISSET(cgiFd, &readfds))
+				{
+					std::string chunk;
+					char	buf[4096];
+					ssize_t	n = read(cgiFd, buf, sizeof(buf));
+					if (n < 0)
+						perror("CGI read error");
+						//throw error
+
+					if (n > 0)
+						clients[i].appendCgiBuffer(buf, n);
+					else if (n == 0)//EOF = CGI finished
+					{
+						int status;
+						waitpid(clients[i].getCgiPid(), &status, WNOHANG);
+						clients[i].setCgiRunning(false);
+						close(cgiFd);
+
+						std::string	rawOutput = clients[i].getCgiBuffer();
+						Response resp(clients[i].getClientFd(), clients[i].getRequest(), servers[clients[i].getIndexServer()]);
+						resp.finalizeCgiResponse(rawOutput);
+					}
+				}
+				continue;
+			}
+
 			int fd = clients[i].getClientFd();
 			if (FD_ISSET(fd, &readfds))
 			{

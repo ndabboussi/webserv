@@ -116,8 +116,8 @@ std::string  statusCodeResponse(int code)
 
 		//redirection messages
 		case 300: return "Multiple Choices"; //dont handle
-		case 301: return "Moved Permanently";
-		case 302: return "Found";
+		case 301: return "Moved Permanently"; //handle
+		case 302: return "Found"; //Handle
 		case 303: return "See Other";
 		case 304: return "Not Modified";
 		case 305: return "Use Proxy";
