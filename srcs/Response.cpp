@@ -324,12 +324,12 @@ bool	Response::cgiResponse(Client &client, Context &context)
 		std::string result = cgi.executeCgi(this->_request, this->_server, this->_clientFd, context);
 		if (this->_server.getFork())
 			throw std::runtime_error("fail");
-		// size_t ret = send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
-		// if (ret <= 0)
-		// {
-		// 	std::cerr << RED "[sendTo] send() failed (client may have disconnected)" << RESET << std::endl;
-		// 	close(this->_clientFd);
-		// }
+		size_t ret = send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
+		if (ret <= 0)
+		{
+			std::cerr << RED "[sendTo] send() failed (client may have disconnected)" << RESET << std::endl;
+			close(this->_clientFd);
+		}
 	}
 	catch (const std::exception &e)
 	{
