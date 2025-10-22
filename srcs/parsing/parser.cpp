@@ -30,7 +30,7 @@ static std::vector<std::string> tokenizeConfig(const std::string &configFile)
 			continue;
 		tokenizeLine(line, tokens);
 	}
-
+	file.close();
 	return tokens;
 }
 

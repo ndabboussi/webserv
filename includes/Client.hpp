@@ -35,12 +35,15 @@ class Client
 		size_t		_indexServer;
 		int			_port;
 
-		int			_checkName;
-		std::string	_data;//store data from request or CGI
-		long long	_content_length;
-		size_t		_endHeader;
-		int			_firstRead;
-		int			_chunked;
+		//for request
+		struct timeval	_time;
+		int				_checkName;
+		int				_checkMths;
+		std::string		_data;//store data from request or CGI
+		long long		_content_length;
+		size_t			_endHeader;
+		int				_firstRead;
+		int				_chunked;
 
 		//if request is chunked
 		int			_firstChunk;
@@ -57,6 +60,7 @@ class Client
 
 	private:
 		int 	checkName(Server &server);
+		void	checkFirstLine();
 		int		loadByChunk(const Server &server);
 		void 	firstRead(Server &server);
 		void 	otherRead(Server &server);
@@ -92,6 +96,7 @@ class Client
 
 		void	handleClientRead(Server &server);
 		void	handleClientWrite(Server &server, Context &context);
+		void	checkTimeOut();
 
 };
 
