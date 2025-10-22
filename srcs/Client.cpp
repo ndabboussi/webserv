@@ -23,6 +23,8 @@ Client &Client::operator=(Client const &src)
 		this->_before = src._before;
 		this->_request = src._request;
 		this->_parsed = src._parsed;
+		this->_time = src._time;
+		this->_checkMths = src._checkMths;
     }
     return *this;
 }
@@ -33,14 +35,14 @@ Client::Client(void)
 {}
 
 Client::Client(int clientFd, size_t indexServer, int port): _parsed(false), _clientFd(clientFd), _indexServer(indexServer), _port(port),
-		_checkName(0), _content_length(0), _endHeader(0), _firstRead(0), _chunked(0), _firstChunk(0), _continue(0), _bodySize(0),
-		 _left(0)
+		_time((timeval){0, 0}), _checkName(0), _checkMths(0), _content_length(0), _endHeader(0), _firstRead(0), _chunked(0), _firstChunk(0), _continue(0),
+		_bodySize(0), _left(0)
 {}
 
 Client::Client(Client const &src) : _request(src._request), _parsed(src._parsed), _clientFd(src._clientFd), _indexServer(src._indexServer),
-		_port(src._port), _checkName(src._checkName), _data(src._data), _content_length(src._content_length), _endHeader(src._endHeader),
-		_firstRead(src._firstRead), _chunked(src._chunked),_firstChunk(src._firstChunk), _continue(src._continue),
-		_before(src._before), _bodySize(src._bodySize), _left(src._left)
+		_port(src._port),  _time(src._time), _checkName(src._checkName), _checkMths(src._checkMths), _data(src._data),
+		_content_length(src._content_length), _endHeader(src._endHeader), _firstRead(src._firstRead), _chunked(src._chunked),
+		_firstChunk(src._firstChunk), _continue(src._continue), _before(src._before), _bodySize(src._bodySize), _left(src._left)
 {}
 
 Client::~Client(void)
@@ -160,7 +162,6 @@ void	Client::sendErrorAndReturn(std::string errMsg, int error)
 		usleep(300000);
 		this->_request.header.insert(std::make_pair("Connection", "close"));
 	}
-	// sendResponse(this->_clientFd, this->_request, servers, context);
 }
 
 static int	deleteChunkSize(std::string data, std::string &src)
@@ -276,12 +277,14 @@ int Client::checkName(Server &server)
 		std::istringstream requestStream(this->_data.substr(this->_data.find("Host: ") + 6));
 		if (std::getline(requestStream, str))
 		{
+			if (str.size() == 0 || str[str.size() - 1] != '\r')
+				return (true);
 			size_t pos = (str.find(':') != std::string::npos) ? str.find(':') : str.size();
 			std::string name = server.getName();
 			str = str.substr(0, pos);
 			if (!name.empty() && str != name)
 			{
-				sendErrorAndReturn("Error 400: Bad request.", 400);
+				sendErrorAndReturn("Error 400: Bad request", 400);
 				return (false);
 			}
 		}
@@ -292,7 +295,7 @@ int Client::checkName(Server &server)
 
 void Client::firstRead(Server &server)
 {
-	char				buffer[500] = {0};
+	char				buffer[4096] = {0};
 	int					bytes_read;
 
 	bytes_read = recv(this->_clientFd, buffer, sizeof(buffer), 0);//use MSG_DONTWAIT ?
@@ -383,11 +386,69 @@ void Client::otherRead(Server &server)
 
 void	Client::handleClientWrite(Server &server, Context &context)
 {
+	if (this->_request.statusCode == 100)
+	{
+		this->_parsed = false;
+		this->_time = (timeval){0, 0};
+	}
 	sendResponse(*this, this->_clientFd, this->_request, server, context);
+}
+
+void	Client::checkTimeOut()
+{
+	if (this->_time.tv_sec == 0)
+		return ;
+	struct timeval current;
+	gettimeofday(&current, NULL);
+	float elapsed = current.tv_sec - this->_time.tv_sec + ((current.tv_usec - this->_time.tv_usec) / 1e6);
+	if (elapsed > 5)
+		sendErrorAndReturn("Error 408: Request Timeout", 408);
+}
+
+static int checkErrors(std::string method, std::string version)
+{
+	if (method != "GET" && method != "POST" && method != "DELETE")
+		return 501;
+	else if (version != "HTTP/1.1")
+		return 505;
+	return 0;
+}
+
+void	Client::checkFirstLine()
+{
+	std::istringstream			requestStream(this->_data, std::ios::binary);
+	std::string					buffer;
+	std::vector<std::string>	line;
+
+	if (std::getline(requestStream, buffer))
+	{
+		if (buffer[buffer.size() - 1] != '\r')
+			return ;
+		std::istringstream iss(buffer);
+		std::string token;
+
+		while (iss >> token)
+			line.push_back(token);
+		if (line.size() != 3)
+		{
+			sendErrorAndReturn("Error 400: Bad request", 400);
+			return ;
+		}
+		int res = checkErrors(line[0], line[2]);
+		if (res)
+		{
+			std::string msg = (res == 501) ? "Error 501: Not inplemented" : "Error 505: HTTP Version Not Supported";
+			sendErrorAndReturn(msg, 400);
+			return ;
+		}
+	}
+	this->_checkMths = 1;
 }
 
 void	Client::handleClientRead(Server &server)
 {
+	if (this->_time.tv_sec == 0)
+		gettimeofday(&this->_time, NULL);
 	try
 	{
 		if (this->_content_length > server.getMaxBodyClientSize())
@@ -414,7 +475,8 @@ void	Client::handleClientRead(Server &server)
 	}
 	catch(const std::exception& e)
 	{
-		std::cerr << e.what() << '\n';
+		if (!this->_data.empty() && !this->_checkMths)
+			checkFirstLine();
 		return ;
 	}
 	

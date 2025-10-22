@@ -11,9 +11,9 @@
 # include <string>
 # include <dirent.h>	 // for opendir
 # include <algorithm>
-
-#include <cstring>      // memset
-#include <arpa/inet.h>  // sockaddr_in, inet_addr
+# include <sys/time.h>
+# include <cstring>      // memset
+# include <arpa/inet.h>  // sockaddr_in, inet_addr
 
 # include <sstream>  // pour std::istringstream
 # include <fstream>  // pour std::ifstream

@@ -249,24 +249,20 @@ int launchServer(std::vector<Server> &servers)
 		{
 			int fd = clients[i].getClientFd();
 			size_t	server_index = clients[i].getIndexServer();
+			if (!clients[i].getParsed())
+				clients[i].checkTimeOut();
 			if (!clients[i].getParsed() && FD_ISSET(fd, &readfds))
 				clients[i].handleClientRead(servers[server_index]);
 			else if (clients[i].getParsed() && FD_ISSET(fd, &writefds))
 			{
 				clients[i].handleClientWrite(servers[server_index], context);
-				if (clients[i].getRequest().isCgi && !(!clients[i].isCgiRunning() && clients[i].isCgiToSend()))
+				if (clients[i].getRequest().statusCode == 100 || (clients[i].getRequest().isCgi && !(!clients[i].isCgiRunning() && clients[i].isCgiToSend())))
 					continue;
 				close(fd);
 				clients.erase(clients.begin() + i);
 				std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
 							<< RESET << std::endl;
 				i--;
-				if (servers[server_index].getFork())
-				{
-					breake = 1;
-					break;
-				}
-				continue;
 			}
 		}
 		if (breake)
