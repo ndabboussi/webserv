@@ -58,7 +58,7 @@ int error500(HttpRequest &req)
 
 int error501(HttpRequest &req)
 {
-	std::cerr << RED "Error 501: Not inplemented: "<< RESET << std::endl;
+	std::cerr << RED "Error 501: Not inplemented"<< RESET << std::endl;
 	req.statusCode = 501;
 	return 1;
 }

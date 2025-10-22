@@ -272,25 +272,29 @@ int launchServer(std::vector<Server> &servers)
 			// 	}
 			// 	continue;
 			// }
-
 			int fd = clients[i].getClientFd();
 			size_t	server_index = clients[i].getIndexServer();
+			if (!clients[i].getParsed())
+				clients[i].checkTimeOut();
 			if (!clients[i].getParsed() && FD_ISSET(fd, &readfds))
 				clients[i].handleClientRead(servers[server_index]);
 			else if (clients[i].getParsed() && FD_ISSET(fd, &writefds))
 			{
 				clients[i].handleClientWrite(servers[server_index], context);
-				close(fd);
-				clients.erase(clients.begin() + i);
-				std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
-							<< RESET << std::endl;
-				i--;
-				if (servers[server_index].getFork())
+				if (clients[i].getRequest().statusCode != 100)
 				{
-					breake = 1;
-					break;
+					close(fd);
+					clients.erase(clients.begin() + i);
+					std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
+								<< RESET << std::endl;
+					i--;
+					if (servers[server_index].getFork())
+					{
+						breake = 1;
+						break;
+					}
+					continue;
 				}
-				continue;
 			}
 		}
 		if (breake)
