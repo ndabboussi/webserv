@@ -182,7 +182,7 @@ int launchServer(std::vector<Server> &servers)
 				int cgiFd = clients[i].getCgiOutputFd();
 				if (cgiFd > 0)
 				{
-					FD_SET(cgiFd, &writefds);
+					FD_SET(cgiFd, &readfds);
 					if (cgiFd > maxFd)
 						maxFd = cgiFd;
 				}
@@ -289,3 +289,4 @@ int launchServer(std::vector<Server> &servers)
 //case 2: client.cgiRunning + !client.cgiSend
 //case 3: client.cgiRunning + client.cgiToSend
 //case 4: !client.cgiRunning + client.cgiToSend = CLOSE
+

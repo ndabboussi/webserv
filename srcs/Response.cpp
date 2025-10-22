@@ -369,34 +369,32 @@ bool	Response::cgiResponse(Client &client, Context &context)
 		{
 			std::cout << BOLD "[HERE 2]" RESET << std::endl;
 			int status = 0;
-			waitpid(client.getCgiPid(), &status, WNOHANG);
+			int result = waitpid(client.getCgiPid(), &status, WNOHANG);
+			if (result < 0)
+				perror("waitpid");
 			if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
 				throw std::runtime_error("[CGI ERROR] process exited with status " + toString(WEXITSTATUS(status)));
 			if (WIFSIGNALED(status))
 				throw std::runtime_error("[CGI ERROR] process killed by signal " + toString(WTERMSIG(status)));
 
 			int cgiFd = client.getCgiOutputFd();
-			if (cgiFd > 0)
+			if (result != 0)
 			{
-				// if (FD_ISSET(cgiFd, &context.allClientFds))
-				// {
-					std::cout << BOLD "[HERE 3]" RESET << std::endl;
-					char buf[4096];
-					ssize_t n = read(cgiFd, buf, sizeof(buf));
-					if (n < 0)
-						perror("[CGI] read failure");
-					else if (n > 0)
-					{
-						std::cout << BOLD "[HERE 4]" RESET << std::endl;
-						client.setCgiBuffer(client.getCgiBuffer() + std::string(buf, n));
-					}
-					else if (n == 0)
-					{
+				std::cout << BOLD "[HERE 3]" RESET << std::endl;
+				char buf[4096];
+				ssize_t n = read(cgiFd, buf, sizeof(buf));
+				if (n < 0)
+					perror("[CGI] read failure");
+				else if (n > 0)
+				{
+					std::cout << BOLD "[HERE 4]" RESET << std::endl;
+					client.setCgiBuffer(client.getCgiBuffer() + std::string(buf, n));
+				}
+				else if (n == 0)
+				{
 					std::cout << BOLD "[HERE 5]" RESET << std::endl;	
-						client.setCgiToSend(true);
-						//close(cgiFd);
-					}
-				// }
+					client.setCgiToSend(true);
+				}
 			}
 			return true;
 		}
