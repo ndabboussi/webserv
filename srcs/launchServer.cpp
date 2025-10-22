@@ -168,17 +168,6 @@ int launchServer(std::vector<Server> &servers)
 			}
 		}
 
-		// for (size_t i = 0; i < clients.size(); ++i)
-		// {
-		// 	if (clients[i].isCgiRunning())
-		// 	{
-		// 		int cgiFd = clients[i].getCgiOutputFd();
-		// 		FD_SET(cgiFd, &readfds);
-		// 		if (cgiFd > maxFd)
-		// 			maxFd = cgiFd;
-		// 	}
-		// }
-
 		// Register all client sockets
 		for (size_t i = 0 ; i < clients.size(); i++)
 		{
@@ -187,8 +176,20 @@ int launchServer(std::vector<Server> &servers)
 				FD_SET(clientFd, &readfds);
 			else
 				FD_SET(clientFd, &writefds);
+
+			if (clients[i].isCgiRunning())
+			{
+				int cgiFd = clients[i].getCgiOutputFd();
+				if (cgiFd > 0)
+				{
+					FD_SET(cgiFd, &readfds);
+					if (cgiFd > maxFd)
+						maxFd = cgiFd;
+				}
+			}
+
 			if (clientFd > maxFd)
-				maxFd = clientFd;//should I do maxFd++ ? Or value of fd really needed ?
+				maxFd = clientFd;
 		}
 	
 		struct timeval tv;
@@ -237,41 +238,15 @@ int launchServer(std::vector<Server> &servers)
 			}
 		}
 
-		context.allClientFds.clear();
+
+		context.allClientFds.clear();//actualise Context clientFds to close in case of CGI
 		for (size_t i = 0; i < clients.size(); i++)
 			context.allClientFds.push_back(clients[i].getClientFd());
+
 		int breake = 0;
 		// STEP 5: Handle activity from connected clients
 		for (size_t i = 0; i < clients.size(); i++)
 		{
-			// if (clients[i].isCgiRunning())
-			// {
-			// 	int cgiFd = clients[i].getCgiOutputFd();
-			// 	if (FD_ISSET(cgiFd, &readfds))
-			// 	{
-			// 		std::string chunk;
-			// 		char	buf[4096];
-			// 		ssize_t	n = read(cgiFd, buf, sizeof(buf));
-			// 		if (n < 0)
-			// 			perror("CGI read error");
-			// 			//throw error
-
-			// 		if (n > 0)
-			// 			clients[i].appendCgiBuffer(buf, n);
-			// 		else if (n == 0)//EOF = CGI finished
-			// 		{
-			// 			int status;
-			// 			waitpid(clients[i].getCgiPid(), &status, WNOHANG);
-			// 			clients[i].setCgiRunning(false);
-			// 			close(cgiFd);
-
-			// 			std::string	rawOutput = clients[i].getCgiBuffer();
-			// 			Response resp(clients[i].getClientFd(), clients[i].getRequest(), servers[clients[i].getIndexServer()]);
-			// 			resp.finalizeCgiResponse(rawOutput);
-			// 		}
-			// 	}
-			// 	continue;
-			// }
 			int fd = clients[i].getClientFd();
 			size_t	server_index = clients[i].getIndexServer();
 			if (!clients[i].getParsed())
@@ -281,20 +256,13 @@ int launchServer(std::vector<Server> &servers)
 			else if (clients[i].getParsed() && FD_ISSET(fd, &writefds))
 			{
 				clients[i].handleClientWrite(servers[server_index], context);
-				if (clients[i].getRequest().statusCode != 100)
-				{
-					close(fd);
-					clients.erase(clients.begin() + i);
-					std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
-								<< RESET << std::endl;
-					i--;
-					if (servers[server_index].getFork())
-					{
-						breake = 1;
-						break;
-					}
+				if (clients[i].getRequest().statusCode == 100 || (clients[i].getRequest().isCgi && !(!clients[i].isCgiRunning() && clients[i].isCgiToSend())))
 					continue;
-				}
+				close(fd);
+				clients.erase(clients.begin() + i);
+				std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
+							<< RESET << std::endl;
+				i--;
 			}
 		}
 		if (breake)
@@ -312,3 +280,9 @@ int launchServer(std::vector<Server> &servers)
 	std::cout << "\033[1;32m[✓] Server shutdown complete.\033[0m\n";
 	return 0;
 }
+
+//case 1: !client.cgiRunning !client.cgiSend
+//case 2: client.cgiRunning + !client.cgiSend
+//case 3: client.cgiRunning + client.cgiToSend
+//case 4: !client.cgiRunning + client.cgiToSend = CLOSE
+

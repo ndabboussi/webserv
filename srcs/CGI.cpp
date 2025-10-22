@@ -244,7 +244,7 @@ bool	CGI::_postSupported() const
 //   5. Builds a proper HTTP response
 // Returns: A complete HTTP/1.1 response as a string
 
-std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context &context)
+void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context &context)
 {
 	try
 	{
@@ -304,8 +304,7 @@ std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, 
 			std::cerr << "execve failed: " << strerror(errno) << std::endl;
 			close(pipeIn[0]);
 			close(pipeOut[1]);
-
-			return "";
+			// return "";
 		}
 
 		//3. Parent process
@@ -334,45 +333,8 @@ std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, 
 		this->_client.setCgiPid(pid);
 		this->_client.setCgiOutputFd(pipeOut[0]);
 		this->_client.setCgiRunning(true);
-
-		// 4. Read all CGI output until EOF
-		// std::string rawOutput = _readFromFd(pipeOut[0]);
-		// close(pipeOut[0]);
-
-		// Wait for CGI child to exit
-		int status = 0;
-		waitpid(pid, &status, WNOHANG);
-		if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-			throw std::runtime_error("[CGI ERROR] process exited with status " + toString(WEXITSTATUS(status)));
-		if (WIFSIGNALED(status))
-			throw std::runtime_error("[CGI ERROR] process killed by signal " + toString(WTERMSIG(status)));
-
-		// 4. Read all CGI output until EOF
-		std::string rawOutput = _readFromFd(pipeOut[0]);
-		close(pipeOut[0]);
-
-		//5. Parse and construct HTTP response
-		int cgiStatus = 200;
-		std::map<std::string,std::string> headers;
-		std::string body = _parseCgiOutput(rawOutput, cgiStatus, headers);
-
-		std::ostringstream response;
-		response << "HTTP/1.1 " << cgiStatus << " OK\r\n";
-
-		// Add Content-Length if CGI didn’t send one!!! Important: Without Content-Length, browser never knows response end
-		if (headers.find("Content-Length") == headers.end())
-		{
-			std::stringstream oss;
-			oss << body.size();
-			headers["Content-Length"] = oss.str();
-		}
-
-		for (std::map<std::string,std::string>::iterator it = headers.begin(); it != headers.end(); it++)
-			response << it->first << ": " << it->second << "\r\n";
-		response << "\r\n" << body;
-		return response.str();
-	
-		//return "";
+		this->_client.setCgiToSend(false);
+		this->_client.setCgiBuffer("");
 	}
 	catch (const std::exception& e)
 	{
@@ -384,8 +346,8 @@ std::string CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, 
 			<< "\r\n\r\n"
 			<< "<html><body><h1>CGI Error</h1><p>"
 			<< e.what() << "</p></body></html>";
-		std::cout << GREEN << err.str() << RESET << std::endl; 
-		return err.str();
+		std::cerr << RED << err.str() << RESET << std::endl; 
+		// return err.str();
 	}
 }
 

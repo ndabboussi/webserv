@@ -56,6 +56,7 @@ class Client
 		pid_t		_cgiPid;
 		int			_cgiOutputFd;
 		bool		_cgiRunning;
+		bool		_cgiToSend;
 		std::string	_cgiBuffer;
 
 	private:
@@ -77,7 +78,9 @@ class Client
 		pid_t		getCgiPid() const;
 		int			getCgiOutputFd() const;
 		bool		isCgiRunning() const;
+		bool		isCgiToSend() const;
 		std::string	getCgiBuffer() const;
+
 		int			getClientFd(void) const;
 		size_t		getIndexServer(void) const;
 		int			getPort(void) const;
@@ -92,6 +95,7 @@ class Client
 		void	setCgiPid(pid_t pid);
 		void	setCgiOutputFd(int fd);
 		void	setCgiRunning(bool flag);
+		void	setCgiToSend(bool flag);
 		void	setCgiBuffer(std::string buffer);
 
 		void	handleClientRead(Server &server);
