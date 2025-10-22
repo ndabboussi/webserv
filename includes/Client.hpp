@@ -70,15 +70,10 @@ class Client
 		~Client(void);
 
 	public:
-		int				getClientFd(void) const;
-		size_t			getIndexServer(void) const;
-		int				getPort(void) const;
-
 		pid_t		getCgiPid() const;
 		int			getCgiOutputFd() const;
 		bool		isCgiRunning() const;
 		std::string	getCgiBuffer() const;
-
 		int			getClientFd(void) const;
 		size_t		getIndexServer(void) const;
 		int			getPort(void) const;
@@ -95,7 +90,6 @@ class Client
 		void	setCgiRunning(bool flag);
 		void	setCgiBuffer(std::string buffer);
 
-		bool	handleClient(Server &server, Context &context);
 		void	handleClientRead(Server &server);
 		void	handleClientWrite(Server &server, Context &context);
 

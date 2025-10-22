@@ -129,6 +129,8 @@ void	Client::setCgiRunning(bool flag)
 void	Client::setCgiBuffer(std::string buffer)
 {
 	this->_cgiBuffer = buffer;
+}
+
 void Client::setRequest(HttpRequest req)
 {
 	this->_request = req;
@@ -371,7 +373,7 @@ void Client::otherRead(Server &server)
 
 void	Client::handleClientWrite(Server &server, Context &context)
 {
-	sendResponse(this->_clientFd, this->_request, server, context);
+	sendResponse(*this, this->_clientFd, this->_request, server, context);
 }
 
 void	Client::handleClientRead(Server &server)
