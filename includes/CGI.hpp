@@ -6,8 +6,8 @@
 
 # include <stdexcept>
 
-struct HttpRequest;
 struct Context;
+struct HttpRequest;
 
 enum	CgiType
 {
