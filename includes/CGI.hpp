@@ -26,6 +26,7 @@ class	CGI
 {
 	private:
 		HttpRequest							&_request;
+		Client								&_client;
 		std::string							_extension;
 		std::string							_path;
 		std::map<std::string, std::string> 	_defaults;;
@@ -44,7 +45,7 @@ class	CGI
 		bool						_postSupported() const;
 
 	public:
-		CGI(HttpRequest &request);
+		CGI(HttpRequest &request, Client &client);
 		CGI &operator=(CGI const &src);
 		CGI(CGI const &src);
 		~CGI();

@@ -168,6 +168,17 @@ int launchServer(std::vector<Server> &servers)
 			}
 		}
 
+		// for (size_t i = 0; i < clients.size(); ++i)
+		// {
+		// 	if (clients[i].isCgiRunning())
+		// 	{
+		// 		int cgiFd = clients[i].getCgiOutputFd();
+		// 		FD_SET(cgiFd, &readfds);
+		// 		if (cgiFd > maxFd)
+		// 			maxFd = cgiFd;
+		// 	}
+		// }
+
 		// Register all client sockets
 		for (size_t i = 0 ; i < clients.size(); i++)
 		{
@@ -177,7 +188,7 @@ int launchServer(std::vector<Server> &servers)
 			else
 				FD_SET(clientFd, &writefds);
 			if (clientFd > maxFd)
-				maxFd = clientFd;
+				maxFd = clientFd;//should I do maxFd++ ? Or value of fd really needed ?
 		}
 	
 		struct timeval tv;
@@ -220,10 +231,12 @@ int launchServer(std::vector<Server> &servers)
 
 					std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
 									<< serverPorts[j] << RESET << std::endl;
+
 					clients.push_back(Client(client_fd, i, serverPorts[j]));
 				}
 			}
 		}
+
 		context.allClientFds.clear();
 		for (size_t i = 0; i < clients.size(); i++)
 			context.allClientFds.push_back(clients[i].getClientFd());
@@ -231,6 +244,35 @@ int launchServer(std::vector<Server> &servers)
 		// STEP 5: Handle activity from connected clients
 		for (size_t i = 0; i < clients.size(); i++)
 		{
+			// if (clients[i].isCgiRunning())
+			// {
+			// 	int cgiFd = clients[i].getCgiOutputFd();
+			// 	if (FD_ISSET(cgiFd, &readfds))
+			// 	{
+			// 		std::string chunk;
+			// 		char	buf[4096];
+			// 		ssize_t	n = read(cgiFd, buf, sizeof(buf));
+			// 		if (n < 0)
+			// 			perror("CGI read error");
+			// 			//throw error
+
+			// 		if (n > 0)
+			// 			clients[i].appendCgiBuffer(buf, n);
+			// 		else if (n == 0)//EOF = CGI finished
+			// 		{
+			// 			int status;
+			// 			waitpid(clients[i].getCgiPid(), &status, WNOHANG);
+			// 			clients[i].setCgiRunning(false);
+			// 			close(cgiFd);
+
+			// 			std::string	rawOutput = clients[i].getCgiBuffer();
+			// 			Response resp(clients[i].getClientFd(), clients[i].getRequest(), servers[clients[i].getIndexServer()]);
+			// 			resp.finalizeCgiResponse(rawOutput);
+			// 		}
+			// 	}
+			// 	continue;
+			// }
+
 			int fd = clients[i].getClientFd();
 			size_t	server_index = clients[i].getIndexServer();
 			if (!clients[i].getParsed() && FD_ISSET(fd, &readfds))
@@ -254,7 +296,7 @@ int launchServer(std::vector<Server> &servers)
 		if (breake)
 			break ;
 	}
-	// STEP 6: Cleanup on shutdown (not usually reached)
+	// STEP 6: Cleanup on shutdown (reached in case of CTRL+C or CGI children)
 	for(size_t i = 0; i < servers.size(); i++)
 	{
 		const std::vector<int> fds = servers[i].getSocketFds();

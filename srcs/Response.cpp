@@ -300,7 +300,7 @@ bool	Response::redirectResponse()
 }
 
 // ----- CGI EXECUTION ----------------------------------------------------
-bool	Response::cgiResponse(Context &context)
+bool	Response::cgiResponse(Client &client, Context &context)
 {
 	if (!this->_request.isCgi)
 		return false;
@@ -308,7 +308,7 @@ bool	Response::cgiResponse(Context &context)
 	std::cout << BLUE "[CGI] Executing script: " << this->_request.path << RESET << std::endl;
 	try
 	{
-		CGI cgi(this->_request);
+		CGI cgi(this->_request, client);
 
 		cgi.setCgiInfos(this->_request, this->_server);
 
@@ -324,12 +324,12 @@ bool	Response::cgiResponse(Context &context)
 		std::string result = cgi.executeCgi(this->_request, this->_server, this->_clientFd, context);
 		if (this->_server.getFork())
 			throw std::runtime_error("fail");
-		size_t ret = send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
-		if (ret <= 0)
-		{
-			std::cerr << RED "[sendTo] send() failed (client may have disconnected)" << RESET << std::endl;
-			close(this->_clientFd);
-		}
+		// size_t ret = send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
+		// if (ret <= 0)
+		// {
+		// 	std::cerr << RED "[sendTo] send() failed (client may have disconnected)" << RESET << std::endl;
+		// 	close(this->_clientFd);
+		// }
 	}
 	catch (const std::exception &e)
 	{
@@ -483,7 +483,7 @@ bool	Response::fileResponse()
 }
 
 
-void sendResponse(int client_fd, HttpRequest &req, Server &server, Context &context)
+void sendResponse(Client &client, int client_fd, HttpRequest &req, Server &server, Context &context)
 {
 	Response	resp(client_fd, req, server);
 
@@ -494,7 +494,7 @@ void sendResponse(int client_fd, HttpRequest &req, Server &server, Context &cont
 		return;
 	if (resp.redirectResponse())
 		return;
-	if (resp.cgiResponse(context))
+	if (resp.cgiResponse(client, context))
 		return;
 	if (resp.postMethodResponse())
 		return;

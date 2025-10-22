@@ -63,6 +63,27 @@ int	Client::getPort(void) const
 	return this->_port;
 }
 
+pid_t	Client::getCgiPid() const
+{
+	return this->_cgiPid;
+}
+
+int	Client::getCgiOutputFd() const
+{
+	return this->_cgiOutputFd;
+}
+
+bool	Client::isCgiRunning() const
+{
+	return this->_cgiRunning;
+}
+
+std::string	Client::getCgiBuffer() const
+{
+	return this->_cgiBuffer;	
+}
+
+
 int	Client::getParsed(void) const
 {
 	return this->_parsed;
@@ -90,6 +111,24 @@ void	Client::setPort(int port)
 	this->_port = port;
 }
 
+void	Client::setCgiPid(pid_t pid)
+{
+	this->_cgiPid = pid;
+}
+
+void	Client::setCgiOutputFd(int fd)
+{
+	this->_cgiOutputFd = fd;
+}
+
+void	Client::setCgiRunning(bool flag)
+{
+	this->_cgiRunning = flag;
+}
+
+void	Client::setCgiBuffer(std::string buffer)
+{
+	this->_cgiBuffer = buffer;
 void Client::setRequest(HttpRequest req)
 {
 	this->_request = req;

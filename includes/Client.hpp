@@ -36,7 +36,7 @@ class Client
 		int			_port;
 
 		int			_checkName;
-		std::string	_data;
+		std::string	_data;//store data from request or CGI
 		long long	_content_length;
 		size_t		_endHeader;
 		int			_firstRead;
@@ -48,6 +48,12 @@ class Client
 		std::string	_before;
 		long long	_bodySize;
 		long long	_left;
+
+		//CGI handling
+		pid_t		_cgiPid;
+		int			_cgiOutputFd;
+		bool		_cgiRunning;
+		std::string	_cgiBuffer;
 
 	private:
 		int 	checkName(Server &server);
@@ -64,6 +70,15 @@ class Client
 		~Client(void);
 
 	public:
+		int				getClientFd(void) const;
+		size_t			getIndexServer(void) const;
+		int				getPort(void) const;
+
+		pid_t		getCgiPid() const;
+		int			getCgiOutputFd() const;
+		bool		isCgiRunning() const;
+		std::string	getCgiBuffer() const;
+
 		int			getClientFd(void) const;
 		size_t		getIndexServer(void) const;
 		int			getPort(void) const;
@@ -75,6 +90,12 @@ class Client
 		void	setPort(int port);
 		void	setRequest(HttpRequest req);
 
+		void	setCgiPid(pid_t pid);
+		void	setCgiOutputFd(int fd);
+		void	setCgiRunning(bool flag);
+		void	setCgiBuffer(std::string buffer);
+
+		bool	handleClient(Server &server, Context &context);
 		void	handleClientRead(Server &server);
 		void	handleClientWrite(Server &server, Context &context);
 

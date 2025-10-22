@@ -5,6 +5,7 @@
 # include "Server.hpp"
 
 struct	Context;
+class	Client;
 
 class	Server;
 struct	HttpRequest;
@@ -58,7 +59,7 @@ class	Response
 		bool		errorResponse();
 		bool		autoIndexResponse();
 		bool		redirectResponse();
-		bool		cgiResponse(Context &context);
+		bool		cgiResponse(Client &client, Context &context);
 		bool		postMethodResponse();
 		std::string	buildPostConfirmation();
 		bool		fileResponse();
