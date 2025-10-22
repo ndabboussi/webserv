@@ -300,35 +300,134 @@ bool	Response::redirectResponse()
 }
 
 // ----- CGI EXECUTION ----------------------------------------------------
+
+// Parses the raw CGI output into headers and body
+// Extracts "Status" if present, otherwise defaults to 200
+std::string parseCgiOutput(const std::string &raw, int &outStatusCode, std::map<std::string,std::string> &outHeaders)
+{
+	std::string::size_type headerEnd = raw.find("\r\n\r\n");
+	if (headerEnd == std::string::npos)
+		headerEnd = raw.find("\n\n");
+
+	std::string headers = raw.substr(0, headerEnd);
+	std::string body = (headerEnd == std::string::npos) ? "" : raw.substr(headerEnd + 4);
+
+	std::istringstream iss(headers);
+	std::string line;
+	while (std::getline(iss, line))
+	{
+		if (!line.empty() && line[line.size()-1] == '\r')
+			line.erase(line.size()-1);
+		size_t pos = line.find(':');
+		if (pos != std::string::npos)
+		{
+			std::string key = line.substr(0, pos);
+			std::string value = line.substr(pos + 1);
+			while (!value.empty() && (value[0] == ' ' || value[0] == '\t'))
+				value.erase(0, 1);
+			outHeaders[key] = value;
+		}
+	}
+	//Default to 200 if CGI didn’t send a "Status" header
+	outStatusCode = (outHeaders.find("Status") != outHeaders.end())
+		? std::atoi(outHeaders["Status"].c_str()) : 200;
+	return body;
+}
+
 bool	Response::cgiResponse(Client &client, Context &context)
 {
 	if (!this->_request.isCgi)
 		return false;
 
 	std::cout << BLUE "[CGI] Executing script: " << this->_request.path << RESET << std::endl;
+
 	try
 	{
-		CGI cgi(this->_request, client);
-
-		cgi.setCgiInfos(this->_request, this->_server);
-
-		if (cgi.getCgiType() == UNKNOWN)
+		if (!client.isCgiRunning() /*&& client.getCgiOutputFd() <= 0*/)//case 1: CGI has not been launched yet
 		{
-			this->_request.statusCode = 401;
-			throw std::runtime_error("[CGI ERROR] Unsupported CGI extension: " + cgi.getExtension());
+			std::cout << BOLD "[HERE 1]" RESET << std::endl;
+			CGI cgi(this->_request, client);
+
+			cgi.setCgiInfos(this->_request, this->_server);
+
+			if (cgi.getCgiType() == UNKNOWN)
+			{
+				this->_request.statusCode = 401;
+				throw std::runtime_error("[CGI ERROR] Unsupported CGI extension: " + cgi.getExtension());
+			}
+
+			if (cgi.checkAccess() <= 0)
+				throw std::runtime_error("[CGI ERROR] CGI file not accessible: " + cgi.getPath());
+
+			cgi.executeCgi(this->_request, this->_server, this->_clientFd, context);
+			if (this->_server.getFork())
+				throw std::runtime_error("fail");
+			return true;
 		}
 
-		if (cgi.checkAccess() <= 0)
-			throw std::runtime_error("[CGI ERROR] CGI file not accessible: " + cgi.getPath());
-
-		std::string result = cgi.executeCgi(this->_request, this->_server, this->_clientFd, context);
-		if (this->_server.getFork())
-			throw std::runtime_error("fail");
-		size_t ret = send(this->_clientFd, result.c_str(), result.size(), MSG_NOSIGNAL);
-		if (ret <= 0)
+		if (client.isCgiRunning() && !client.isCgiToSend())
 		{
-			std::cerr << RED "[sendTo] send() failed (client may have disconnected)" << RESET << std::endl;
-			close(this->_clientFd);
+			std::cout << BOLD "[HERE 2]" RESET << std::endl;
+			int status = 0;
+			waitpid(client.getCgiPid(), &status, WNOHANG);
+			if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+				throw std::runtime_error("[CGI ERROR] process exited with status " + toString(WEXITSTATUS(status)));
+			if (WIFSIGNALED(status))
+				throw std::runtime_error("[CGI ERROR] process killed by signal " + toString(WTERMSIG(status)));
+
+			int cgiFd = client.getCgiOutputFd();
+			if (cgiFd > 0)
+			{
+				// if (FD_ISSET(cgiFd, &context.allClientFds))
+				// {
+					std::cout << BOLD "[HERE 3]" RESET << std::endl;
+					char buf[4096];
+					ssize_t n = read(cgiFd, buf, sizeof(buf));
+					if (n < 0)
+						perror("[CGI] read failure");
+					else if (n > 0)
+					{
+						std::cout << BOLD "[HERE 4]" RESET << std::endl;
+						client.setCgiBuffer(client.getCgiBuffer() + std::string(buf, n));
+					}
+					else if (n == 0)
+					{
+					std::cout << BOLD "[HERE 5]" RESET << std::endl;	
+						client.setCgiToSend(true);
+						//close(cgiFd);
+					}
+				// }
+			}
+			return true;
+		}
+		else if (client.isCgiToSend())//case 3: CGI read finished, need to send
+		{
+			std::cout << BOLD "[HERE 6]" RESET << std::endl;
+			int cgiStatus = 200;
+			std::string readOutput = client.getCgiBuffer();
+
+			std::map<std::string, std::string> headers;
+			std::string body = parseCgiOutput(readOutput, cgiStatus, headers);
+
+			this->_code = cgiStatus;
+			this->setStatusLine();
+			for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); it++)
+				this->setHeader(it->first, it->second);
+
+			// if (headers.find("Content-Length") == headers.end())
+			// 	this->setHeader("Content-Length", toString(body.size()));
+			
+			std::string contentType;
+			if (headers.count("Content-Type"))
+				contentType = headers["Content-Type"];
+			else
+				contentType = "text/html";
+
+			this->setBody(body, contentType);
+			this->sendTo();
+			client.setCgiRunning(false);
+			client.setCgiBuffer("");
+			return true;
 		}
 	}
 	catch (const std::exception &e)
@@ -487,7 +586,8 @@ void sendResponse(Client &client, int client_fd, HttpRequest &req, Server &serve
 {
 	Response	resp(client_fd, req, server);
 
-	(void)context;
+	// (void)context;
+	// (void)client;
 	if (resp.errorResponse())
 		return;
 	if (resp.autoIndexResponse())

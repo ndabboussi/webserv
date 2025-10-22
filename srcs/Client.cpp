@@ -78,6 +78,12 @@ bool	Client::isCgiRunning() const
 	return this->_cgiRunning;
 }
 
+bool	Client::isCgiToSend() const
+{
+	return this->_cgiToSend;
+}
+
+
 std::string	Client::getCgiBuffer() const
 {
 	return this->_cgiBuffer;	
@@ -124,6 +130,11 @@ void	Client::setCgiOutputFd(int fd)
 void	Client::setCgiRunning(bool flag)
 {
 	this->_cgiRunning = flag;
+}
+
+void	Client::setCgiToSend(bool flag)
+{
+	this->_cgiToSend = flag;
 }
 
 void	Client::setCgiBuffer(std::string buffer)
@@ -256,7 +267,6 @@ int	Client::loadByChunk(const Server &server)
 	}
 	return 0;
 }
-
 
 int Client::checkName(Server &server)
 {
