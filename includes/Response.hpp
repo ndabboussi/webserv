@@ -4,10 +4,10 @@
 # include <sys/stat.h>
 # include "Server.hpp"
 
-struct	HttpRequest;
 struct	Context;
 
-class	 Server;
+class	Server;
+struct	HttpRequest;
 
 enum	MimeCategory
 {
@@ -24,20 +24,20 @@ enum	MimeCategory
 class	Response
 {
 	private:
-			Server								&_server;
-			HttpRequest							&_request;
-			int									_clientFd;
+		Server								&_server;
+		HttpRequest							&_request;
+		int									_clientFd;
 
-			int									_code;
-			std::string							_statusLine;
+		int									_code;
+		std::string							_statusLine;
 
-			std::ostringstream					_headerStream;
-			std::ostringstream					_headersFinal;
-			std::string							_contentType;
-			std::string							_contentLenght;
-			std::string							_cookies;
-			std::string							_connection;
-			std::string							_body;
+		std::ostringstream					_headerStream;
+		std::ostringstream					_headersFinal;
+		std::string							_contentType;
+		std::string							_contentLenght;
+		std::string							_cookies;
+		std::string							_connection;
+		std::string							_body;
 
 	public:
 		Response(int clientFd, HttpRequest &req, Server &server);

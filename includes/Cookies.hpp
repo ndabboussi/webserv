@@ -4,7 +4,8 @@
 
 # include "Server.hpp"
 
-struct HttpRequest;
+struct	HttpRequest;
+class	Server;
 
 class Cookies
 {
