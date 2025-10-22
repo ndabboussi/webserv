@@ -306,11 +306,15 @@ bool	Response::redirectResponse()
 std::string parseCgiOutput(const std::string &raw, int &outStatusCode, std::map<std::string,std::string> &outHeaders)
 {
 	std::string::size_type headerEnd = raw.find("\r\n\r\n");
+	size_t skip = 4;
 	if (headerEnd == std::string::npos)
+	{
 		headerEnd = raw.find("\n\n");
+		skip = 2;
+	}
 
 	std::string headers = raw.substr(0, headerEnd);
-	std::string body = (headerEnd == std::string::npos) ? "" : raw.substr(headerEnd + 4);
+	std::string body = (headerEnd == std::string::npos) ? "" : raw.substr(headerEnd + skip);
 
 	std::istringstream iss(headers);
 	std::string line;
