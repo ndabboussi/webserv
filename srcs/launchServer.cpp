@@ -146,11 +146,13 @@ int launchServer(std::vector<Server> &servers)
 	// STEP 2: Prepare structures to track clients
 	std::vector<Client> clients;
 
-	 // STEP 3: Main select() event loop
+	// STEP 3: Main select() event loop
 	while (true && serverRunning)
 	{
 		fd_set	readfds; // File descriptor set for select()
+		fd_set	writefds;
 		FD_ZERO(&readfds); // Reset all bits
+		FD_ZERO(&writefds);
 		int	maxFd = 0; // Track highest FD for select()
 
 		// Register all server sockets --> handle multiple servers sockets
@@ -181,7 +183,10 @@ int launchServer(std::vector<Server> &servers)
 		for (size_t i = 0 ; i < clients.size(); i++)
 		{
 			int clientFd = clients[i].getClientFd();
-			FD_SET(clientFd, &readfds);
+			if (!clients[i].getParsed())
+				FD_SET(clientFd, &readfds);
+			else
+				FD_SET(clientFd, &writefds);
 			if (clientFd > maxFd)
 				maxFd = clientFd;//should I do maxFd++ ? Or value of fd really needed ?
 		}
@@ -189,7 +194,7 @@ int launchServer(std::vector<Server> &servers)
 		struct timeval tv;
 		tv.tv_sec = 0; // 0 seconds
 		tv.tv_usec = 50000; //50 milliseconds (adjustable tick)
-		int activity = select(maxFd + 1, &readfds, NULL, NULL, &tv);
+		int activity = select(maxFd + 1, &readfds, &writefds, NULL, &tv);
 		if (activity < 0) // Wait for socket activity (non-blocking)
 		{
 			std::cerr << RED "Select() error. errno: " << errno << RESET << std::endl;
@@ -235,7 +240,6 @@ int launchServer(std::vector<Server> &servers)
 		context.allClientFds.clear();
 		for (size_t i = 0; i < clients.size(); i++)
 			context.allClientFds.push_back(clients[i].getClientFd());
-
 		int breake = 0;
 		// STEP 5: Handle activity from connected clients
 		for (size_t i = 0; i < clients.size(); i++)
@@ -270,25 +274,23 @@ int launchServer(std::vector<Server> &servers)
 			// }
 
 			int fd = clients[i].getClientFd();
-			if (FD_ISSET(fd, &readfds))
+			size_t	server_index = clients[i].getIndexServer();
+			if (!clients[i].getParsed() && FD_ISSET(fd, &readfds))
+				clients[i].handleClientRead(servers[server_index]);
+			else if (clients[i].getParsed() && FD_ISSET(fd, &writefds))
 			{
-				size_t	server_index = clients[i].getIndexServer();
-				// Delegate to the HTTP handling logic
-				bool keep = clients[i].handleClient(servers[server_index], context);
-				if (keep == false) // If client disconnected or done → cleanup
+				clients[i].handleClientWrite(servers[server_index], context);
+				close(fd);
+				clients.erase(clients.begin() + i);
+				std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
+							<< RESET << std::endl;
+				i--;
+				if (servers[server_index].getFork())
 				{
-					close(fd);
-					clients.erase(clients.begin() + i);
-					std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
-							 << RESET << std::endl;
-					i--;
-					if (servers[server_index].getFork())
-					{
-						breake = 1;
-						break;
-					}
-					continue;
+					breake = 1;
+					break;
 				}
+				continue;
 			}
 		}
 		if (breake)

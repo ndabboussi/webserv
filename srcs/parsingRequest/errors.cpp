@@ -1,4 +1,4 @@
-#include "parsingRequest.hpp"
+#include "Client.hpp"
 
 int error301(HttpRequest &req)
 {
@@ -38,6 +38,13 @@ int error405(HttpRequest &req)
 int error413(HttpRequest &req)
 {
 	std::cerr << RED "Error 413: Entity Too Large" << RESET << std::endl;
+	req.statusCode = 413;
+	return 1;
+}
+
+int error414(HttpRequest &req)
+{
+	std::cerr << RED "Error 414: Uri Too Large" << RESET << std::endl;
 	req.statusCode = 413;
 	return 1;
 }

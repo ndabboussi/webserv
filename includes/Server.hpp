@@ -2,7 +2,6 @@
 # define SERVER_HPP
 
 # include "Location.hpp"
-# include "parsingRequest.hpp"
 # include "Response.hpp"
 # include "Cookies.hpp"
 # include "PersonalInfos.hpp"
@@ -11,10 +10,11 @@
 # include <signal.h> // for signals
 # include <csignal> //for SIGINT
 
-struct	HttpRequest;
 class	Response;
 class	PersonalInfos;
 class	Client;
+
+struct	HttpRequest;
 
 struct Context
 {

@@ -2,6 +2,7 @@
 
 //Operators----------------------------------------------------------------
 
+
 Client &Client::operator=(Client const &src)
 {
     if (this != &src)
@@ -20,6 +21,8 @@ Client &Client::operator=(Client const &src)
 		this->_left = src._left;
 		this->_continue = src._continue;
 		this->_before = src._before;
+		this->_request = src._request;
+		this->_parsed = src._parsed;
     }
     return *this;
 }
@@ -29,13 +32,15 @@ Client &Client::operator=(Client const &src)
 Client::Client(void)
 {}
 
-Client::Client(int clientFd, size_t indexServer, int port): _clientFd(clientFd), _indexServer(indexServer), _port(port),
-		_checkName(0), _content_length(0), _endHeader(0), _firstRead(0), _chunked(0), _firstChunk(0), _continue(0), _bodySize(0), _left(0)
+Client::Client(int clientFd, size_t indexServer, int port): _parsed(false), _clientFd(clientFd), _indexServer(indexServer), _port(port),
+		_checkName(0), _content_length(0), _endHeader(0), _firstRead(0), _chunked(0), _firstChunk(0), _continue(0), _bodySize(0),
+		 _left(0)
 {}
 
-Client::Client(Client const &src) : _clientFd(src._clientFd), _indexServer(src._indexServer), _port(src._port), _checkName(src._checkName),
-		_data(src._data), _content_length(src._content_length), _endHeader(src._endHeader), _firstRead(src._firstRead), _chunked(src._chunked),
-		_firstChunk(src._firstChunk), _continue(src._continue), _before(src._before), _bodySize(src._bodySize), _left(src._left)
+Client::Client(Client const &src) : _request(src._request), _parsed(src._parsed), _clientFd(src._clientFd), _indexServer(src._indexServer),
+		_port(src._port), _checkName(src._checkName), _data(src._data), _content_length(src._content_length), _endHeader(src._endHeader),
+		_firstRead(src._firstRead), _chunked(src._chunked),_firstChunk(src._firstChunk), _continue(src._continue),
+		_before(src._before), _bodySize(src._bodySize), _left(src._left)
 {}
 
 Client::~Client(void)
@@ -79,6 +84,16 @@ std::string	Client::getCgiBuffer() const
 }
 
 
+int	Client::getParsed(void) const
+{
+	return this->_parsed;
+}
+
+HttpRequest Client::getRequest(void) const
+{
+	return this->_request;
+}
+
 //SETTERS ---------------------------------------------------------
 
 void	Client::setClientFd(int fd)
@@ -114,22 +129,25 @@ void	Client::setCgiRunning(bool flag)
 void	Client::setCgiBuffer(std::string buffer)
 {
 	this->_cgiBuffer = buffer;
+void Client::setRequest(HttpRequest req)
+{
+	this->_request = req;
 }
 
 //Member functions
 
-static void	sendErrorAndReturn(Client &client, std::string errMsg, int error, int client_fd, Server &servers, Context &context)
+void	Client::sendErrorAndReturn(std::string errMsg, int error)
 {
-	std::cerr << RED << errMsg << RESET << std::endl;// error 500 ?
-	HttpRequest req;
-	req.isCgi = false;
-	req.statusCode = error;
+	std::cerr << RED << errMsg << RESET << std::endl;
+	this->_request.isCgi = false;
+	this->_request.statusCode = error;
+	this->_parsed = true;
 	if (error == 413)
 	{
 		usleep(300000);
-		req.header.insert(std::make_pair("Connection", "close"));
+		this->_request.header.insert(std::make_pair("Connection", "close"));
 	}
-	sendResponse(client, client_fd, req, servers, context);
+	// sendResponse(this->_clientFd, this->_request, servers, context);
 }
 
 static int	deleteChunkSize(std::string data, std::string &src)
@@ -183,7 +201,6 @@ static long long analyseLine(std::string line)
 
 int	Client::loadByChunk(const Server &server)
 {
-	//std::string			buffer;
 	std::vector<char>	buff(5, '\0');
 	long long			byteRead;
 	long long			size = 0;
@@ -239,7 +256,7 @@ int	Client::loadByChunk(const Server &server)
 }
 
 
-int Client::checkName(Server &server, Context &context)
+int Client::checkName(Server &server)
 {
 	if (!this->_checkName && !this->_data.empty() && this->_data.find("Host: ") != std::string::npos)
 	{
@@ -252,7 +269,7 @@ int Client::checkName(Server &server, Context &context)
 			str = str.substr(0, pos);
 			if (!name.empty() && str != name)
 			{
-				sendErrorAndReturn(*this, "Error 400: Bad request.", 400, this->_clientFd, server, context);
+				sendErrorAndReturn("Error 400: Bad request.", 400);
 				return (false);
 			}
 		}
@@ -261,116 +278,143 @@ int Client::checkName(Server &server, Context &context)
 	return true;
 }
 
-bool	Client::handleClient(Server &server, Context &context)
+void Client::firstRead(Server &server)
 {
-	char				buffer[4096] = {0};
+	char				buffer[500] = {0};
 	int					bytes_read;
 
-	//add return if cgiRunning is true
-	if (this->_content_length > server.getMaxBodyClientSize())
+	bytes_read = recv(this->_clientFd, buffer, sizeof(buffer), 0);//use MSG_DONTWAIT ?
+	if (bytes_read < 0)
 	{
-		sendErrorAndReturn(*this, "Error 413: Entity Too Large", 413, this->_clientFd, server, context);
-		return false;
+		sendErrorAndReturn("Erreur de lecture depuis le client.", 500);
+		throw std::exception();
 	}
-	if (this->checkName(server, context) == false)
-		return (false);
-	if (this->_firstRead == 0)
+	if (bytes_read == 0)
 	{
-		bytes_read = recv(this->_clientFd, buffer, sizeof(buffer), 0);//use MSG_DONTWAIT ?
-		if (bytes_read < 0)
+		sendErrorAndReturn("Error 400: Bad request.", 400);
+		throw std::exception();
+	}
+	this->_data.append(buffer, bytes_read);
+	if (this->checkName(server) == 0)
+		throw std::exception();
+	this->_endHeader = this->_data.find("\r\n\r\n");
+	if (this->_endHeader == std::string::npos)
+		throw std::exception();
+	this->_firstRead = 1;
+	this->_endHeader += 4;
+	size_t pos;
+	if ((pos = this->_data.find("Content-Length:")) != std::string::npos)
+	{
+		pos += 15;
+		this->_content_length = std::atoi(this->_data.c_str() + pos);
+	}
+	else if (this->_data.find("Transfer-Encoding: chunked") != std::string::npos)
+	{
+		this->_chunked = 1;
+		throw std::exception();
+	}
+	if (static_cast<long long>(this->_data.size() - this->_endHeader) < this->_content_length)
+		throw std::exception();
+	this->_firstRead = 0;
+}
+
+void Client::otherRead(Server &server)
+{
+	int	bytes_read;
+
+	if (this->_chunked)
+	{
+		if (this->_data.find("Expect: 100-continue") != std::string::npos && !this->_continue)
 		{
-			sendErrorAndReturn(*this, "Erreur de lecture depuis le client.", 500, this->_clientFd, server, context);
-			return (false);
+			this->_continue = 1;
+			sendErrorAndReturn("", 100);
+			throw std::exception();
 		}
-		if (bytes_read == 0)
+		else if (!this->_continue)
 		{
-			sendErrorAndReturn(*this, "Error 400: Bad request.", 400, this->_clientFd, server, context);
-			return (false);
+			sendErrorAndReturn("Error 400: Bad request.", 400);
+			throw std::exception();
 		}
-		this->_data.append(buffer, bytes_read);
-		if (this->checkName(server, context) == false)
-			return (false);
-		this->_endHeader = this->_data.find("\r\n\r\n");
-		if (this->_endHeader == std::string::npos)
-			return true;
-		this->_firstRead = 1;
-		this->_endHeader += 4;
-		size_t pos;
-		if ((pos = this->_data.find("Content-Length:")) != std::string::npos)
+		int res = this->loadByChunk(server);
+		if (res > 0)
 		{
-			pos += 15;
-			this->_content_length = std::atoi(this->_data.c_str() + pos);
+			std::string msg = (res == 500) ? "Erreur de lecture depuis le client." :
+				(res == 400) ? "Error 400: Bad request." : "Error 413: Entity Too Large";
+			sendErrorAndReturn(msg, res);
+			throw std::exception();
 		}
-		else if (this->_data.find("Transfer-Encoding: chunked") != std::string::npos)
-		{
-			this->_chunked = 1;
-			return true;
-		}
-		if (static_cast<long long>(this->_data.size() - this->_endHeader) < this->_content_length)
-			return true;
-		this->_firstRead = 0;
+		if (res < 0)
+			throw std::exception();
+		this->_chunked = 0;
 	}
 	else
 	{
-		if (this->_chunked)
+		int size = this->_content_length - (this->_data.size() - this->_endHeader);
+		std::vector<char> buf(size);
+		bytes_read = recv(this->_clientFd, buf.data(), size, 0);//use MSG_DONTWAIT ?
+		if (bytes_read < 0)
 		{
-			if (this->_data.find("Expect: 100-continue") != std::string::npos && !this->_continue)
-			{
-				this->_continue = 1;
-				sendErrorAndReturn(*this, "", 100, this->_clientFd, server, context);
-				return true;
-			}
-			else if (!this->_continue)
-			{
-				sendErrorAndReturn(*this, "Error 400: Bad request.", 400, this->_clientFd, server, context);
-				return false;
-			}
-			int res = this->loadByChunk(server);
-			if (res > 0)
-			{
-				std::string msg = (res == 500) ? "Erreur de lecture depuis le client." :
-					(res == 400) ? "Error 400: Bad request." : "Error 413: Entity Too Large";
-				sendErrorAndReturn(*this, msg, res, this->_clientFd, server, context);
-				return false;
-			}
-			if (res < 0)
-				return true;
-			this->_chunked = 0;
+			sendErrorAndReturn("Erreur de lecture depuis le client.", 500);
+			throw std::exception();
 		}
+		if (bytes_read == 0)
+		{
+			sendErrorAndReturn("Error 400: Bad request.", 400);
+			throw std::exception();
+		}
+		this->_data.append(buf.data(), bytes_read);
+		if (bytes_read < size)
+			throw std::exception();
+		this->_firstRead = 0;
+	}
+}
+
+void	Client::handleClientWrite(Server &server, Context &context)
+{
+	sendResponse(this->_clientFd, this->_request, server, context);
+}
+
+void	Client::handleClientRead(Server &server)
+{
+	try
+	{
+		if (this->_content_length > server.getMaxBodyClientSize())
+		{
+			sendErrorAndReturn("Error 413: Entity Too Large", 413);
+			throw std::exception();
+		}
+		if (this->checkName(server) == false)
+		{
+			this->_parsed = true;
+			throw std::exception();
+		}
+		if (this->_firstRead == 0)
+			this->firstRead(server);
+			
 		else
+			this->otherRead(server);
+		
+		if (this->_data.empty())
 		{
-			int size = this->_content_length - (this->_data.size() - this->_endHeader);
-			std::vector<char> buf(size);
-			bytes_read = recv(this->_clientFd, buf.data(), size, 0);//use MSG_DONTWAIT ?
-			if (bytes_read < 0)
-			{
-				sendErrorAndReturn(*this, "Erreur de lecture depuis le client.", 500, this->_clientFd, server, context);
-				return (false);
-			}
-			if (bytes_read == 0)
-			{
-				sendErrorAndReturn(*this, "Error 400: Bad request.", 400, this->_clientFd, server, context);
-				return (false);
-			}
-			this->_data.append(buf.data(), bytes_read);
-			if (bytes_read < size)
-				return true;
-			this->_firstRead = 0;
+			this->_parsed = true;
+			throw std::exception();
 		}
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+		return ;
 	}
 	
-	if (this->_data.empty())
-		return false;
-
 	std::cout << PINK << this->_data << RESET << std::endl;
-	HttpRequest request = parseHttpRequest(this->_data, server);
-	request.serverPort = this->_port;
-	if (request.statusCode < 300)
+	this->_request = parseHttpRequest(this->_data, server);
+	this->_request.serverPort = this->_port;
+	if (this->_request.statusCode < 300)
 	{
 		if (this->_data.find("\r\n\r\n") != std::string::npos)
-			request.rawBody = std::vector<char>(this->_data.begin() + this->_data.find("\r\n\r\n") + 4, this->_data.end());
-		manageCookies(server, request);
+			this->_request.rawBody = std::vector<char>(this->_data.begin() + this->_data.find("\r\n\r\n") + 4, this->_data.end());
+		manageCookies(server, this->_request);
 	}
-	sendResponse(*this, this->_clientFd, request, server, context);
-	return false;
+	this->_parsed = true;
+	return ;
 }
