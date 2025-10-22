@@ -240,8 +240,13 @@ int launchServer(std::vector<Server> &servers)
 
 
 		context.allClientFds.clear();//actualise Context clientFds to close in case of CGI
+		context.allOutputFds.clear();
 		for (size_t i = 0; i < clients.size(); i++)
+		{
 			context.allClientFds.push_back(clients[i].getClientFd());
+			if (clients[i].getCgiOutputFd() > 0)
+				context.allOutputFds.push_back(clients[i].getCgiOutputFd());
+		}
 
 		int breake = 0;
 		// STEP 5: Handle activity from connected clients
@@ -276,7 +281,11 @@ int launchServer(std::vector<Server> &servers)
 			close(fds[j]);
 	}
 	for(size_t i = 0; i < clients.size(); i++)
+	{
+		if (clients[i].getCgiOutputFd() > -1)
+			close(clients[i].getCgiOutputFd());
 		close(clients[i].getClientFd());
+	}
 	std::cout << "\033[1;32m[✓] Server shutdown complete.\033[0m\n";
 	return 0;
 }

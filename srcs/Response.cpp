@@ -339,13 +339,13 @@ bool	Response::cgiResponse(Client &client, Context &context)
 	if (!this->_request.isCgi)
 		return false;
 
-	std::cout << BLUE "[CGI] Executing script: " << this->_request.path << RESET << std::endl;
+	//std::cout << BLUE "[CGI] Executing script: " << this->_request.path << RESET << std::endl;
 
 	try
 	{
 		if (!client.isCgiRunning() /*&& client.getCgiOutputFd() <= 0*/)//case 1: CGI has not been launched yet
 		{
-			std::cout << BOLD "[HERE 1]" RESET << std::endl;
+			//std::cout << BOLD "[HERE 1]" RESET << std::endl;
 			CGI cgi(this->_request, client);
 
 			cgi.setCgiInfos(this->_request, this->_server);
@@ -367,7 +367,7 @@ bool	Response::cgiResponse(Client &client, Context &context)
 
 		if (client.isCgiRunning() && !client.isCgiToSend())
 		{
-			std::cout << BOLD "[HERE 2]" RESET << std::endl;
+			//std::cout << BOLD "[HERE 2]" RESET << std::endl;
 			int status = 0;
 			int result = waitpid(client.getCgiPid(), &status, WNOHANG);
 			if (result < 0)
@@ -377,22 +377,33 @@ bool	Response::cgiResponse(Client &client, Context &context)
 			if (WIFSIGNALED(status))
 				throw std::runtime_error("[CGI ERROR] process killed by signal " + toString(WTERMSIG(status)));
 
+			if (client.checkTimeOut())
+			{
+				kill(client.getCgiPid(), SIGKILL);
+				close(client.getCgiOutputFd());
+				client.setCgiOutputFd(-1);
+				this->_request.statusCode = 504;
+				client.setCgiRunning(false);
+				client.setCgiToSend(true);
+				this->errorResponse();
+			}
+
 			int cgiFd = client.getCgiOutputFd();
 			if (result != 0)
 			{
-				std::cout << BOLD "[HERE 3]" RESET << std::endl;
+				//std::cout << BOLD "[HERE 3]" RESET << std::endl;
 				char buf[4096];
 				ssize_t n = read(cgiFd, buf, sizeof(buf));
 				if (n < 0)
 					perror("[CGI] read failure");
 				else if (n > 0)
 				{
-					std::cout << BOLD "[HERE 4]" RESET << std::endl;
+					//std::cout << BOLD "[HERE 4]" RESET << std::endl;
 					client.setCgiBuffer(client.getCgiBuffer() + std::string(buf, n));
 				}
 				else if (n == 0)
 				{
-					std::cout << BOLD "[HERE 5]" RESET << std::endl;	
+					//std::cout << BOLD "[HERE 5]" RESET << std::endl;	
 					client.setCgiToSend(true);
 				}
 			}
@@ -400,7 +411,7 @@ bool	Response::cgiResponse(Client &client, Context &context)
 		}
 		else if (client.isCgiToSend())//case 3: CGI read finished, need to send
 		{
-			std::cout << BOLD "[HERE 6]" RESET << std::endl;
+			//std::cout << BOLD "[HERE 6]" RESET << std::endl;
 			int cgiStatus = 200;
 			std::string readOutput = client.getCgiBuffer();
 
@@ -425,6 +436,8 @@ bool	Response::cgiResponse(Client &client, Context &context)
 			this->sendTo();
 			client.setCgiRunning(false);
 			client.setCgiBuffer("");
+			close(client.getCgiOutputFd());
+			client.setCgiOutputFd(-1);
 			return true;
 		}
 	}

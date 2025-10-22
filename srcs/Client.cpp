@@ -25,6 +25,11 @@ Client &Client::operator=(Client const &src)
 		this->_parsed = src._parsed;
 		this->_time = src._time;
 		this->_checkMths = src._checkMths;
+		this->_cgiPid = src._cgiPid;
+		this->_cgiOutputFd = src._cgiOutputFd;
+		this->_cgiRunning = src._cgiRunning;
+		this->_cgiToSend = src._cgiToSend;
+		this->_cgiBuffer = src._cgiBuffer;
     }
     return *this;
 }
@@ -36,13 +41,14 @@ Client::Client(void)
 
 Client::Client(int clientFd, size_t indexServer, int port): _parsed(false), _clientFd(clientFd), _indexServer(indexServer), _port(port),
 		_time((timeval){0, 0}), _checkName(0), _checkMths(0), _content_length(0), _endHeader(0), _firstRead(0), _chunked(0), _firstChunk(0), _continue(0),
-		_bodySize(0), _left(0)
+		_bodySize(0), _left(0), _cgiPid(-1), _cgiOutputFd(-1), _cgiRunning(false), _cgiToSend(false) 
 {}
 
 Client::Client(Client const &src) : _request(src._request), _parsed(src._parsed), _clientFd(src._clientFd), _indexServer(src._indexServer),
 		_port(src._port),  _time(src._time), _checkName(src._checkName), _checkMths(src._checkMths), _data(src._data),
 		_content_length(src._content_length), _endHeader(src._endHeader), _firstRead(src._firstRead), _chunked(src._chunked),
-		_firstChunk(src._firstChunk), _continue(src._continue), _before(src._before), _bodySize(src._bodySize), _left(src._left)
+		_firstChunk(src._firstChunk), _continue(src._continue), _before(src._before), _bodySize(src._bodySize), _left(src._left), 
+		_cgiPid(src._cgiPid), _cgiOutputFd(src._cgiOutputFd), _cgiRunning(src._cgiRunning), _cgiToSend(src._cgiToSend), _cgiBuffer(src._cgiBuffer) 
 {}
 
 Client::~Client(void)
@@ -91,6 +97,10 @@ std::string	Client::getCgiBuffer() const
 	return this->_cgiBuffer;	
 }
 
+timeval	Client::getTime() const
+{
+	return this->_time;	
+}
 
 int	Client::getParsed(void) const
 {
@@ -142,6 +152,11 @@ void	Client::setCgiToSend(bool flag)
 void	Client::setCgiBuffer(std::string buffer)
 {
 	this->_cgiBuffer = buffer;
+}
+
+void	Client::setTime(timeval value)
+{
+	this->_time = value;
 }
 
 void Client::setRequest(HttpRequest req)
@@ -394,15 +409,20 @@ void	Client::handleClientWrite(Server &server, Context &context)
 	sendResponse(*this, this->_clientFd, this->_request, server, context);
 }
 
-void	Client::checkTimeOut()
+bool	Client::checkTimeOut()
 {
 	if (this->_time.tv_sec == 0)
-		return ;
+		return false;
 	struct timeval current;
 	gettimeofday(&current, NULL);
 	float elapsed = current.tv_sec - this->_time.tv_sec + ((current.tv_usec - this->_time.tv_usec) / 1e6);
 	if (elapsed > 5)
-		sendErrorAndReturn("Error 408: Request Timeout", 408);
+	{
+		if (!this->_request.isCgi)
+			sendErrorAndReturn("Error 408: Request Timeout", 408);
+		return true;
+	}
+	return false;
 }
 
 static int checkErrors(std::string method, std::string version)

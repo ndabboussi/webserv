@@ -75,17 +75,18 @@ class Client
 		~Client(void);
 
 	public:
-		pid_t		getCgiPid() const;
-		int			getCgiOutputFd() const;
-		bool		isCgiRunning() const;
-		bool		isCgiToSend() const;
-		std::string	getCgiBuffer() const;
+		pid_t			getCgiPid() const;
+		int				getCgiOutputFd() const;
+		bool			isCgiRunning() const;
+		bool			isCgiToSend() const;
+		std::string		getCgiBuffer() const;
+		struct timeval	getTime() const;
 
-		int			getClientFd(void) const;
-		size_t		getIndexServer(void) const;
-		int			getPort(void) const;
-		HttpRequest	getRequest(void) const;
-		int			getParsed(void) const;
+		int				getClientFd(void) const;
+		size_t			getIndexServer(void) const;
+		int				getPort(void) const;
+		HttpRequest		getRequest(void) const;
+		int				getParsed(void) const;
 
 		void	setClientFd(int fd);
 		void	setIndexServer(size_t index);
@@ -97,10 +98,11 @@ class Client
 		void	setCgiRunning(bool flag);
 		void	setCgiToSend(bool flag);
 		void	setCgiBuffer(std::string buffer);
+		void	setTime(timeval value);
 
 		void	handleClientRead(Server &server);
 		void	handleClientWrite(Server &server, Context &context);
-		void	checkTimeOut();
+		bool	checkTimeOut();
 
 };
 

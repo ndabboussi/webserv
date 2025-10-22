@@ -20,6 +20,7 @@ struct Context
 {
 	std::vector<int> allServerFds;
 	std::vector<int> allClientFds;
+	std::vector<int> allOutputFds;
 };
 
 class	Server : public Location

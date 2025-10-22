@@ -257,6 +257,10 @@ void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context
 		if (pipe(pipeIn) == -1 || pipe(pipeOut) == -1)
 			throw std::runtime_error("[CGI ERROR] pipe() failed");
 
+		timeval tmp = {0, 0};
+		gettimeofday(&tmp, NULL);
+		this->_client.setTime(tmp);
+		
 		pid_t pid = fork();
 		if (pid < 0)
 		{
@@ -277,6 +281,8 @@ void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context
 				close(context.allServerFds[i]);
 			for (size_t i = 0; i < context.allClientFds.size(); i++)
 				close(context.allClientFds[i]);
+			for (size_t i = 0; i < context.allOutputFds.size(); i++)
+				close(context.allOutputFds[i]);	
 
 			dup2(pipeIn[0], STDIN_FILENO);
 			dup2(pipeOut[1], STDOUT_FILENO);
@@ -286,6 +292,8 @@ void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context
 			close(pipeOut[0]);
 			close(pipeIn[0]);
 			close(pipeOut[1]);
+
+			//_exit(0);
 
 			char *argv[3]; 	//Prepare args for execve()
 			if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
@@ -302,9 +310,6 @@ void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context
 				execve(this->_interpreter.c_str(), argv, &envp[0]);
 			}
 			std::cerr << "execve failed: " << strerror(errno) << std::endl;
-			close(pipeIn[0]);
-			close(pipeOut[1]);
-			// return "";
 		}
 
 		//3. Parent process
