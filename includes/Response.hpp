@@ -39,6 +39,7 @@ class	Response
 		std::string							_cookies;
 		std::string							_connection;
 		std::string							_body;
+		std::string							_errorMsg;
 
 	public:
 		Response(int clientFd, HttpRequest &req, Server &server);

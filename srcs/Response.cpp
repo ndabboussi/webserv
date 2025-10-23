@@ -170,7 +170,7 @@ void Response::sendTo()
 }
 //------------------------- ERRORS DURING PARSING -------------------------//
 
-std::string	generateDefaultErrorPage(int code)
+std::string	generateDefaultErrorPage(int code, std::string msg)
 {
 	std::ostringstream body;
 	body << "<!DOCTYPE html>\n"
@@ -187,6 +187,7 @@ std::string	generateDefaultErrorPage(int code)
 		<< "<body>\n"
 		<< "<h1>" << code << " " << statusCodeResponse(code) << "</h1>\n"
 		<< "<p>The server encountered an error while processing your request.</p>\n"
+		<< "<p>" << msg << "</p>\n"
 		<< "<div id=\"sidebar-container\"></div>\n"
 		<< "<script src=\"/siteUtils/cookies.js\"></script>\n"
 		<< "</body>\n"
@@ -233,12 +234,12 @@ bool	Response::errorResponse()
 		{
 			std::cerr << RED "[!] Failed to read custom error page: " 
 						<< e.what() << RESET << std::endl;
-			body = generateDefaultErrorPage(this->_code);
+			body = generateDefaultErrorPage(this->_code, this->_errorMsg);
 		}
 	}
 	else
 	{
-		body = generateDefaultErrorPage(this->_code);
+		body = generateDefaultErrorPage(this->_code, this->_errorMsg);
 	}
 
 	std::vector<char> tmpBody(body.begin(), body.end()); // cookies
@@ -417,9 +418,6 @@ bool	Response::cgiResponse(Client &client, Context &context)
 			this->setStatusLine();
 			for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); it++)
 				this->setHeader(it->first, it->second);
-
-			// if (headers.find("Content-Length") == headers.end())
-			// 	this->setHeader("Content-Length", toString(body.size()));
 			
 			std::string contentType;
 			if (headers.count("Content-Type"))
@@ -438,8 +436,9 @@ bool	Response::cgiResponse(Client &client, Context &context)
 	}
 	catch (const std::exception &e)
 	{
-		std::string msg = e.what();
-		std::cerr << RED << msg << RESET << std::endl;
+		this->_errorMsg = e.what();
+		std::cerr << RED << this->_errorMsg << RESET << std::endl;
+
 		client.setCgiRunning(false);
 		client.setCgiToSend(true);
 		this->errorResponse();
@@ -554,7 +553,7 @@ bool	Response::fileResponse()
 	{
 		this->_code = 500;
 		this->setStatusLine();
-		std::string body = generateDefaultErrorPage(this->_code);
+		std::string body = generateDefaultErrorPage(this->_code, this->_errorMsg);
 		this->setBody(body, "text/html");
 		this->sendTo();
 		return true;

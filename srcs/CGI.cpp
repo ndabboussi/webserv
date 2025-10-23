@@ -113,18 +113,18 @@ int CGI::checkAccess() const
 {
 	if (access(this->_path.c_str(), F_OK) == -1) // Check if the file exists
 	{
-		this->_request.statusCode = 404;
+		this->_request.statusCode = 500;
 		throw std::runtime_error("[CGI ERROR] File not found: " + this->_path);
 	}
 
 	if (access(this->_path.c_str(), X_OK) == -1) // Check execute permission
 	{
-		this->_request.statusCode = 403;
+		this->_request.statusCode = 500;
 		throw std::runtime_error("[CGI ERROR] File is not executable: " + this->_path);
 	}
 	if (access(this->_path.c_str(), R_OK) == -1) // Check read permission
 	{
-		this->_request.statusCode = 403;
+		this->_request.statusCode = 500;
 		throw std::runtime_error("[CGI ERROR] File is not readable: " + this->_path);
 	}
 	return 1;
