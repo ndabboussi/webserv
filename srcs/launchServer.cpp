@@ -83,6 +83,180 @@ int createServerSocket(int port)
 	return server_fd;
 }
 
+void	initServersSockets(std::vector<Server> &servers, Context &context)
+{
+	for(size_t i = 0; i < servers.size(); i++)
+	{
+		std::vector<int> ports = servers[i].getPorts();
+		for (size_t j = 0; j < ports.size(); j++)
+		{
+			int	port = 8080;
+			if (ports[j] > 0)
+				port = ports[j];
+			int server_fd = createServerSocket(port);
+			if (server_fd >= 0)
+			{
+				servers[i].addSocketFd(server_fd);
+				context.allServerFds.push_back(server_fd);
+				std::string name = (servers[i].getName().empty()) ? "localhost" : servers[i].getName();
+				std::cout << GREEN "Server " << i << " running on http://" << name << ':' << port << RESET << std::endl;
+			}
+		}
+	}
+}
+
+
+// Helper function to remove servers with no valid sockets
+void removeEmptyServers(std::vector<Server> &servers, Context &context)
+{
+	(void)context;
+	for(size_t i = 0; i < servers.size(); i++)
+	{
+		if (servers[i].getSocketFds().empty())
+		{
+			servers.erase(servers.begin() + i);
+			//context.allServerFds.erase(context.allServerFds.begin() + i);
+			i--;
+		}
+	}
+}
+
+int monitorSockets(fd_set &readfds, fd_set &writefds, std::vector<Server> &servers, std::vector<Client> &clients)
+{
+	FD_ZERO(&readfds); // Reset all bits
+	FD_ZERO(&writefds);
+	int	maxFd = 0; // Track highest FD for select()
+
+	// Register all server sockets --> handle multiple servers sockets
+	for (size_t	i = 0; i < servers.size(); i++)
+	{
+		std::vector<int> serverFds = servers[i].getSocketFds();
+		for (size_t j = 0; j < serverFds.size(); j++)
+		{
+			int	fd = serverFds[j];
+			FD_SET(fd, &readfds);// Add to monitored set
+			if (fd > maxFd)
+				maxFd = fd;
+		}
+	}
+
+	// Register all client sockets
+	for (size_t i = 0 ; i < clients.size(); i++)
+	{
+		int clientFd = clients[i].getClientFd();
+		if (!clients[i].getParsed())
+			FD_SET(clientFd, &readfds);
+		else
+			FD_SET(clientFd, &writefds);
+
+		if (clients[i].isCgiRunning())
+		{
+			int cgiFd = clients[i].getCgiOutputFd();
+			if (cgiFd > 0)
+			{
+				FD_SET(cgiFd, &readfds);
+				if (cgiFd > maxFd)
+					maxFd = cgiFd;
+			}
+		}
+
+		if (clientFd > maxFd)
+			maxFd = clientFd;
+	}
+	return maxFd;
+}
+
+void acceptClientsConnections(fd_set &readfds, const std::vector<Server> &servers, std::vector<Client> &clients, Context &context)
+{
+	for (size_t i = 0; i < servers.size(); i++)
+	{
+		const std::vector<int> socketsFds = servers[i].getSocketFds();
+		const std::vector<int> serverPorts = servers[i].getPorts();
+		
+		for (size_t j = 0; j < socketsFds.size(); j++)
+		{
+			int	server_fd = socketsFds[j];
+			if (FD_ISSET(server_fd, &readfds))// If the server_fd is ready → incoming connection
+			{
+				struct sockaddr_in clientAddr;
+				socklen_t 			len = sizeof(clientAddr);
+				int client_fd = accept(server_fd, (struct sockaddr *)&clientAddr, &len);
+				if (client_fd < 0)
+				{
+					std::cerr << RED "Error: Accept() failure in launchSerevr()" RESET << std::endl;
+					continue;
+				}
+				struct timeval tv;// Optional: Set socket timeout (prevents infinite read block)
+				tv.tv_sec = 5; // timeout in seconds
+				tv.tv_usec = 0;
+				if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+					perror("setsockopt SO_RCVTIMEO");
+				if (setsockopt(client_fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0)
+					perror("setsockopt SO_SNDTIMEO");
+
+				std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
+								<< serverPorts[j] << RESET << std::endl;
+
+				clients.push_back(Client(client_fd, i, serverPorts[j]));
+			}
+		}
+	}
+
+	context.allClientFds.clear();//actualise Context clientFds to close in case of CGI
+	context.allOutputFds.clear();
+	for (size_t i = 0; i < clients.size(); i++)
+	{
+		context.allClientFds.push_back(clients[i].getClientFd());
+		if (clients[i].getCgiOutputFd() > 0)
+			context.allOutputFds.push_back(clients[i].getCgiOutputFd());
+	}
+}
+
+int	handleClientsActivity(fd_set &readfds, fd_set &writefds, std::vector<Server> &servers, std::vector<Client> &clients, Context &context)
+{
+	for (size_t i = 0; i < clients.size(); i++)
+	{
+		int fd = clients[i].getClientFd();
+		size_t	server_index = clients[i].getIndexServer();
+		if (!clients[i].getParsed())
+			clients[i].checkTimeOut();
+		if (!clients[i].getParsed() && FD_ISSET(fd, &readfds))
+			clients[i].handleClientRead(servers[server_index]);
+		else if (clients[i].getParsed() && FD_ISSET(fd, &writefds))
+		{
+			clients[i].handleClientWrite(servers[server_index], context);
+			if (servers[server_index].getFork())
+				return 1;
+			if (clients[i].getRequest().statusCode == 100
+				|| (clients[i].getRequest().isCgi && !(!clients[i].isCgiRunning() && clients[i].isCgiToSend())))
+				continue;
+			close(fd);
+			clients.erase(clients.begin() + i);
+			std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
+						<< RESET << std::endl;
+			i--;
+		}
+	}
+	return 0;
+}
+
+void cleanup(std::vector<Server> &servers, std::vector<Client> &clients)
+{
+	for(size_t i = 0; i < servers.size(); i++)
+	{
+		const std::vector<int> fds = servers[i].getSocketFds();
+		for (size_t j = 0; j < fds.size(); j++)
+			close(fds[j]);
+	}
+	for(size_t i = 0; i < clients.size(); i++)
+	{
+		if (clients[i].getCgiOutputFd() > -1)
+			close(clients[i].getCgiOutputFd());
+		close(clients[i].getClientFd());
+	}
+	std::cout << "\033[1;32m[✓] Server shutdown complete.\033[0m\n";
+}
+
 //------------------------------------ LAUNCHSERVER -------------------------------------//
 
 /* FUNCTION: launchServer
@@ -112,85 +286,22 @@ int launchServer(std::vector<Server> &servers)
 
 	Context	context;
 	// STEP 1: Create a listening socket for each port of each server
-	for(size_t i = 0; i < servers.size(); i++)
-	{
-		std::vector<int> ports = servers[i].getPorts();
-		for (size_t j = 0; j < ports.size(); j++)
-		{
-			int	port = 8080;
-			if (ports[j] > 0)
-				port = ports[j];
-			int server_fd = createServerSocket(port);
-			if (server_fd >= 0)
-			{
-				servers[i].addSocketFd(server_fd);
-				context.allServerFds.push_back(server_fd);
-				std::string name = (servers[i].getName().empty()) ? "localhost" : servers[i].getName();
-				std::cout << GREEN "Server " << i << " running on http://" << name << ':' << port << RESET << std::endl;
-			}
-		}
-	}
-
-	for(size_t i = 0; i < servers.size(); i++)
-	{
-		if (servers[i].getSocketFds().empty())
-		{
-			servers.erase(servers.begin() + i);
-			i--;
-		}
-	}
+	initServersSockets(servers, context);
+	removeEmptyServers(servers, context);
 
 	if (servers.empty())
 		return 1;
 
-	// STEP 2: Prepare structures to track clients
-	std::vector<Client> clients;
+	int breake = 0;
 
-	// STEP 3: Main select() event loop
+	// STEP 2: Main event loop using select()
+	std::vector<Client> clients;//structures to track clients 
 	while (true && serverRunning)
 	{
 		fd_set	readfds; // File descriptor set for select()
 		fd_set	writefds;
-		FD_ZERO(&readfds); // Reset all bits
-		FD_ZERO(&writefds);
 		int	maxFd = 0; // Track highest FD for select()
-
-		// Register all server sockets --> handle multiple servers sockets
-		for (size_t	i = 0; i < servers.size(); i++)
-		{
-			std::vector<int> serverFds = servers[i].getSocketFds();
-			for (size_t j = 0; j < serverFds.size(); j++)
-			{
-				int	fd = serverFds[j];
-				FD_SET(fd, &readfds);// Add to monitored set
-				if (fd > maxFd)
-					maxFd = fd;
-			}
-		}
-
-		// Register all client sockets
-		for (size_t i = 0 ; i < clients.size(); i++)
-		{
-			int clientFd = clients[i].getClientFd();
-			if (!clients[i].getParsed())
-				FD_SET(clientFd, &readfds);
-			else
-				FD_SET(clientFd, &writefds);
-
-			if (clients[i].isCgiRunning())
-			{
-				int cgiFd = clients[i].getCgiOutputFd();
-				if (cgiFd > 0)
-				{
-					FD_SET(cgiFd, &readfds);
-					if (cgiFd > maxFd)
-						maxFd = cgiFd;
-				}
-			}
-
-			if (clientFd > maxFd)
-				maxFd = clientFd;
-		}
+		maxFd = monitorSockets(readfds, writefds, servers, clients);
 	
 		struct timeval tv;
 		tv.tv_sec = 0; // 0 seconds
@@ -202,97 +313,20 @@ int launchServer(std::vector<Server> &servers)
 			continue;
 		}
 
-		// STEP 4: Check if new client is connecting to a server, accept client on the correct port
-		for (size_t i = 0; i < servers.size(); i++)
-		{
-			const std::vector<int> socketsFds = servers[i].getSocketFds();
-			const std::vector<int> serverPorts = servers[i].getPorts();
-			
-			for (size_t j = 0; j < socketsFds.size(); j++)
-			{
-				int	server_fd = socketsFds[j];
-				if (FD_ISSET(server_fd, &readfds))// If the server_fd is ready → incoming connection
-				{
-					struct sockaddr_in clientAddr;
-					socklen_t 			len = sizeof(clientAddr);
-					int client_fd = accept(server_fd, (struct sockaddr *)&clientAddr, &len);
-					if (client_fd < 0)
-					{
-						std::cerr << RED "Error: Accept() failure in launchSerevr()" RESET << std::endl;
-						continue;
-					}
-					// Optional: Set socket timeout (prevents infinite read block)
-					struct timeval tv;
-					tv.tv_sec = 5; // timeout in seconds
-					tv.tv_usec = 0;
-					if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
-						perror("setsockopt SO_RCVTIMEO");
-					if (setsockopt(client_fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0)
-						perror("setsockopt SO_SNDTIMEO");
+		// STEP 3: Accept new clients on correct port
+		acceptClientsConnections(readfds, servers, clients, context);
 
-					std::cout << UNDERLINE GREEN "[+] New client accepted on port " 
-									<< serverPorts[j] << RESET << std::endl;
-
-					clients.push_back(Client(client_fd, i, serverPorts[j]));
-				}
-			}
-		}
-
-
-		context.allClientFds.clear();//actualise Context clientFds to close in case of CGI
-		context.allOutputFds.clear();
-		for (size_t i = 0; i < clients.size(); i++)
-		{
-			context.allClientFds.push_back(clients[i].getClientFd());
-			if (clients[i].getCgiOutputFd() > 0)
-				context.allOutputFds.push_back(clients[i].getCgiOutputFd());
-		}
-
-		int breake = 0;
-		// STEP 5: Handle activity from connected clients
-		for (size_t i = 0; i < clients.size(); i++)
-		{
-			int fd = clients[i].getClientFd();
-			size_t	server_index = clients[i].getIndexServer();
-			if (!clients[i].getParsed())
-				clients[i].checkTimeOut();
-			if (!clients[i].getParsed() && FD_ISSET(fd, &readfds))
-				clients[i].handleClientRead(servers[server_index]);
-			else if (clients[i].getParsed() && FD_ISSET(fd, &writefds))
-			{
-				clients[i].handleClientWrite(servers[server_index], context);
-				if (clients[i].getRequest().statusCode == 100
-					|| (clients[i].getRequest().isCgi && !(!clients[i].isCgiRunning() && clients[i].isCgiToSend())))
-					continue;
-				close(fd);
-				clients.erase(clients.begin() + i);
-				std::cout << UNDERLINE GREY "[-] Client REMOVED from connections " 
-							<< RESET << std::endl;
-				i--;
-			}
-		}
+		// STEP 4: Handle client activity
+		breake = handleClientsActivity(readfds, writefds, servers, clients, context);
 		if (breake)
 			break ;
 	}
-	// STEP 6: Cleanup on shutdown (reached in case of CTRL+C or CGI children)
-	for(size_t i = 0; i < servers.size(); i++)
-	{
-		const std::vector<int> fds = servers[i].getSocketFds();
-		for (size_t j = 0; j < fds.size(); j++)
-			close(fds[j]);
-	}
-	for(size_t i = 0; i < clients.size(); i++)
-	{
-		if (clients[i].getCgiOutputFd() > -1)
-			close(clients[i].getCgiOutputFd());
-		close(clients[i].getClientFd());
-	}
-	std::cout << "\033[1;32m[✓] Server shutdown complete.\033[0m\n";
+
+	// STEP 5: Cleanup on shutdown (reached in case of CTRL+C or CGI children)
+	cleanup(servers, clients);
+
+	if (breake)
+		return 1;
+
 	return 0;
 }
-
-//case 1: !client.cgiRunning !client.cgiSend
-//case 2: client.cgiRunning + !client.cgiSend
-//case 3: client.cgiRunning + client.cgiToSend
-//case 4: !client.cgiRunning + client.cgiToSend = CLOSE
-

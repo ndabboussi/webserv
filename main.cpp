@@ -32,6 +32,7 @@ int	main(int ac, char **av)
 		return 1;
 	}
 	//printServers(servers);
-	launchServer(servers);
+	if (launchServer(servers))
+		return 1;
 	return 0;
 }
