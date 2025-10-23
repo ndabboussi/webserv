@@ -81,7 +81,7 @@ void Location::addData(std::string key, std::string value)
 	if (this->_data.find(key) == this->_data.end())
 		this->_data.insert(std::make_pair(key, value));
 	else
-		this->_data[key] = value;//remplace la key si elle existe deja
+		this->_data[key] = value;
 	return ;
 }
 

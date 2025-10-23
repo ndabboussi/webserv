@@ -42,11 +42,12 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 	if (newPath == "/")
 		newPath.clear();
 	oldPath = (oldPath[0] != '/') ? '/' + oldPath : oldPath;
-	while (end != std::string::npos)
+
+	while (end != std::string::npos) //rebuild the path of the request checking all locations we're going through
 	{
 		newPath += str;
 		data = loc.getData();
-		if (!loc.getRedirect().path.empty())
+		if (!loc.getRedirect().path.empty()) //check for redirections in the current location
 		{
 			req.statusCode = loc.getRedirect().redirCode;
 			req.url = loc.getRedirect().path;
@@ -67,14 +68,17 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 		prev = loc;
 		findLocations(str, loc);
 	}
+
 	data = loc.getData();
-	if (!loc.getRedirect().path.empty())
+
+	if (!loc.getRedirect().path.empty()) //check for redirections in the current location
 	{
 		req.statusCode = loc.getRedirect().redirCode;
 		req.url = loc.getRedirect().path;
 		return 1;
 	}
-	if (data.find("alias") != data.end() && prev.getPath() != loc.getPath())
+
+	if (data.find("alias") != data.end() && prev.getPath() != loc.getPath()) //finals checks
 	{
 		if (req.url[req.url.size() - 1] == '/')
 			newPath = data.find("alias")->second + '/';
@@ -185,11 +189,11 @@ int parsePath(HttpRequest &req, const Server &server)
 		req.path.erase(req.path.begin());
 	req.methodPath = loc.getMethods();
 
-	if (req.url == "/register" || req.url == "/login" || req.url == "/logout" || req.url == "/me")
-			return (0);
+	if (req.url == "/register" || req.url == "/login" || req.url == "/logout" || req.url == "/me") //checks for cookies
+		return (0);
   
 	int res = isAFile(req.path);
-	if (res == 0 && req.method == "GET")//if the path is a directory
+	if (res == 0 && req.method == "GET")//if the path is a directory checks for index or auto_index
 	{
 		if (req.path[req.path.size() - 1] != '/')
 		{
@@ -211,7 +215,7 @@ int parsePath(HttpRequest &req, const Server &server)
 	}
 	else if (res < 0) //if the path isn't found
 		return error404(req, req.path);
-	else if (res == 1)
+	else if (res == 1) // if the path is a file check if it is in a cgi location
 	{
 		req.isCgi = false;
 		std::vector<std::string> cgiExt = loc.getCgiExt();
@@ -225,10 +229,8 @@ int parsePath(HttpRequest &req, const Server &server)
 				break;
 			}
 		}
-		
 		if (!req.isCgi && req.path.find("cgi-bin") != std::string::npos)
 			req.isCgi = true;
-
 	}
 
 	if (checkAccess(req))

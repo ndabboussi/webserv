@@ -184,7 +184,7 @@ void	Client::sendErrorAndReturn(std::string errMsg, int error)
 	}
 }
 
-static int	deleteChunkSize(std::string data, std::string &src)
+static void	deleteChunkSize(std::string data, std::string &src)
 {
 	std::istringstream  before(data);
 	std::string			buffer;
@@ -203,7 +203,7 @@ static int	deleteChunkSize(std::string data, std::string &src)
 			buff.resize(size);
 			src.erase(pos, buffer.size() + 1);
 			if (size == 0)
-				return 0;
+				return ;
 			pos += size;
 			before.read(buff.data(), size);
 			before.read(crlf, 2);
@@ -212,7 +212,7 @@ static int	deleteChunkSize(std::string data, std::string &src)
 			src.erase(pos, 2);
 		}
 	}
-	return 1;
+	return ;
 }
 
 static long long analyseLine(std::string line)
@@ -318,7 +318,7 @@ void Client::firstRead(Server &server)
 	char				buffer[4096] = {0};
 	int					bytes_read;
 
-	bytes_read = recv(this->_clientFd, buffer, sizeof(buffer), 0);//use MSG_DONTWAIT ?
+	bytes_read = recv(this->_clientFd, buffer, sizeof(buffer), 0);
 	if (bytes_read < 0)
 	{
 		sendErrorAndReturn("Erreur de lecture depuis le client.", 500);
@@ -386,7 +386,7 @@ void Client::otherRead(Server &server)
 	{
 		int size = this->_content_length - (this->_data.size() - this->_endHeader);
 		std::vector<char> buf(size);
-		bytes_read = recv(this->_clientFd, buf.data(), size, 0);//use MSG_DONTWAIT ?
+		bytes_read = recv(this->_clientFd, buf.data(), size, 0);
 		if (bytes_read < 0)
 		{
 			sendErrorAndReturn("Erreur de lecture depuis le client.", 500);

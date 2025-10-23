@@ -345,11 +345,9 @@ bool	Response::cgiResponse(Client &client, Context &context)
 	if (!this->_request.isCgi)
 		return false;
 
-	//std::cout << BLUE "[CGI] Executing script: " << this->_request.path << RESET << std::endl;
-
 	try
 	{
-		if (!client.isCgiRunning() /*&& client.getCgiOutputFd() <= 0*/)//case 1: CGI has not been launched yet
+		if (!client.isCgiRunning())//case 1: CGI has not been launched yet
 		{
 			CGI cgi(this->_request, client);
 
