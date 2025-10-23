@@ -95,6 +95,7 @@ class Client
 		void	setIndexServer(size_t index);
 		void	setPort(int port);
 		void	setRequest(HttpRequest req);
+		void	setCgiFlag(bool value);
 
 		void	setCgiPid(pid_t pid);
 		void	setCgiOutputFd(int fd);
