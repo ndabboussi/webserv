@@ -8,6 +8,7 @@ Location &Location::operator=(Location const &src)
 		return (*this);
 	this->_locations = src._locations;
 	this->_data = src._data;
+	this->_redirect = src._redirect;
 	this->_methods = src._methods;
 	this->_path = src._path;
 	this->_autoIndex = src._autoIndex;
@@ -18,7 +19,8 @@ Location &Location::operator=(Location const &src)
 
 //Constructor/Destructors--------------------------------------------------
 
-Location::Location(void): _path(""), _autoIndex(false), _locations(), _data(), _methods(0){};
+Location::Location(void): _path(""), _autoIndex(false), _locations(), _data(), _redirect((t_redirect){0, ""}), _methods(0)
+{}
 
 Location::Location(Location const &src)
 {
@@ -29,6 +31,8 @@ Location::Location(Location const &src)
 Location::~Location(void){}
 
 //Member functions---------------------------------------------------------
+
+//GETTERS------------------------------------------------------------------
 
 std::vector<Location> const Location::getLocations() const
 {
@@ -55,6 +59,10 @@ bool Location::getAutoIndex(void) const
 	return this->_autoIndex;
 }
 
+const t_redirect &Location::getRedirect(void) const
+{
+	return this->_redirect;
+}
 
 void Location::addLocations(Location newLoc)
 {
@@ -77,6 +85,8 @@ void Location::addData(std::string key, std::string value)
 	return ;
 }
 
+//SETTERS------------------------------------------------------------------
+
 void Location::setMethods(uint8_t methods)
 {
 	this->_methods = methods;
@@ -93,6 +103,12 @@ void Location::setPath(std::string path)
 {
 	this->_path = path;
 	return ;
+}
+
+void Location::setRedirect(int redirCode, std::string path)
+{
+	this->_redirect.redirCode = redirCode;
+	this->_redirect.path = path;
 }
 
 //------------------------------------ CGI ------------------------------------//
