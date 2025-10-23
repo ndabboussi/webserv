@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="/siteUtils/styles.css">
+    <link rel="stylesheet"  href="/siteUtils/sidebar.css">
+
+
+    <title>POST Test</title>
+  </head>
+  <body>
+    <h1>Test POST upload</h1>
+    <form action="/uploads" method="POST" enctype="application/x-www-form-urlencoded">
+      <label for="content">Enter content:</label><br>
+      <textarea id="content" name="content" rows="5" cols="40"></textarea><br><br>
+      <button type="submit">Send POST</button>
+    </form>
+
+
+    <div class="button-container" style="margin-top: 2em;">
+        <a class="button" href="/">🏠 Go back to Home Page</a>
+    </div>
+
+    </div>
+    <div id="sidebar-container"></div>
+    <script src="/siteUtils/cookies.js"></script>
+  </body>
+</html>

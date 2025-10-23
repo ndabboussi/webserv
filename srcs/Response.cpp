@@ -151,7 +151,7 @@ std::string Response::build()
 	res << _headerStream.str();
 	appendCookies(res);
 	res << "\r\n";
-	//std::cout << GREEN "[<] Sent Response:\n" << res.str() << RESET << std::endl;
+	std::cout << GREEN "[<] Sent Response:\n" << res.str() << RESET << std::endl;
 	res << this->_body;
 	return res.str();
 }
@@ -166,7 +166,7 @@ void Response::sendTo()
 		close(this->_clientFd);
 		return;
 	}
-	std::cout << GREEN "[<] Sent Response:\n" << full.c_str() << RESET << std::endl;
+	//std::cout << GREEN "[<] Sent Response:\n" << full.c_str() << RESET << std::endl;
 }
 //------------------------- ERRORS DURING PARSING -------------------------//
 
@@ -349,7 +349,6 @@ bool	Response::cgiResponse(Client &client, Context &context)
 	{
 		if (!client.isCgiRunning() /*&& client.getCgiOutputFd() <= 0*/)//case 1: CGI has not been launched yet
 		{
-			//std::cout << BOLD "[HERE 1]" RESET << std::endl;
 			CGI cgi(this->_request, client);
 
 			cgi.setCgiInfos(this->_request, this->_server);
@@ -371,7 +370,6 @@ bool	Response::cgiResponse(Client &client, Context &context)
 
 		if (client.isCgiRunning() && !client.isCgiToSend())
 		{
-			//std::cout << BOLD "[HERE 2]" RESET << std::endl;
 			int status = 0;
 			int result = waitpid(client.getCgiPid(), &status, WNOHANG);
 			if (result < 0)
@@ -395,27 +393,19 @@ bool	Response::cgiResponse(Client &client, Context &context)
 			int cgiFd = client.getCgiOutputFd();
 			if (result != 0)
 			{
-				//std::cout << BOLD "[HERE 3]" RESET << std::endl;
 				char buf[4096];
 				ssize_t n = read(cgiFd, buf, sizeof(buf));
 				if (n < 0)
 					perror("[CGI] read failure");
 				else if (n > 0)
-				{
-					//std::cout << BOLD "[HERE 4]" RESET << std::endl;
 					client.setCgiBuffer(client.getCgiBuffer() + std::string(buf, n));
-				}
-				else if (n == 0)
-				{
-					//std::cout << BOLD "[HERE 5]" RESET << std::endl;	
+				else if (n == 0)	
 					client.setCgiToSend(true);
-				}
 			}
 			return true;
 		}
 		else if (client.isCgiToSend())//case 3: CGI read finished, need to send
 		{
-			//std::cout << BOLD "[HERE 6]" RESET << std::endl;
 			int cgiStatus = 200;
 			std::string readOutput = client.getCgiBuffer();
 
@@ -449,6 +439,8 @@ bool	Response::cgiResponse(Client &client, Context &context)
 	{
 		std::string msg = e.what();
 		std::cerr << RED << msg << RESET << std::endl;
+		client.setCgiRunning(false);
+		client.setCgiToSend(true);
 		this->errorResponse();
 	}
 	return true;
@@ -503,7 +495,7 @@ bool		Response::postMethodResponse()
 				<< "<head>\n"
 				<< "<meta charset=\"UTF-8\">\n"
 				<< "<title>File Updated</title>\n"
-				<< "<link rel=\"stylesheet\" href=\"/styles.css\">\n"
+				<< "<link rel=\"stylesheet\" href=\"/siteUtils/styles.css\">\n"
 				<< "<link rel=\"stylesheet\" href=\"/siteUtils/sidebar.css\">\n"
 				<< "<style>\n"
 				<< "body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }\n"
@@ -601,8 +593,6 @@ void sendResponse(Client &client, int client_fd, HttpRequest &req, Server &serve
 {
 	Response	resp(client_fd, req, server);
 
-	// (void)context;
-	// (void)client;
 	if (resp.errorResponse())
 		return;
 	if (resp.autoIndexResponse())

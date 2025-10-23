@@ -164,6 +164,11 @@ void Client::setRequest(HttpRequest req)
 	this->_request = req;
 }
 
+void	Client::setCgiFlag(bool value)
+{
+	this->_request.isCgi = value;
+}
+
 //Member functions
 
 void	Client::sendErrorAndReturn(std::string errMsg, int error)

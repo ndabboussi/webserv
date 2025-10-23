@@ -113,7 +113,7 @@ static int fillIndexFile(HttpRequest &req)
         "\t<head>\n"
         "\t\t<meta charset=\"utf-8\" />\n"
         "\t\t<title>Index of " + req.url + "</title>\n"
-		"\t\t<link rel=\"stylesheet\" href=\"/styles.css\">\n"
+		"\t\t<link rel=\"stylesheet\" href=\"/siteUtils/styles.css\">\n"
         "\t\t<link rel=\"stylesheet\" href=\"/siteUtils/sidebar.css\">\n"
         "\t\t<style>\n"
         "\t\t\tbody {font-family: 'Segoe UI', Arial, sans-serif;"
@@ -172,23 +172,6 @@ int parsePath(HttpRequest &req, const Server &server)
 	if (req.path[0] == '/')
 		req.path.erase(req.path.begin());
 	req.methodPath = loc.getMethods();
-	// CGI config file ?
-  	req.isCgi = false; 	// CGI config file ?
-	std::vector<std::string> cgiExt = loc.getCgiExt();
-
-	for (size_t i = 0; i < cgiExt.size(); i++)
-	{
-		if (req.path.size() >= cgiExt[i].size() && req.path.compare(req.path.size() - cgiExt[i].size(),
-							cgiExt[i].size(),
-							cgiExt[i]) == 0)
-		{
-			req.isCgi = true;
-			break;
-		}
-	}
-	
-	if (!req.isCgi && req.path.find("cgi-bin") != std::string::npos)
-		req.isCgi = true;
 
 	if (req.url == "/register" || req.url == "/login" || req.url == "/logout" || req.url == "/me")
 			return (0);
@@ -216,6 +199,25 @@ int parsePath(HttpRequest &req, const Server &server)
 	}
 	else if (res < 0) //if the path isn't found
 		return error404(req, req.path);
+	else if (res == 1)
+	{
+		std::vector<std::string> cgiExt = loc.getCgiExt();
+		for (size_t i = 0; i < cgiExt.size(); i++)
+		{
+			if (req.path.size() >= cgiExt[i].size() && req.path.compare(req.path.size() - cgiExt[i].size(),
+								cgiExt[i].size(),
+								cgiExt[i]) == 0)
+			{
+				req.isCgi = true;
+				break;
+			}
+		}
+		
+		if (!req.isCgi && req.path.find("cgi-bin") != std::string::npos)
+			req.isCgi = true;
+
+	}
+
 	if (checkAccess(req))
 		return 1;
 
