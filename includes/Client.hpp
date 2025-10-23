@@ -24,6 +24,9 @@ struct HttpRequest
 	std::vector<char>					rawBody;
 	bool								isCgi;
 	int									serverPort;
+	HttpRequest()
+		: statusCode(0), methodPath(0), isCgi(false), serverPort(-1)
+	{}
 };
 
 class Client

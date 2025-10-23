@@ -261,7 +261,8 @@ int launchServer(std::vector<Server> &servers)
 			else if (clients[i].getParsed() && FD_ISSET(fd, &writefds))
 			{
 				clients[i].handleClientWrite(servers[server_index], context);
-				if (clients[i].getRequest().statusCode == 100 || (clients[i].getRequest().isCgi && !(!clients[i].isCgiRunning() && clients[i].isCgiToSend())))
+				if (clients[i].getRequest().statusCode == 100
+					|| (clients[i].getRequest().isCgi && !(!clients[i].isCgiRunning() && clients[i].isCgiToSend())))
 					continue;
 				close(fd);
 				clients.erase(clients.begin() + i);

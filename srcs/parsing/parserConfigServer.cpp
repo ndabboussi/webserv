@@ -1,15 +1,5 @@
 # include "parserConfig.hpp"
 
-static int isStrDigit(std::string str)
-{
-	for (size_t i = 0; i < str.size(); i++)
-	{
-		if (!isdigit(str[i]))
-			return 0;
-	}
-	return 1;
-}
-
 static void fillPort(Server &server, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
 {
 	int nb = 0;
@@ -72,7 +62,6 @@ static void fillBodyClientSize(Server &server, std::vector<std::string>::iterato
 static void fillErrorPage(Server &server, std::vector<std::string>::iterator &it, std::vector<std::string>::iterator end)
 {
 	int key;
-	std::string value;
 	if (isStrDigit(*it) && it + 1 != end)
 	{
 		key = std::atoi(it->c_str());
@@ -85,7 +74,7 @@ static void fillErrorPage(Server &server, std::vector<std::string>::iterator &it
 			it++;
 		}
 		if ((*it)[it->size() - 1] != ';')
-			throw std::runtime_error("Error: Error: Missing ; or too much informations in instruction in error_page field in server scope");
+			throw std::runtime_error("Error: Missing ; or too much informations in instruction in error_page field in server scope");
 	}
 	else if ((*it)[0] == ';')
 		throw std::runtime_error("Error: Missing error number in field error_page");

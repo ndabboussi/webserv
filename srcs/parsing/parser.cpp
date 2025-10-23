@@ -1,5 +1,15 @@
 # include "parserConfig.hpp"
 
+int isStrDigit(std::string str)
+{
+	for (size_t i = 0; i < str.size(); i++)
+	{
+		if (!isdigit(str[i]))
+			return 0;
+	}
+	return 1;
+}
+
 void fillLocation(Location &dest, Location src)
 {
 	dest.cpyData(src.getData());
