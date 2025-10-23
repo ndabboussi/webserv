@@ -142,6 +142,20 @@ small {
   --button-text: #007acc;
   --button-hover: #dddddd;
 
+  --link: #660404;
+  --link-hover: #007acc;
+}
+
+[data-theme="green"]
+{
+  --bg: #c2e9bf;
+  --text: #2c2b2b;
+  --title: #333333;
+  --small-text: #555555;
+  --button-bg: #8fe059;
+  --button-text: #007acc;
+  --button-hover: #dddddd;
+
   --link: #333333;
   --link-hover: #007acc;
 }
