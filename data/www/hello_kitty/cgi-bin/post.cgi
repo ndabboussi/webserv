@@ -3,7 +3,7 @@
 echo "Content-Type: text/html"
 echo ""
 
-UPLOAD_DIR="data/www/hello_kitty/cgi-bin/uploads"
+UPLOAD_DIR="data/www/hello_kitty/uploads"
 mkdir -p "$UPLOAD_DIR"
 
 BOUNDARY=$(echo "$CONTENT_TYPE" | sed -n 's/.*boundary=\(.*\)/\1/p')
