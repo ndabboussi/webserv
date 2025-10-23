@@ -153,7 +153,7 @@ static int deleteRessource(HttpRequest &req, const Server &server)
 	std::vector<char> tmp(500);
 	std::map<std::string, std::string>	data = server.getData();
 
-	if (checkDot(req.path, req))
+	if (checkDot(req.path, req)) //checks if there is .. sequence in the path (for security)
 		return 1;
 	if (data.find("root") != data.end())
 		root = data.find("root")->second;

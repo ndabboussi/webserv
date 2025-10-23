@@ -240,9 +240,6 @@ bool	CGI::_postSupported() const
 //   1. Sets up environment and pipes
 //   2. Forks the process
 //   3. Executes the CGI script via execve()
-//   4. Reads CGI output
-//   5. Builds a proper HTTP response
-// Returns: A complete HTTP/1.1 response as a string
 
 void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context &context)
 {
