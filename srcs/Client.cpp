@@ -505,7 +505,7 @@ void	Client::handleClientRead(Server &server)
 		return ;
 	}
 	
-	std::cout << PINK << this->_data << RESET << std::endl;
+	// std::cout << PINK << this->_data << RESET << std::endl;
 	this->_request = parseHttpRequest(this->_data, server);
 	this->_request.serverPort = this->_port;
 	if (this->_request.statusCode < 300)

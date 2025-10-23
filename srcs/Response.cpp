@@ -340,6 +340,7 @@ std::string parseCgiOutput(const std::string &raw, int &outStatusCode, std::map<
 
 bool	Response::cgiResponse(Client &client, Context &context)
 {
+
 	if (!this->_request.isCgi)
 		return false;
 
