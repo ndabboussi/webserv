@@ -109,6 +109,7 @@ body.rightsidebar-visible .rightsidebar
 .sidebar h2
 {
   margin-top: 0;
+  color: #d0d0d0;
   font-size: 24px;
   text-align: center;
 }
@@ -116,6 +117,7 @@ body.rightsidebar-visible .rightsidebar
 .rightsidebar h2
 {
   margin-top: 0;
+  color: #d0d0d0;
   font-size: 24px;
   text-align: center;
 }
