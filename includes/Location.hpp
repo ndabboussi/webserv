@@ -42,6 +42,13 @@ typedef enum e_methods
 	DELETE = 4
 }	t_methods;
 
+typedef struct s_redirect
+{
+	int			redirCode;
+	std::string	path;
+}t_redirect;
+
+
 class Location
 {
 	private:
@@ -54,6 +61,7 @@ class Location
 	protected:
 		std::vector<Location>				_locations;
 		std::map<std::string, std::string>	_data;
+		t_redirect							_redirect;
 		uint8_t								_methods;
 		
 	public:
@@ -68,6 +76,7 @@ class Location
 		uint8_t										getMethods() const;
 		std::string									getPath() const;
 		bool										getAutoIndex() const;
+		t_redirect const							&getRedirect() const;
 
 		void										addLocations(Location newLoc);
 		void										addData(std::string key, std::string value);
@@ -77,6 +86,7 @@ class Location
 		void										setMethods(uint8_t methods);
 		void										setPath(std::string path);
 		void										setAutoIndex(bool flag);
+		void										setRedirect(int redirCode, std::string path);
 
 		std::vector<std::string>					getCgiPath() const;
 		std::vector<std::string>					getCgiExt() const;

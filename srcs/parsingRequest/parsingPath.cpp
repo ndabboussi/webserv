@@ -46,6 +46,12 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 	{
 		newPath += str;
 		data = loc.getData();
+		if (!loc.getRedirect().path.empty())
+		{
+			req.statusCode = loc.getRedirect().redirCode;
+			req.url = loc.getRedirect().path;
+			return 1;
+		}
 		if (data.find("alias") != data.end() && prev.getPath() != loc.getPath())
 			newPath = data.find("alias")->second;
 		else if (data.find("root") != data.end() && data.find("root")->second != serverRoot
@@ -62,6 +68,12 @@ static int buildPath(std::string &newPath, std::string oldPath, Location &loc, H
 		findLocations(str, loc);
 	}
 	data = loc.getData();
+	if (!loc.getRedirect().path.empty())
+	{
+		req.statusCode = loc.getRedirect().redirCode;
+		req.url = loc.getRedirect().path;
+		return 1;
+	}
 	if (data.find("alias") != data.end() && prev.getPath() != loc.getPath())
 	{
 		if (req.url[req.url.size() - 1] == '/')
