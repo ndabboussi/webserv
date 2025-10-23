@@ -30,6 +30,7 @@ int	main(int ac, char **av)
 		std::cerr << e.what() << '\n';
 		return 1;
 	}
-	launchServer(servers);
+	if (launchServer(servers))
+		return 1;
 	return 0;
 }

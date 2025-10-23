@@ -290,8 +290,6 @@ void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context
 			close(pipeIn[0]);
 			close(pipeOut[1]);
 
-			//_exit(0);
-
 			char *argv[3]; 	//Prepare args for execve()
 			if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
 			{

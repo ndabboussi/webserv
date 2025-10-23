@@ -437,6 +437,9 @@ bool	Response::cgiResponse(Client &client, Context &context)
 		this->_errorMsg = e.what();
 		std::cerr << RED << this->_errorMsg << RESET << std::endl;
 
+		if (client.getCgiOutputFd() > -1)
+			close(client.getCgiOutputFd());
+		this->_request.statusCode = 500;
 		client.setCgiRunning(false);
 		client.setCgiToSend(true);
 		this->errorResponse();
