@@ -20,7 +20,7 @@ Run the server with a configuration file:
 ./webserv path/to/config.conf
 
 Example:  
-./webserv configs/default.conf  
+./webserv conf/default.conf  
 
 Then open your browser and go to:  
 http://localhost:8080

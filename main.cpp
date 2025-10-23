@@ -15,7 +15,7 @@ int	main(int ac, char **av)
 {
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGINT, handleSignal);
-	std::string	configFile = "./conf/webserv.conf";
+	std::string	configFile = "./conf/default.conf";
 	if (ac > 2)
 		return (std::cout << "Error: too many arguments." << std::endl, 1);
 	else if (ac == 2)

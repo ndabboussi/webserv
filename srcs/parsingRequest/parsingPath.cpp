@@ -213,6 +213,7 @@ int parsePath(HttpRequest &req, const Server &server)
 		return error404(req, req.path);
 	else if (res == 1)
 	{
+		req.isCgi = false;
 		std::vector<std::string> cgiExt = loc.getCgiExt();
 		for (size_t i = 0; i < cgiExt.size(); i++)
 		{
