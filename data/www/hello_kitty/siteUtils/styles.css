@@ -5,6 +5,17 @@ html, body {
   color: var(--text);
 }
 
+.site-logo {
+  width: 250px;
+  height: 250px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-image: var(--logo);
+}
+
+
 .content {
   display: flex;
   flex-direction: column;
@@ -106,6 +117,7 @@ small {
 
 :root
 {
+  --logo: url("/images/kitty.jpg");
   --bg: #ffffff;
   --text: #000000;
   --title: #333333;
@@ -120,6 +132,7 @@ small {
 /* Si data-theme="dark" sur html */
 [data-theme="dark"]
 {
+  --logo: url("/images/dark_kitty_friend.jpg");
   --bg: #333333;
   --text: #ffffff;
   --title: #fba6af;
@@ -134,6 +147,7 @@ small {
 
 [data-theme="pink"]
 {
+  --logo: url("/images/pink_kitty.jpg");
   --bg: #ffe6f0;
   --text: #333333;
   --title: #333333;
@@ -148,6 +162,7 @@ small {
 
 [data-theme="green"]
 {
+  --logo: url("/images/cute_froggy.jpg");
   --bg: #c2e9bf;
   --text: #2c2b2b;
   --title: #333333;
