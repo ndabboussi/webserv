@@ -111,6 +111,7 @@ class Client
 };
 
 HttpRequest	parseHttpRequest(const std::string &rawRequest, Server &server);
+int			restoreLocations(const Location &location, std::string root);
 int			checkDot(std::string &path, HttpRequest &req);
 int			parsePath(HttpRequest &req, const Server &server);
 int			parseBody(HttpRequest &req, std::istringstream &requestStream);

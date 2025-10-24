@@ -9,9 +9,12 @@ Server &Server::operator=(Server const &src)
         Location::operator=(src);
         this->_port = src._port;
         this->_name = src._name;
+        this->_socketFd = src._socketFd;
         this->_maxClientBodySize = src._maxClientBodySize;
         this->_errorPages = src._errorPages;
         this->_cookies = src._cookies;
+        this->_accountIdToInfos = src._accountIdToInfos;
+        this->_accounts = src._accounts;
         this->_modified = src._modified;
         this->_fork = src._fork;
     }
@@ -25,7 +28,7 @@ Server::Server(void) : Location(), _name(""), _maxClientBodySize(2000000), _modi
 
 Server::Server(Server const &src) : Location(src), _port(src._port), _name(src._name), _socketFd(src._socketFd),
     _maxClientBodySize(src._maxClientBodySize), _errorPages(src._errorPages), _cookies(src._cookies), _modified(src._modified),
-    _fork(src._fork)
+    _accountIdToInfos(src._accountIdToInfos), _accounts(src._accounts), _fork(src._fork)
 {}
 
 Server::~Server(void)

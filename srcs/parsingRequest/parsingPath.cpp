@@ -19,7 +19,7 @@ static int findLocations(std::string str, Location &location)
 int isAFile(std::string path)
 {
 	struct stat st;
-	if (stat(path.c_str(), &st) == 0)
+	if (lstat(path.c_str(), &st) == 0)
 	{
 		if (!S_ISREG(st.st_mode))
 			return 0;

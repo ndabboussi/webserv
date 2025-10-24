@@ -66,13 +66,13 @@ static int checkMethod(HttpRequest &req)
 	return 0;
 }
 
-static int restoreLocations(const Location &location, std::string root)
+int restoreLocations(const Location &location, std::string root)
 {
 	std::vector<Location>				loc = location.getLocations();
 	std::map<std::string, std::string>	map;
 	std::string							str;
 	
-	if (root.size() > 0 && root[0] == '/')
+	if (root.size() > 0 && root.size() > 1 && root[0] == '/')
 		root.erase(root.begin());
 	for (size_t i = 0; i < loc.size(); i++)
 	{
