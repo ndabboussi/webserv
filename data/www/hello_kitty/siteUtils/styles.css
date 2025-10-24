@@ -147,7 +147,7 @@ small {
 
 [data-theme="pink"]
 {
-  --logo: url("/images/kitty.jpg");
+  --logo: url("/images/pink_kitty.jpg");
   --bg: #ffe6f0;
   --text: #333333;
   --title: #333333;
