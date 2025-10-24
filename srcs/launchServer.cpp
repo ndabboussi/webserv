@@ -107,18 +107,15 @@ void	initServersSockets(std::vector<Server> &servers, Context &context)
 
 
 // Helper function to remove servers with no valid sockets
-void removeEmptyServers(std::vector<Server> &servers, Context &context)
+void removeEmptyServers(std::vector<Server> &servers)
 {
-	(void)context;
-	for(size_t i = 0; i < servers.size(); i++)
+	for (int i = static_cast<int>(servers.size()) - 1; i >= 0; i--)
 	{
-		if (servers[i].getSocketFds().empty())
-		{
+		std::vector<int> fds = servers[i].getSocketFds();
+		if (fds.empty())
 			servers.erase(servers.begin() + i);
-			//context.allServerFds.erase(context.allServerFds.begin() + i);
-			i--;
-		}
 	}
+	
 }
 
 int monitorSockets(fd_set &readfds, fd_set &writefds, std::vector<Server> &servers, std::vector<Client> &clients)
@@ -286,12 +283,21 @@ int launchServer(std::vector<Server> &servers)
 
 	Context	context;
 	// STEP 1: Create a listening socket for each port of each server
+
 	initServersSockets(servers, context);
-	removeEmptyServers(servers, context);
+
+	removeEmptyServers(servers);
 
 	if (servers.empty())
 		return 1;
 
+	for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); it++)
+	{
+		std::map<std::string, std::string> map = it->getData();
+		if (map.find("root") != map.end())
+			restoreLocations(*it, map.find("root")->second);
+	}
+	
 	int breake = 0;
 
 	// STEP 2: Main event loop using select()
