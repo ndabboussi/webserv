@@ -1,4 +1,4 @@
 #!/usr/bin/python3
 print("Content-Type: text/html")
 print("")
-print("<html><body><h1>😕 Unknown extension test</h1><p>If you see this, something bypassed your extension check.</p></body></html>")
+print("<html><body><h1>Unknown extension test</h1><p>If you see this, something bypassed your extension check.</p></body></html>")
