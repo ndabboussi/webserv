@@ -245,8 +245,10 @@ void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context
 {
 	try
 	{
+		std::string script = this->_path.substr(this->_path.find_last_of('/') + 1);
+
 		//1. Build environment and create pipes
-		std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, request.path);
+		std::vector<std::string> cgiEnv = _buildCgiEnv(request, server, script);
 		std::vector<char*> envp = _envVecToCharPtr(cgiEnv);
 
 		int pipeIn[2];
@@ -279,7 +281,11 @@ void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context
 			for (size_t i = 0; i < context.allClientFds.size(); i++)
 				close(context.allClientFds[i]);
 			for (size_t i = 0; i < context.allOutputFds.size(); i++)
-				close(context.allOutputFds[i]);	
+				close(context.allOutputFds[i]);
+
+			std::string scriptDir = this->_path.substr(0, this->_path.find_last_of('/'));
+			if (chdir(scriptDir.c_str()) == -1)
+				throw std::runtime_error("[CGI ERROR] chdir failed");
 
 			dup2(pipeIn[0], STDIN_FILENO);
 			dup2(pipeOut[1], STDOUT_FILENO);
@@ -293,14 +299,14 @@ void	CGI::executeCgi(HttpRequest &request, Server &server, int clientFd, Context
 			char *argv[3]; 	//Prepare args for execve()
 			if (this->_interpreter.empty()) // Direct binary execution (.cgi or already executable script)
 			{
-				argv[0] = const_cast<char *>(this->_path.c_str());
+				argv[0] = const_cast<char *>(script.c_str());
 				argv[1] = NULL;
-				execve(this->_path.c_str(), argv, &envp[0]);
+				execve(script.c_str(), argv, &envp[0]);
 			}
 			else // Interpreter execution (.py, .sh, etc.)
 			{
 				argv[0] = const_cast<char *>(this->_interpreter.c_str());
-				argv[1] = const_cast<char *>(this->_path.c_str());
+				argv[1] = const_cast<char *>(script.c_str());
 				argv[2] = NULL;
 				execve(this->_interpreter.c_str(), argv, &envp[0]);
 			}
